@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+﻿const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 require('dotenv').config({ path: '../.env' });
 
@@ -11,210 +11,118 @@ const Question = require('../models/Question');
 const CodingProblem = require('../models/CodingProblem');
 const TestCase = require('../models/TestCase');
 const Exam = require('../models/Exam');
+const College = require('../models/College');
+const Membership = require('../models/Membership');
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/online_exam_db';
+
+const requireEnv = (key) => {
+  if (!process.env[key]) throw new Error(`${key} is required for production seeding`);
+  return process.env[key];
+};
+
+const clearCollections = async () => {
+  if (process.env.SEED_RESET_DATABASE !== 'true') return;
+
+  await Promise.all([
+    User.deleteMany(),
+    Student.deleteMany(),
+    Faculty.deleteMany(),
+    Category.deleteMany(),
+    Course.deleteMany(),
+    Question.deleteMany(),
+    CodingProblem.deleteMany(),
+    TestCase.deleteMany(),
+    Exam.deleteMany(),
+    College.deleteMany(),
+    Membership.deleteMany(),
+  ]);
+};
 
 const seedData = async () => {
   try {
     await mongoose.connect(MONGO_URI);
-    console.log('Connected to MongoDB for Seeding...');
+    console.log('Connected to MongoDB for seeding.');
 
-    // Clear existing collections
-    await User.deleteMany();
-    await Student.deleteMany();
-    await Faculty.deleteMany();
-    await Category.deleteMany();
-    await Course.deleteMany();
-    await Question.deleteMany();
-    await CodingProblem.deleteMany();
-    await TestCase.deleteMany();
-    await Exam.deleteMany();
+    await clearCollections();
 
+    const adminEmail = requireEnv('SEED_ADMIN_EMAIL').toLowerCase().trim();
+    const adminPassword = requireEnv('SEED_ADMIN_PASSWORD');
+    const adminName = process.env.SEED_ADMIN_NAME || 'System Administrator';
+    const collegeName = process.env.SEED_COLLEGE_NAME || process.env.DEFAULT_COLLEGE_NAME || 'Primary Institution';
+    const collegeCode = (process.env.SEED_COLLEGE_CODE || 'PRIMARY').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
     const salt = await bcrypt.genSalt(10);
-    const defaultPassword = await bcrypt.hash('password123', salt);
+    const hashedPassword = await bcrypt.hash(adminPassword, salt);
 
-    // 1. Create Admin
-    const admin = await User.create({
-      name: 'System Admin',
-      email: 'admin@examportal.edu',
-      password: defaultPassword,
-      role: 'admin',
-      isEmailVerified: true,
-    });
-
-    // 2. Create Faculty
-    const faculty = await User.create({
-      name: 'Dr. Sarah Connor',
-      email: 'faculty@examportal.edu',
-      password: defaultPassword,
-      role: 'faculty',
-      isEmailVerified: true,
-    });
-    await Faculty.create({
-      userId: faculty._id,
-      department: 'Computer Science',
-      designation: 'Associate Professor',
-    });
-
-    // 3. Create Student
-    const student = await User.create({
-      name: 'Alex Johnson',
-      email: 'student@examportal.edu',
-      password: defaultPassword,
-      role: 'student',
-      isEmailVerified: true,
-    });
-    await Student.create({
-      userId: student._id,
-      college: 'National Institute of Technology',
-      course: 'B.Tech CS',
-      branch: 'Computer Science & Engineering',
-      semester: '6th',
-      rollNumber: 'CS2024001',
-    });
-
-    // 4. Categories & Courses
-    const catCS = await Category.create({ name: 'Data Structures & Algorithms', createdBy: admin._id });
-    const catWeb = await Category.create({ name: 'Web Development', createdBy: admin._id });
-    await Course.create({ name: 'Computer Science Essentials', code: 'CS101', createdBy: admin._id });
-
-    // 5. Create Sample MCQs
-    const q1 = await Question.create({
-      questionText: 'What is the time complexity of searching an element in a balanced Binary Search Tree (BST)?',
-      options: [
-        { optionText: 'O(1)', isCorrect: false },
-        { optionText: 'O(n)', isCorrect: false },
-        { optionText: 'O(log n)', isCorrect: true },
-        { optionText: 'O(n log n)', isCorrect: false },
-      ],
-      questionType: 'single',
-      marks: 2,
-      negativeMarks: 0.5,
-      category: 'Data Structures & Algorithms',
-      difficulty: 'easy',
-      explanation: 'In a balanced BST, height is log2(n), hence search requires O(log n) comparisons.',
-      createdBy: faculty._id,
-    });
-
-    const q2 = await Question.create({
-      questionText: 'Which of the following data structures follows the Last In First Out (LIFO) principle?',
-      options: [
-        { optionText: 'Queue', isCorrect: false },
-        { optionText: 'Stack', isCorrect: true },
-        { optionText: 'Array', isCorrect: false },
-        { optionText: 'LinkedList', isCorrect: false },
-      ],
-      questionType: 'single',
-      marks: 2,
-      negativeMarks: 0.5,
-      category: 'Data Structures & Algorithms',
-      difficulty: 'easy',
-      createdBy: faculty._id,
-    });
-
-    const q3 = await Question.create({
-      questionText: 'Which HTTP method is used to update an existing resource idempotently?',
-      options: [
-        { optionText: 'POST', isCorrect: false },
-        { optionText: 'PUT', isCorrect: true },
-        { optionText: 'GET', isCorrect: false },
-        { optionText: 'DELETE', isCorrect: false },
-      ],
-      questionType: 'single',
-      marks: 2,
-      category: 'Web Development',
-      difficulty: 'medium',
-      createdBy: faculty._id,
-    });
-
-    // 6. Create Sample Coding Problems
-    const cp1 = await CodingProblem.create({
-      title: 'Two Sum Problem',
-      description: 'Given an array of integers `nums` and an integer `target`, return the two numbers that sum up to `target`. Print the space-separated values.',
-      inputFormat: 'Line 1: Space-separated array of integers.\nLine 2: Target sum integer.',
-      outputFormat: 'Space separated pair of integers or NO match.',
-      constraints: '2 <= N <= 10^4',
-      examples: [
-        { input: '2 7 11 15\n9', output: '2 7', explanation: '2 + 7 = 9' },
-      ],
-      difficulty: 'easy',
-      category: 'Data Structures & Algorithms',
-      marks: 10,
-      timeLimit: 2,
-      allowedLanguages: ['javascript', 'python', 'java', 'cpp', 'c'],
-      starterCode: [
-        {
-          language: 'javascript',
-          code: `const fs = require('fs');\nconst input = fs.readFileSync('/dev/stdin', 'utf-8').trim().split('\\n');\nconst nums = input[0].split(' ').map(Number);\nconst target = Number(input[1]);\n// Write your solution here\nconsole.log("2 7");`,
+    const college = await College.findOneAndUpdate(
+      { code: collegeCode },
+      {
+        name: collegeName,
+        code: collegeCode,
+        domain: process.env.SEED_COLLEGE_DOMAIN || '',
+        contactEmail: process.env.SEED_COLLEGE_EMAIL || adminEmail,
+        isActive: true,
+        settings: {
+          allowSelfRegistration: true,
+          requireInviteCode: false,
         },
-        {
-          language: 'python',
-          code: `import sys\nlines = sys.stdin.read().splitlines()\nnums = list(map(int, lines[0].split()))\ntarget = int(lines[1])\n# Write your code here\nprint("2 7")`,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    const admin = await User.findOneAndUpdate(
+      { email: adminEmail },
+      {
+        $set: {
+          name: adminName,
+          email: adminEmail,
+          password: hashedPassword,
+          role: 'admin',
+          isEmailVerified: true,
+          isActive: true,
+          activeCollegeId: college._id,
         },
-      ],
-      createdBy: faculty._id,
-    });
+        $addToSet: { collegeIds: college._id },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
-    // Test cases for CP1
-    await TestCase.create([
-      { codingProblemId: cp1._id, input: '2 7 11 15\n9', expectedOutput: '2 7', isHidden: false, weight: 1 },
-      { codingProblemId: cp1._id, input: '3 2 4\n6', expectedOutput: '2 4', isHidden: true, weight: 1 },
-      { codingProblemId: cp1._id, input: '3 3\n6', expectedOutput: '3 3', isHidden: true, weight: 1 },
-    ]);
+    college.createdBy = admin._id;
+    await college.save();
 
-    const cp2 = await CodingProblem.create({
-      title: 'Fibonacci Sequence Generator',
-      description: 'Given an integer `N`, print the N-th Fibonacci number (where F(0)=0, F(1)=1).',
-      inputFormat: 'Single line containing integer N.',
-      outputFormat: 'Single integer F(N).',
-      difficulty: 'easy',
-      category: 'Data Structures & Algorithms',
-      marks: 10,
-      starterCode: [
-        {
-          language: 'python',
-          code: `import sys\nn = int(sys.stdin.read().trim())\ndef fib(n):\n    if n <= 1: return n\n    a, b = 0, 1\n    for _ in range(2, n+1):\n        a, b = b, a + b\n    return b\nprint(fib(n))`,
-        },
-      ],
-      createdBy: faculty._id,
-    });
+    await Membership.findOneAndUpdate(
+      { userId: admin._id, collegeId: college._id },
+      { userId: admin._id, collegeId: college._id, role: 'admin', status: 'active', createdBy: admin._id },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
-    await TestCase.create([
-      { codingProblemId: cp2._id, input: '5', expectedOutput: '5', isHidden: false, weight: 1 },
-      { codingProblemId: cp2._id, input: '10', expectedOutput: '55', isHidden: true, weight: 1 },
-    ]);
+    if (process.env.SEED_WITH_REFERENCE_CONTENT === 'true') {
+      const categoryName = process.env.SEED_CATEGORY_NAME || 'General Assessment';
+      await Category.findOneAndUpdate(
+        { name: categoryName, collegeId: college._id },
+        { name: categoryName, collegeId: college._id, createdBy: admin._id },
+        { upsert: true, new: true }
+      );
 
-    // 7. Create Sample Exam
-    const startDate = new Date();
-    const endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days ahead
+      if (process.env.SEED_COURSE_NAME && process.env.SEED_COURSE_CODE) {
+        await Course.findOneAndUpdate(
+          { code: process.env.SEED_COURSE_CODE.toUpperCase().trim(), collegeId: college._id },
+          {
+            name: process.env.SEED_COURSE_NAME,
+            code: process.env.SEED_COURSE_CODE.toUpperCase().trim(),
+            collegeId: college._id,
+            createdBy: admin._id,
+          },
+          { upsert: true, new: true }
+        );
+      }
+    }
 
-    await Exam.create({
-      title: 'Full-Stack & Algorithms Assessment 2026',
-      description: 'Comprehensive test containing objective MCQs and programming challenges on Data Structures, Algorithms, and Web fundamentals.',
-      category: 'Data Structures & Algorithms',
-      facultyId: faculty._id,
-      questions: [q1._id, q2._id, q3._id],
-      codingProblems: [cp1._id, cp2._id],
-      duration: 60, // 60 minutes
-      startDate,
-      endDate,
-      totalMarks: 26, // 3 MCQs (6 marks) + 2 Coding (20 marks)
-      passingMarks: 10,
-      negativeMarking: true,
-      status: 'published',
-    });
-
-    console.log('=====================================================');
-    console.log('SEEDING COMPLETED SUCCESSFULLY!');
-    console.log('Demo Credentials Created:');
-    console.log('Admin:    admin@examportal.edu    / password123');
-    console.log('Faculty:  faculty@examportal.edu  / password123');
-    console.log('Student:  student@examportal.edu  / password123');
-    console.log('=====================================================');
-
+    console.log('Seeding completed successfully.');
+    console.log(`Admin account ready: ${admin.email}`);
     process.exit(0);
   } catch (err) {
-    console.error('Seeding Failed:', err);
+    console.error('Seeding failed:', err.message);
     process.exit(1);
   }
 };

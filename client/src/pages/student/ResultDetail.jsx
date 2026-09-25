@@ -69,9 +69,13 @@ const ResultDetail = () => {
   };
 
   const handleOpenAiInsights = (code, language = 'javascript', problemTitle = 'Exam Problem') => {
-    const sampleCode = code || `function solution(arr) {\n  // Exam code submission\n  return arr.sort((a, b) => a - b);\n}`;
+    if (!code) {
+      toast.info('No submitted code is available for this result.');
+      return;
+    }
+
     setSelectedCodeData({
-      code: sampleCode,
+      code,
       language,
       problemTitle: problemTitle || result?.examId?.title || 'Coding Submission',
     });
@@ -88,10 +92,27 @@ const ResultDetail = () => {
   };
 
   if (loading || !result) {
-    return <div className="text-center py-5 text-light">Loading evaluation summary...</div>;
+    return <div className="text-center py-5 text-body">Loading evaluation summary...</div>;
   }
 
-  const isPass = result.status === 'Pass';
+  const score = Number(result.totalScore ?? result.score ?? 0);
+  const totalMarks = Number(result.totalMarks ?? result.examId?.totalMarks ?? 0);
+  const objectiveScore = Number(result.objectiveScore ?? 0);
+  const codingScore = Number(result.codingScore ?? 0);
+  const percentage = Number.isFinite(Number(result.percentage))
+    ? Number(result.percentage)
+    : totalMarks > 0
+      ? Math.round((score / totalMarks) * 100)
+      : 0;
+  const status = result.status || (percentage >= 40 ? 'Pass' : 'Fail');
+  const isPass = status.toLowerCase() === 'pass';
+  const codingSubmission = result.attemptId?.codingSubmissions
+    ?.map((item) => ({
+      code: item.submissionId?.sourceCode,
+      language: item.submissionId?.language || 'javascript',
+      problemTitle: item.problemId?.title || result.examId?.title || 'Coding Submission',
+    }))
+    .find((item) => item.code);
 
   return (
     <div>
@@ -120,21 +141,21 @@ const ResultDetail = () => {
         </div>
       </div>
 
-      <div className={`p-4 rounded-4 mb-4 text-white ${isPass ? 'bg-success bg-opacity-20 border border-success' : 'bg-danger bg-opacity-20 border border-danger'}`}>
+      <div className={`p-4 rounded-3 mb-4 text-white ${isPass ? 'bg-success bg-opacity-20 border-success' : 'bg-danger bg-opacity-20 border-danger'}`}>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
           <div>
             <div className="d-flex align-items-center gap-2 mb-1">
-              <span className={`badge ${isPass ? 'bg-success' : 'bg-danger'} fs-6`}>{result.status}</span>
-              <span className="text-muted small">Evaluated at {new Date(result.evaluatedAt).toLocaleString()}</span>
+              <span className={`badge ${isPass ? 'bg-success' : 'bg-danger'} fs-6`}>{status}</span>
+              <span className="text-muted small">Evaluated at {new Date(result.evaluatedAt || result.submittedAt || Date.now()).toLocaleString()}</span>
             </div>
-            <h2 className="fw-extrabold m-0 text-light">{result.examId?.title || 'Assessment Result'}</h2>
+            <h2 className="fw-bold m-0 text-body">{result.examId?.title || 'Assessment Result'}</h2>
           </div>
 
           <div className="text-center">
-            <h1 className={`display-4 fw-extrabold m-0 ${isPass ? 'text-success' : 'text-danger'}`}>
-              {result.percentage}%
+            <h1 className={`display-4 fw-bold m-0 ${isPass ? 'text-success' : 'text-danger'}`}>
+              {percentage}%
             </h1>
-            <span className="text-muted small">Total Marks: {result.totalScore} / {result.totalMarks}</span>
+            <span className="text-muted small">Total Marks: {score} / {totalMarks || '-'}</span>
           </div>
         </div>
       </div>
@@ -142,44 +163,46 @@ const ResultDetail = () => {
       {/* Breakdown Grid */}
       <div className="row g-3 mb-4">
         <div className="col-6 col-md-3">
-          <div className="glass-card p-3 text-center">
+          <div className="card p-3 text-center">
             <div className="text-success mb-1"><CheckCircle2 size={24} /></div>
-            <h4 className="fw-bold text-light m-0">{result.correctAnswers}</h4>
+            <h4 className="fw-bold text-body m-0">{result.correctAnswers ?? 0}</h4>
             <span className="text-muted small">Correct</span>
           </div>
         </div>
         <div className="col-6 col-md-3">
-          <div className="glass-card p-3 text-center">
+          <div className="card p-3 text-center">
             <div className="text-danger mb-1"><XCircle size={24} /></div>
-            <h4 className="fw-bold text-light m-0">{result.wrongAnswers}</h4>
+            <h4 className="fw-bold text-body m-0">{result.wrongAnswers ?? 0}</h4>
             <span className="text-muted small">Wrong</span>
           </div>
         </div>
         <div className="col-6 col-md-3">
-          <div className="glass-card p-3 text-center">
+          <div className="card p-3 text-center">
             <div className="text-warning mb-1"><HelpCircle size={24} /></div>
-            <h4 className="fw-bold text-light m-0">{result.skippedAnswers}</h4>
+            <h4 className="fw-bold text-body m-0">{result.skippedAnswers ?? 0}</h4>
             <span className="text-muted small">Skipped</span>
           </div>
         </div>
         <div className="col-6 col-md-3">
-          <div className="glass-card p-3 text-center">
+          <div className="card p-3 text-center">
             <div className="text-info mb-1"><Award size={24} /></div>
-            <h4 className="fw-bold text-light m-0">{result.objectiveScore + result.codingScore}</h4>
+            <h4 className="fw-bold text-body m-0">{objectiveScore + codingScore || score}</h4>
             <span className="text-muted small">Objective + Coding</span>
           </div>
         </div>
       </div>
 
       {/* AI Code Review Action Card */}
-      <div className="glass-card p-4 mb-4 border border-info border-opacity-50 bg-info bg-opacity-10 d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div className="card p-4 mb-4 border-info border-opacity-50 bg-info bg-opacity-10 d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div>
-          <h5 className="fw-bold text-light mb-1 d-flex align-items-center gap-2">
+          <h5 className="fw-bold text-body mb-1 d-flex align-items-center gap-2">
             <Sparkles className="text-warning animate-pulse" size={22} />
             AI Code Complexity & Optimization Analysis
           </h5>
           <p className="text-muted small mb-0">
-            Get instant AI analysis for your submitted solution: Time & Space complexity bounds ($O(N)$), edge cases, and clean code optimization tips.
+            {codingSubmission
+              ? 'Get instant AI analysis for your submitted solution: time and space complexity, edge cases, and clean code optimization tips.'
+              : 'AI code feedback appears after this attempt has an actual coding submission.'}
           </p>
         </div>
         <div className="d-flex gap-2 flex-wrap">
@@ -192,7 +215,8 @@ const ResultDetail = () => {
 
           <button
             className="btn btn-info fw-bold px-4 py-2 rounded-pill d-flex align-items-center gap-2 shadow"
-            onClick={() => handleOpenAiInsights()}
+            onClick={() => handleOpenAiInsights(codingSubmission?.code, codingSubmission?.language, codingSubmission?.problemTitle)}
+            disabled={!codingSubmission}
           >
             <Bot size={18} /> View AI Code Feedback
           </button>
@@ -200,7 +224,7 @@ const ResultDetail = () => {
       </div>
 
       {/* Retake & Certificate Action Bar */}
-      <div className="glass-card p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div className="card p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div className="d-flex align-items-center gap-3">
           <span className="badge bg-secondary fs-6 px-3 py-2 font-monospace">
             Attempt: {result.attemptNumber || 1} / {result.examId?.maxAttempts && result.examId.maxAttempts > 0 ? result.examId.maxAttempts : 'Unlimited'}
@@ -226,7 +250,7 @@ const ResultDetail = () => {
               <RefreshCw size={18} /> Take Test Again
             </button>
           ) : (
-            <span className="badge bg-dark border border-secondary text-muted px-3 py-2 font-monospace">
+            <span className="badge bg-body-tertiary border text-muted px-3 py-2 font-monospace">
               Maximum attempts reached
             </span>
           )}

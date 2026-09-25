@@ -1,3 +1,4 @@
+import '../../styles/faculty.css';
 import React, { useEffect, useState } from 'react';
 import API from '../../services/api';
 import { toast } from 'react-toastify';
@@ -47,7 +48,7 @@ const PlagiarismDetector = () => {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-          <h3 className="fw-extrabold text-light m-0 d-flex align-items-center gap-2">
+          <h3 className="fw-bold text-body m-0 d-flex align-items-center gap-2">
             <ShieldAlert size={26} className="text-danger" /> Code Plagiarism & Similarity Detector
           </h3>
           <p className="text-secondary small m-0">AST & Tokenized similarity analysis engine across student coding submissions.</p>
@@ -55,12 +56,12 @@ const PlagiarismDetector = () => {
       </div>
 
       {/* Control Card */}
-      <div className="glass-card p-4 rounded-4 border border-secondary mb-4 shadow-lg">
+      <div className="card p-4 rounded-3 border mb-4 ">
         <div className="row g-3 align-items-end">
           <div className="col-12 col-md-8">
-            <label className="form-label text-light fw-semibold small">Select Assessment</label>
+            <label className="form-label text-body fw-semibold small">Select Assessment</label>
             <select
-              className="form-select bg-dark text-light border-secondary"
+              className="form-select bg-body-tertiary text-body border"
               value={selectedExamId}
               onChange={(e) => setSelectedExamId(e.target.value)}
               disabled={loadingExams}
@@ -99,56 +100,56 @@ const PlagiarismDetector = () => {
         <div>
           <div className="row g-3 mb-4">
             <div className="col-6 col-md-4">
-              <div className="glass-card p-3 rounded-4 border border-secondary text-center">
-                <h4 className="fw-extrabold text-light m-0">{analysisData.totalSubmissions}</h4>
+              <div className="card p-3 rounded-3 border text-center">
+                <h4 className="fw-bold text-body m-0">{analysisData.totalSubmissions}</h4>
                 <div className="text-muted extra-small">Submissions Analyzed</div>
               </div>
             </div>
             <div className="col-6 col-md-4">
-              <div className="glass-card p-3 rounded-4 border border-secondary text-center">
-                <h4 className="fw-extrabold text-warning m-0">{analysisData.flaggedCount}</h4>
+              <div className="card p-3 rounded-3 border text-center">
+                <h4 className="fw-bold text-warning m-0">{analysisData.flaggedCount}</h4>
                 <div className="text-muted extra-small">Flagged Similarity Pairs</div>
               </div>
             </div>
             <div className="col-12 col-md-4">
-              <div className="glass-card p-3 rounded-4 border border-secondary text-center">
-                <h4 className="fw-extrabold text-success m-0">100%</h4>
+              <div className="card p-3 rounded-3 border text-center">
+                <h4 className="fw-bold text-success m-0">100%</h4>
                 <div className="text-muted extra-small">AST Token Accuracy</div>
               </div>
             </div>
           </div>
 
           {analysisData.pairs?.length === 0 ? (
-            <div className="glass-card p-4 rounded-4 border border-success text-center text-success fw-bold">
+            <div className="card p-4 rounded-3 border-success text-center text-success fw-bold">
               🎉 No high-similarity code plagiarisms detected for this assessment!
             </div>
           ) : (
             <div className="d-flex flex-column gap-3">
               {analysisData.pairs.map((pair) => (
-                <div key={pair.id} className="glass-card p-4 rounded-4 border border-secondary shadow-sm">
+                <div key={pair.id} className="card p-4 rounded-3 border shadow-sm">
                   <div className="d-flex justify-content-between align-items-center mb-3">
                     <div className="d-flex align-items-center gap-2">
                       <span className={`badge ${pair.similarityScore >= 80 ? 'bg-danger' : 'bg-warning text-dark'} fs-6 px-3 py-1`}>
                         {pair.similarityScore}% Similarity — {pair.status}
                       </span>
-                      <span className="text-light fw-bold font-monospace">{pair.problemTitle}</span>
+                      <span className="text-body fw-bold font-monospace">{pair.problemTitle}</span>
                     </div>
                   </div>
 
                   <div className="row g-3">
                     <div className="col-12 col-md-6">
-                      <div className="p-3 bg-dark border border-secondary rounded-3">
+                      <div className="p-3 bg-body-tertiary border rounded-3">
                         <div className="fw-bold text-info small mb-1">{pair.studentA.name} ({pair.studentA.email})</div>
-                        <pre className="p-2 bg-black text-success rounded extra-small font-monospace m-0 border border-secondary" style={{ maxHeight: 180, overflowY: 'auto' }}>
+                        <pre className="p-2 bg-body-tertiary text-success rounded extra-small font-monospace m-0 border" style={{ maxHeight: 180, overflowY: 'auto' }}>
                           {pair.studentA.code}
                         </pre>
                       </div>
                     </div>
 
                     <div className="col-12 col-md-6">
-                      <div className="p-3 bg-dark border border-secondary rounded-3">
+                      <div className="p-3 bg-body-tertiary border rounded-3">
                         <div className="fw-bold text-info small mb-1">{pair.studentB.name} ({pair.studentB.email})</div>
-                        <pre className="p-2 bg-black text-warning rounded extra-small font-monospace m-0 border border-secondary" style={{ maxHeight: 180, overflowY: 'auto' }}>
+                        <pre className="p-2 bg-body-tertiary text-warning rounded extra-small font-monospace m-0 border" style={{ maxHeight: 180, overflowY: 'auto' }}>
                           {pair.studentB.code}
                         </pre>
                       </div>

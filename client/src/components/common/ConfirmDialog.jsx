@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import Button from './Button';
 
@@ -10,9 +10,21 @@ const ConfirmDialog = ({
   description = 'Are you sure you want to proceed with this action?',
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
-  variant = 'danger', // 'danger' | 'primary' | 'success' | 'warning'
+  variant = 'danger',
   loading = false,
 }) => {
+  const closeButtonRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && !loading) onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    closeButtonRef.current?.focus();
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, loading, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -21,16 +33,20 @@ const ConfirmDialog = ({
       tabIndex="-1"
       role="dialog"
       aria-modal="true"
-      style={{ backgroundColor: 'rgba(11, 17, 32, 0.75)', zIndex: 2050, backdropFilter: 'blur(6px)' }}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !loading) onClose();
+      }}
+      style={{ zIndex: 2050 }}
     >
       <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: 440 }}>
-        <div className="modal-content border shadow-lg">
+        <div className="modal-content app-confirm-dialog shadow-lg">
           <div className="modal-header px-4 pt-3 pb-2">
             <h5 className="modal-title d-flex align-items-center gap-2 fw-bold">
               <AlertTriangle size={20} className={`text-${variant}`} />
               <span>{title}</span>
             </h5>
             <button
+              ref={closeButtonRef}
               type="button"
               className="btn-close"
               onClick={onClose}

@@ -144,15 +144,15 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
       style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1050 }}
     >
       <div className="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div className="modal-content glass-card text-light border border-secondary shadow-lg rounded-4">
+        <div className="modal-content card text-body border shadow-lg rounded-3">
           {/* Modal Header */}
-          <div className="modal-header border-bottom border-secondary px-4 py-3">
+          <div className="modal-header border-bottom border px-4 py-3">
             <div className="d-flex align-items-center gap-3">
               <div className="p-2 bg-primary bg-opacity-20 text-primary rounded-3">
                 <GraduationCap size={24} />
               </div>
               <div>
-                <h5 className="modal-title fw-bold text-light m-0">Student Profile & Career Resume</h5>
+                <h5 className="modal-title fw-bold text-body m-0">Student Profile & Career Resume</h5>
                 <p className="text-muted small m-0">
                   Complete all 5 sections to reach 100% profile completion
                 </p>
@@ -163,7 +163,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
           </div>
 
           {/* Progress Indicator Header Bar */}
-          <div className="bg-dark bg-opacity-50 px-4 py-3 border-bottom border-secondary">
+          <div className="bg-body-tertiary bg-opacity-50 px-4 py-3 border-bottom border">
             <div className="d-flex justify-content-between align-items-center mb-2">
               <span className="small fw-semibold text-secondary">
                 Profile Completion Progress: <strong className="text-success">{completedCount} of 5 sections done</strong>
@@ -181,7 +181,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
           </div>
 
           {/* Nav Tabs Bar */}
-          <div className="nav nav-pills nav-fill gap-1 p-2 bg-dark border-bottom border-secondary overflow-x-auto flex-nowrap">
+          <div className="nav nav-pills nav-fill gap-1 p-2 bg-body-tertiary border-bottom border overflow-x-auto flex-nowrap">
             <button
               className={`nav-link small py-2 px-3 rounded-3 text-nowrap d-flex align-items-center justify-content-center gap-1 ${
                 activeTab === 'academic' ? 'active bg-primary text-white' : 'text-secondary'
@@ -238,7 +238,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                     <label className="form-label text-secondary small">Full Name</label>
                     <input
                       type="text"
-                      className="form-control bg-dark border-secondary text-light"
+                      className="form-control bg-body-tertiary border text-body"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
@@ -249,7 +249,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                     <label className="form-label text-secondary small">Phone Number</label>
                     <input
                       type="text"
-                      className="form-control bg-dark border-secondary text-light"
+                      className="form-control bg-body-tertiary border text-body"
                       placeholder="+91 9876543210"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -260,7 +260,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                     <label className="form-label text-secondary small">College / Institute</label>
                     <input
                       type="text"
-                      className="form-control bg-dark border-secondary text-light"
+                      className="form-control bg-body-tertiary border text-body"
                       value={formData.college}
                       onChange={(e) => setFormData({ ...formData, college: e.target.value })}
                       placeholder="e.g. ABC Institute of Technology"
@@ -271,7 +271,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                     <label className="form-label text-secondary small">Degree / Course</label>
                     <input
                       type="text"
-                      className="form-control bg-dark border-secondary text-light"
+                      className="form-control bg-body-tertiary border text-body"
                       value={formData.course}
                       onChange={(e) => setFormData({ ...formData, course: e.target.value })}
                       placeholder="e.g. B.Tech Computer Science"
@@ -282,7 +282,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                     <label className="form-label text-secondary small">Branch</label>
                     <input
                       type="text"
-                      className="form-control bg-dark border-secondary text-light"
+                      className="form-control bg-body-tertiary border text-body"
                       value={formData.branch}
                       onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
                       placeholder="CSE / IT / ECE"
@@ -293,7 +293,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                     <label className="form-label text-secondary small">Semester</label>
                     <input
                       type="text"
-                      className="form-control bg-dark border-secondary text-light"
+                      className="form-control bg-body-tertiary border text-body"
                       value={formData.semester}
                       onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
                       placeholder="e.g. 6th"
@@ -304,7 +304,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                     <label className="form-label text-secondary small">Roll / Enrollment No.</label>
                     <input
                       type="text"
-                      className="form-control bg-dark border-secondary text-light"
+                      className="form-control bg-body-tertiary border text-body"
                       value={formData.rollNumber}
                       onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value })}
                       placeholder="2100450100"
@@ -315,7 +315,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                     <label className="form-label text-secondary small">CGPA / Aggregate %</label>
                     <input
                       type="text"
-                      className="form-control bg-dark border-secondary text-light"
+                      className="form-control bg-body-tertiary border text-body"
                       value={formData.cgpa}
                       onChange={(e) => setFormData({ ...formData, cgpa: e.target.value })}
                       placeholder="8.5 / 85%"
@@ -332,14 +332,14 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                   </label>
                   <textarea
                     rows={4}
-                    className="form-control bg-dark border-secondary text-light mb-3"
+                    className="form-control bg-body-tertiary border text-body mb-3"
                     placeholder="JavaScript, React, Node.js, Python, SQL, C++, HTML/CSS, Git, Docker"
                     value={formData.skillsStr}
                     onChange={(e) => setFormData({ ...formData, skillsStr: e.target.value })}
                   />
 
                   <div className="small text-muted mb-2">Preview Skill Badges:</div>
-                  <div className="d-flex flex-wrap gap-2 p-3 bg-dark rounded-3 border border-secondary">
+                  <div className="d-flex flex-wrap gap-2 p-3 bg-body-tertiary rounded-3 border">
                     {formData.skillsStr
                       .split(',')
                       .map((s) => s.trim())
@@ -351,7 +351,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                         .map((s) => s.trim())
                         .filter(Boolean)
                         .map((sk, idx) => (
-                          <span key={idx} className="badge bg-primary bg-opacity-20 text-primary border border-primary px-3 py-1">
+                          <span key={idx} className="badge bg-primary bg-opacity-20 text-primary border-primary px-3 py-1">
                             {sk}
                           </span>
                         ))
@@ -375,12 +375,12 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                   </div>
 
                   {formData.projects.length === 0 ? (
-                    <div className="text-center py-4 border border-dashed border-secondary rounded-4 text-muted">
+                    <div className="text-center py-4 border-dashed border rounded-3 text-muted">
                       No projects added yet. Click "+ Add Project" to showcase your work.
                     </div>
                   ) : (
                     formData.projects.map((proj, pIdx) => (
-                      <div key={pIdx} className="glass-card p-3 mb-3 border border-secondary rounded-3 position-relative">
+                      <div key={pIdx} className="card p-3 mb-3 border rounded-3 position-relative">
                         <button
                           type="button"
                           className="btn btn-sm text-danger position-absolute top-0 end-0 m-2"
@@ -394,7 +394,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                           <div className="col-12 col-md-6">
                             <input
                               type="text"
-                              className="form-control form-control-sm bg-dark border-secondary text-light"
+                              className="form-control form-control-sm bg-body-tertiary border text-body"
                               placeholder="Project Title (e.g. AI Code Evaluator)"
                               value={proj.title}
                               onChange={(e) => handleUpdateProject(pIdx, 'title', e.target.value)}
@@ -403,7 +403,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                           <div className="col-12 col-md-6">
                             <input
                               type="text"
-                              className="form-control form-control-sm bg-dark border-secondary text-light"
+                              className="form-control form-control-sm bg-body-tertiary border text-body"
                               placeholder="Tech Stack (e.g. React, Node.js, MongoDB)"
                               value={proj.techStack}
                               onChange={(e) => handleUpdateProject(pIdx, 'techStack', e.target.value)}
@@ -412,7 +412,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                           <div className="col-12">
                             <textarea
                               rows={2}
-                              className="form-control form-control-sm bg-dark border-secondary text-light"
+                              className="form-control form-control-sm bg-body-tertiary border text-body"
                               placeholder="Brief description of key features and architecture..."
                               value={proj.description}
                               onChange={(e) => handleUpdateProject(pIdx, 'description', e.target.value)}
@@ -421,7 +421,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                           <div className="col-12 col-md-6">
                             <input
                               type="url"
-                              className="form-control form-control-sm bg-dark border-secondary text-light"
+                              className="form-control form-control-sm bg-body-tertiary border text-body"
                               placeholder="GitHub Repository URL"
                               value={proj.githubUrl}
                               onChange={(e) => handleUpdateProject(pIdx, 'githubUrl', e.target.value)}
@@ -430,7 +430,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                           <div className="col-12 col-md-6">
                             <input
                               type="url"
-                              className="form-control form-control-sm bg-dark border-secondary text-light"
+                              className="form-control form-control-sm bg-body-tertiary border text-body"
                               placeholder="Live Project URL"
                               value={proj.liveUrl}
                               onChange={(e) => handleUpdateProject(pIdx, 'liveUrl', e.target.value)}
@@ -458,12 +458,12 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                   </div>
 
                   {formData.experience.length === 0 ? (
-                    <div className="text-center py-4 border border-dashed border-secondary rounded-4 text-muted">
+                    <div className="text-center py-4 border-dashed border rounded-3 text-muted">
                       No experience added yet. Click "+ Add Experience" to record internships.
                     </div>
                   ) : (
                     formData.experience.map((exp, eIdx) => (
-                      <div key={eIdx} className="glass-card p-3 mb-3 border border-secondary rounded-3 position-relative">
+                      <div key={eIdx} className="card p-3 mb-3 border rounded-3 position-relative">
                         <button
                           type="button"
                           className="btn btn-sm text-danger position-absolute top-0 end-0 m-2"
@@ -477,7 +477,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                           <div className="col-12 col-md-4">
                             <input
                               type="text"
-                              className="form-control form-control-sm bg-dark border-secondary text-light"
+                              className="form-control form-control-sm bg-body-tertiary border text-body"
                               placeholder="Company Name (e.g. TCS)"
                               value={exp.company}
                               onChange={(e) => handleUpdateExperience(eIdx, 'company', e.target.value)}
@@ -486,7 +486,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                           <div className="col-12 col-md-4">
                             <input
                               type="text"
-                              className="form-control form-control-sm bg-dark border-secondary text-light"
+                              className="form-control form-control-sm bg-body-tertiary border text-body"
                               placeholder="Role (e.g. Frontend Intern)"
                               value={exp.role}
                               onChange={(e) => handleUpdateExperience(eIdx, 'role', e.target.value)}
@@ -495,7 +495,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                           <div className="col-12 col-md-4">
                             <input
                               type="text"
-                              className="form-control form-control-sm bg-dark border-secondary text-light"
+                              className="form-control form-control-sm bg-body-tertiary border text-body"
                               placeholder="Duration (e.g. Jun 2025 - Aug 2025)"
                               value={exp.duration}
                               onChange={(e) => handleUpdateExperience(eIdx, 'duration', e.target.value)}
@@ -504,7 +504,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                           <div className="col-12">
                             <textarea
                               rows={2}
-                              className="form-control form-control-sm bg-dark border-secondary text-light"
+                              className="form-control form-control-sm bg-body-tertiary border text-body"
                               placeholder="Key responsibilities and contributions..."
                               value={exp.description}
                               onChange={(e) => handleUpdateExperience(eIdx, 'description', e.target.value)}
@@ -524,7 +524,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                     <label className="form-label text-secondary small">Resume PDF Link (Google Drive / Cloudinary)</label>
                     <input
                       type="url"
-                      className="form-control bg-dark border-secondary text-light"
+                      className="form-control bg-body-tertiary border text-body"
                       placeholder="https://drive.google.com/file/d/..."
                       value={formData.resumeUrl}
                       onChange={(e) => setFormData({ ...formData, resumeUrl: e.target.value })}
@@ -535,7 +535,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                     <label className="form-label text-secondary small">LinkedIn Profile URL</label>
                     <input
                       type="url"
-                      className="form-control bg-dark border-secondary text-light"
+                      className="form-control bg-body-tertiary border text-body"
                       placeholder="https://linkedin.com/in/username"
                       value={formData.linkedinUrl}
                       onChange={(e) => setFormData({ ...formData, linkedinUrl: e.target.value })}
@@ -546,7 +546,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                     <label className="form-label text-secondary small">GitHub Profile URL</label>
                     <input
                       type="url"
-                      className="form-control bg-dark border-secondary text-light"
+                      className="form-control bg-body-tertiary border text-body"
                       placeholder="https://github.com/username"
                       value={formData.githubUrl}
                       onChange={(e) => setFormData({ ...formData, githubUrl: e.target.value })}
@@ -557,7 +557,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                     <label className="form-label text-secondary small">Personal Portfolio Website</label>
                     <input
                       type="url"
-                      className="form-control bg-dark border-secondary text-light"
+                      className="form-control bg-body-tertiary border text-body"
                       placeholder="https://myportfolio.com"
                       value={formData.portfolioUrl}
                       onChange={(e) => setFormData({ ...formData, portfolioUrl: e.target.value })}
@@ -568,7 +568,7 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
             </div>
 
             {/* Modal Footer */}
-            <div className="modal-footer border-top border-secondary px-4 py-3 d-flex justify-content-between">
+            <div className="modal-footer border-top border px-4 py-3 d-flex justify-content-between">
               <button type="button" className="btn btn-outline-secondary rounded-pill px-4" onClick={onClose}>
                 Cancel
               </button>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import API from '../../services/api';
 import { toast } from 'react-toastify';
@@ -165,18 +165,18 @@ public class Solution {
 const getProblemStarterCode = (probTitle, lang) => {
   const pName = probTitle ? probTitle.trim() : 'Problem Solution';
   if (lang === 'python') {
-    return `# Problem: ${pName}\n# Write your Python solution below\nimport sys\n\ndef solution():\n    data = sys.stdin.read().strip().split()\n    if not data:\n        return\n    # Add logic for ${pName}\n\nsolution()\n`;
+    return `# Problem: ${pName}\n# Write your Python solution below\nimport sys\n\ndef solution():\n data = sys.stdin.read().strip().split()\n if not data:\n return\n # Add logic for ${pName}\n\nsolution()\n`;
   }
   if (lang === 'cpp') {
-    return `// Problem: ${pName}\n// Write your C++ solution below\n#include <iostream>\nusing namespace std;\n\nint main() {\n    // Add logic for ${pName}\n    return 0;\n}\n`;
+    return `// Problem: ${pName}\n// Write your C++ solution below\n#include <iostream>\nusing namespace std;\n\nint main() {\n // Add logic for ${pName}\n return 0;\n}\n`;
   }
   if (lang === 'c') {
-    return `// Problem: ${pName}\n// Write your C solution below\n#include <stdio.h>\n\nint main() {\n    // Add logic for ${pName}\n    return 0;\n}\n`;
+    return `// Problem: ${pName}\n// Write your C solution below\n#include <stdio.h>\n\nint main() {\n // Add logic for ${pName}\n return 0;\n}\n`;
   }
   if (lang === 'java') {
-    return `// Problem: ${pName}\n// Write your Java solution below\nimport java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        // Add logic for ${pName}\n    }\n}\n`;
+    return `// Problem: ${pName}\n// Write your Java solution below\nimport java.util.Scanner;\n\npublic class Main {\n public static void main(String[] args) {\n Scanner sc = new Scanner(System.in);\n // Add logic for ${pName}\n }\n}\n`;
   }
-  return `// Problem: ${pName}\n// Write your JavaScript solution below\nconst fs = require('fs');\n\nfunction solution() {\n  const input = fs.readFileSync(0, 'utf-8').trim();\n  // Add logic for ${pName}\n}\n\nsolution();\n`;
+  return `// Problem: ${pName}\n// Write your JavaScript solution below\nconst fs = require('fs');\n\nfunction solution() {\n const input = fs.readFileSync(0, 'utf-8').trim();\n // Add logic for ${pName}\n}\n\nsolution();\n`;
 };
 
 const PracticePlayground = () => {
@@ -406,11 +406,11 @@ const PracticePlayground = () => {
       if (expectedVal) {
         const isMatch = rawOutput === expectedVal;
         outputDisplay += `\n\nExpected Output:\n${expectedVal}`;
-        outputDisplay += `\n\nResult: ${isMatch ? '✅ MATCHED (Passed)' : '❌ MISMATCHED (Wrong Answer)'}`;
+        outputDisplay += `\n\nResult: ${isMatch ? 'âœ… MATCHED (Passed)' : 'âŒ MISMATCHED (Wrong Answer)'}`;
 
         setOutputStatus(isMatch ? 'success' : 'wrong');
         if (isMatch) {
-          toast.success('Trial Run Output Matched Expected Output! 🎉');
+          toast.success('Trial Run Output Matched Expected Output! ðŸŽ‰');
         } else {
           toast.warning('Trial Run Output Mismatched Expected Output.');
         }
@@ -491,7 +491,7 @@ const PracticePlayground = () => {
         );
 
         toast.success(
-          '🎉 Solution Accepted!'
+          'ðŸŽ‰ Solution Accepted!'
         );
       } else {
         setOutputStatus('wrong');
@@ -584,7 +584,7 @@ const PracticePlayground = () => {
 
   if (loadingProblems) {
     return (
-      <div className="text-center text-light py-5">
+      <div className="text-center text-body py-5">
         <RefreshCw
           size={30}
           className="spinner-border"
@@ -605,7 +605,7 @@ const PracticePlayground = () => {
 
   if (!problems.length) {
     return (
-      <div className="glass-card p-5 text-center text-light">
+      <div className="card p-5 text-center text-body">
         <Code2
           size={50}
           className="text-info mb-3"
@@ -642,7 +642,7 @@ const PracticePlayground = () => {
       {/* =====================================================
           TOP CONTROL BAR & QUICK PROBLEM SELECTOR
       ====================================================== */}
-      <div className="glass-card p-3 border border-secondary rounded-4 mb-3 shadow-sm d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div className="card p-3 border rounded-3 mb-3 shadow-sm d-flex flex-wrap align-items-center justify-content-between gap-3">
         {/* Left: Quick Problem Select Dropdown & Title */}
         <div className="d-flex align-items-center gap-3 flex-grow-1" style={{ minWidth: '300px' }}>
           <div className="p-2 bg-primary bg-opacity-20 text-primary rounded-3 flex-shrink-0">
@@ -654,7 +654,7 @@ const PracticePlayground = () => {
               <Layers size={12} className="text-primary" /> Active Problem ({problems.length})
             </label>
             <select
-              className="form-select form-select-sm bg-dark text-info border-secondary font-monospace fw-bold"
+              className="form-select form-select-sm bg-body-tertiary text-info border font-monospace fw-bold"
               value={selectedProblem?._id || ''}
               onChange={(e) => {
                 const target = problems.find((p) => p._id === e.target.value);
@@ -675,7 +675,7 @@ const PracticePlayground = () => {
         <div className="d-flex align-items-center gap-2 flex-wrap ms-auto">
           {/* Language Selector */}
           <select
-            className="form-select form-select-sm bg-dark text-light border-secondary font-monospace"
+            className="form-select form-select-sm bg-body-tertiary text-body border font-monospace"
             value={language}
             onChange={(e) => handleLanguageChange(e.target.value)}
             style={{ width: '140px', borderRadius: '8px' }}
@@ -741,9 +741,9 @@ const PracticePlayground = () => {
         ==================================================== */}
         {!isEditorFullscreen && (
           <div className="col-12 col-lg-6 d-flex flex-column">
-            <div className="glass-card border border-secondary rounded-4 shadow-sm overflow-hidden d-flex flex-column h-100" style={{ minHeight: '680px' }}>
+            <div className="card border rounded-3 shadow-sm overflow-hidden d-flex flex-column h-100" style={{ minHeight: '680px' }}>
               {/* Left Panel Tabs Header */}
-              <div className="d-flex bg-dark border-bottom border-secondary px-2 pt-2 gap-1">
+              <div className="d-flex bg-body-tertiary border-bottom border px-2 pt-2 gap-1">
                 <button
                   type="button"
                   className={`btn btn-sm rounded-top-3 px-3 py-2 font-monospace fw-bold d-flex align-items-center gap-1.5 border-bottom-0 ${
@@ -798,13 +798,13 @@ const PracticePlayground = () => {
                           {problemDetails.difficulty}
                         </span>
                         <span className="badge bg-primary px-2.5 py-1.5 font-monospace">{problemDetails.marks || 10} Marks</span>
-                        <span className="badge bg-dark border border-secondary text-light px-2.5 py-1.5 font-monospace">
+                        <span className="badge bg-body-tertiary border text-body px-2.5 py-1.5 font-monospace">
                           <Clock size={12} className="me-1" /> {problemDetails.timeLimit || 2}s limit
                         </span>
                       </div>
 
                       {/* Problem Statement */}
-                      <div className="text-light mb-4 leading-relaxed font-sans small bg-black bg-opacity-40 p-3 rounded-3 border border-secondary">
+                      <div className="text-body mb-4 leading-relaxed font-sans small bg-body-tertiary bg-opacity-40 p-3 rounded-3 border">
                         {problemDetails.description}
                       </div>
 
@@ -812,8 +812,8 @@ const PracticePlayground = () => {
                       {problemDetails.inputFormat && (
                         <div className="mb-3">
                           <div className="text-info extra-small fw-bold mb-1 uppercase font-monospace">Input Format</div>
-                          <div className="p-2.5 rounded-3 bg-dark border border-secondary text-light extra-small font-monospace">
-                            <pre className="m-0 text-light whitespace-pre-wrap">{problemDetails.inputFormat}</pre>
+                          <div className="p-2.5 rounded-3 bg-body-tertiary border text-body extra-small font-monospace">
+                            <pre className="m-0 text-body whitespace-pre-wrap">{problemDetails.inputFormat}</pre>
                           </div>
                         </div>
                       )}
@@ -822,8 +822,8 @@ const PracticePlayground = () => {
                       {problemDetails.outputFormat && (
                         <div className="mb-3">
                           <div className="text-info extra-small fw-bold mb-1 uppercase font-monospace">Output Format</div>
-                          <div className="p-2.5 rounded-3 bg-dark border border-secondary text-light extra-small font-monospace">
-                            <pre className="m-0 text-light whitespace-pre-wrap">{problemDetails.outputFormat}</pre>
+                          <div className="p-2.5 rounded-3 bg-body-tertiary border text-body extra-small font-monospace">
+                            <pre className="m-0 text-body whitespace-pre-wrap">{problemDetails.outputFormat}</pre>
                           </div>
                         </div>
                       )}
@@ -832,37 +832,37 @@ const PracticePlayground = () => {
                       {problemDetails.constraints && (
                         <div className="mb-3">
                           <div className="text-info extra-small fw-bold mb-1 uppercase font-monospace">Constraints</div>
-                          <div className="p-2.5 rounded-3 bg-dark border border-secondary text-light extra-small font-monospace">
-                            <pre className="m-0 text-light whitespace-pre-wrap">{problemDetails.constraints}</pre>
+                          <div className="p-2.5 rounded-3 bg-body-tertiary border text-body extra-small font-monospace">
+                            <pre className="m-0 text-body whitespace-pre-wrap">{problemDetails.constraints}</pre>
                           </div>
                         </div>
                       )}
 
-                      {/* Sample Test Cases */}
+                      {/* Public Test Cases */}
                       {publicTestCases.length > 0 && (
-                        <div className="pt-3 border-top border-secondary mt-4">
-                          <h6 className="fw-bold text-light mb-3 font-monospace d-flex align-items-center gap-2">
-                            <CheckCircle2 size={16} className="text-success" /> Sample Test Cases ({publicTestCases.length})
+                        <div className="pt-3 border-top border mt-4">
+                          <h6 className="fw-bold text-body mb-3 font-monospace d-flex align-items-center gap-2">
+                            <CheckCircle2 size={16} className="text-success" /> Public Test Cases ({publicTestCases.length})
                           </h6>
                           {publicTestCases.map((tc, index) => (
-                            <div key={tc._id || index} className="p-3 rounded-3 bg-dark border border-secondary mb-3 font-monospace">
+                            <div key={tc._id || index} className="p-3 rounded-3 bg-body-tertiary border mb-3 font-monospace">
                               <div className="d-flex justify-content-between align-items-center mb-1">
-                                <span className="text-muted extra-small fw-bold">Sample #{index + 1} Input:</span>
+                                <span className="text-muted extra-small fw-bold">Public Case #{index + 1} Input:</span>
                                 <button
                                   type="button"
                                   className="btn btn-link text-info extra-small p-0 text-decoration-none"
                                   onClick={() => {
                                     setCustomInput(tc.input || '');
-                                    toast.info(`Sample #${index + 1} input loaded into Custom Input box!`);
+                                    toast.info(`Public case #${index + 1} input loaded into Custom Input box!`);
                                   }}
                                 >
-                                  ⚡ Load Input
+                                  âš¡ Load Input
                                 </button>
                               </div>
-                              <pre className="text-success extra-small bg-black p-2.5 rounded mb-2 border border-secondary">{tc.input || '(Empty)'}</pre>
+                              <pre className="text-success extra-small bg-body-tertiary p-2.5 rounded mb-2 border">{tc.input || '(Empty)'}</pre>
 
                               <div className="text-muted extra-small fw-bold mb-1">Expected Output:</div>
-                              <pre className="text-warning extra-small bg-black p-2.5 rounded mb-0 border border-secondary">
+                              <pre className="text-warning extra-small bg-body-tertiary p-2.5 rounded mb-0 border">
                                 {tc.expectedOutput || tc.output || 'N/A'}
                               </pre>
                             </div>
@@ -881,7 +881,7 @@ const PracticePlayground = () => {
                     <Search size={14} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" />
                     <input
                       type="text"
-                      className="form-control form-control-sm bg-dark text-light border-secondary ps-5 font-monospace"
+                      className="form-control form-control-sm bg-body-tertiary text-body border ps-5 font-monospace"
                       placeholder="Search coding problems..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -898,8 +898,8 @@ const PracticePlayground = () => {
                             key={problem._id}
                             className={`btn btn-sm text-start d-flex justify-content-between align-items-center rounded-3 px-3 py-2.5 ${
                               isSelected
-                                ? 'bg-primary text-white fw-bold border-0 shadow-sm'
-                                : 'bg-dark text-light border border-secondary hover-dark'
+                                ? 'bg-primary text-white fw-bold shadow-sm'
+                                : 'bg-body-tertiary text-body border hover-dark'
                             }`}
                             onClick={() => {
                               setSelectedProblem(problem);
@@ -935,12 +935,12 @@ const PracticePlayground = () => {
             RIGHT SIDE (MONACO CODE EDITOR & CONSOLE)
         ==================================================== */}
         <div className={isEditorFullscreen ? 'col-12' : 'col-12 col-lg-6'}>
-          <div className="glass-card overflow-hidden border border-secondary rounded-4 shadow-sm">
+          <div className="card overflow-hidden border rounded-3 shadow-sm">
             {/* Editor Top Toolbar */}
-            <div className="d-flex justify-content-between align-items-center px-3 py-2 bg-dark border-bottom border-secondary">
+            <div className="d-flex justify-content-between align-items-center px-3 py-2 bg-body-tertiary border-bottom border">
               <div className="d-flex align-items-center gap-2">
                 <Code2 size={16} className="text-info" />
-                <span className="text-light small fw-bold font-monospace">
+                <span className="text-body small fw-bold font-monospace">
                   {currentLanguage?.label || language} Solution Canvas
                 </span>
               </div>
@@ -974,17 +974,17 @@ const PracticePlayground = () => {
             {/* =================================================
                 INPUT / EXECUTION CONSOLE
             ================================================== */}
-            <div className="border-top border-secondary bg-dark p-3">
+            <div className="border-top border bg-body-tertiary p-3">
               <div className="row g-3">
                 {/* Input Column */}
-                <div className="col-12 col-md-6 border-end border-secondary">
+                <div className="col-12 col-md-6 border-end border">
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <label className="form-label extra-small text-light fw-bold d-flex align-items-center gap-1 mb-0 font-monospace">
+                    <label className="form-label extra-small text-body fw-bold d-flex align-items-center gap-1 mb-0 font-monospace">
                       <ChevronRight size={14} className="text-primary" /> Custom Input
                     </label>
                   </div>
                   <textarea
-                    className="form-control bg-black text-success border-secondary font-monospace extra-small"
+                    className="form-control bg-body-tertiary text-success border font-monospace extra-small"
                     rows={6}
                     value={customInput}
                     onChange={(e) => setCustomInput(e.target.value)}
@@ -996,7 +996,7 @@ const PracticePlayground = () => {
                 {/* Output Column */}
                 <div className="col-12 col-md-6">
                   <div className="d-flex align-items-center justify-content-between mb-2">
-                    <label className="form-label extra-small text-light fw-bold d-flex align-items-center gap-1 mb-0 font-monospace">
+                    <label className="form-label extra-small text-body fw-bold d-flex align-items-center gap-1 mb-0 font-monospace">
                       <ChevronRight size={14} className="text-primary" /> Execution Console
                     </label>
 
@@ -1020,14 +1020,14 @@ const PracticePlayground = () => {
                   </div>
 
                   <pre
-                    className={`p-3 rounded-3 bg-black font-monospace extra-small m-0 ${
+                    className={`p-3 rounded-3 bg-body-tertiary font-monospace extra-small m-0 ${
                       outputStatus === 'success'
-                        ? 'text-success border border-success border-opacity-25'
+                        ? 'text-success border-success border-opacity-25'
                         : outputStatus === 'error'
-                        ? 'text-danger border border-danger border-opacity-25'
+                        ? 'text-danger border-danger border-opacity-25'
                         : outputStatus === 'wrong'
-                        ? 'text-warning border border-warning border-opacity-25'
-                        : 'text-light border border-secondary'
+                        ? 'text-warning border-warning border-opacity-25'
+                        : 'text-body border'
                     }`}
                     style={{
                       minHeight: '145px',
@@ -1037,16 +1037,16 @@ const PracticePlayground = () => {
                     }}
                   >
                     {running
-                      ? '⏳ Executing code against custom input...'
+                      ? 'â³ Executing code against custom input...'
                       : submitting
-                      ? '⏳ Evaluating all test cases...'
+                      ? 'â³ Evaluating all test cases...'
                       : output || '// Run Code to see execution output'}
                   </pre>
                 </div>
               </div>
               {/* Submission Result Details Banner */}
               {submissionResult && (
-                <div className="mt-3 p-3 rounded-3 bg-black border border-secondary font-monospace">
+                <div className="mt-3 p-3 rounded-3 bg-body-tertiary border font-monospace">
                   <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
                     <div>
                       <span className="text-muted extra-small">Submission Status: </span>
@@ -1056,7 +1056,7 @@ const PracticePlayground = () => {
                     </div>
                     <div>
                       <span className="text-muted extra-small">Passed Cases: </span>
-                      <span className="text-light fw-bold">
+                      <span className="text-body fw-bold">
                         {submissionResult.passedTestCases}/{submissionResult.totalTestCases}
                       </span>
                     </div>
@@ -1067,9 +1067,9 @@ const PracticePlayground = () => {
                   </div>
 
                   {Array.isArray(submissionResult.testResults) && submissionResult.testResults.length > 0 && (
-                    <div className="mt-2.5 pt-2.5 border-top border-secondary">
+                    <div className="mt-2.5 pt-2.5 border-top border">
                       <div className="table-responsive">
-                        <table className="table table-dark table-sm align-middle mb-0 extra-small">
+                        <table className="table table-sm align-middle mb-0 extra-small">
                           <thead>
                             <tr className="text-muted">
                               <th>#</th>

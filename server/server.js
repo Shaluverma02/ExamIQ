@@ -1,9 +1,13 @@
-const app = require('./app');
 const mongoose = require('mongoose');
 require('dotenv').config();
+const app = require('./app');
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/online_exam_db';
+
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET must be configured in production');
+}
 
 mongoose
   .connect(MONGO_URI)
@@ -15,8 +19,5 @@ mongoose
   })
   .catch((err) => {
     console.error('MongoDB Connection Error:', err.message);
-    console.log('Starting HTTP Server without direct DB connection for initial configuration...');
-    app.listen(PORT, () => {
-      console.log(`Server listening on port ${PORT}`);
-    });
+    process.exitCode = 1;
   });

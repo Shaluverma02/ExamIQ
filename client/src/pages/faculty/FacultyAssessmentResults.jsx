@@ -1,3 +1,4 @@
+import '../../styles/faculty.css';
 import React, { useEffect, useState } from 'react';
 import API from '../../services/api';
 import { toast } from 'react-toastify';
@@ -204,12 +205,12 @@ const FacultyAssessmentResults = () => {
   });
 
   return (
-    <div className="container-fluid py-4 min-vh-100 bg-dark text-light">
+    <div className="container-fluid py-4 min-vh-100 bg-body-tertiary text-body">
       {/* Top Header & Assessment Selection Bar */}
-      <div className="glass-card p-4 rounded-4 border border-secondary mb-4 shadow-lg">
+      <div className="card p-4 rounded-3 border mb-4 ">
         <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
           <div>
-            <h3 className="fw-extrabold text-light m-0 d-flex align-items-center gap-2">
+            <h3 className="fw-bold text-body m-0 d-flex align-items-center gap-2">
               <Award className="text-primary" size={28} /> Faculty Assessment Results Manager
             </h3>
             <p className="text-secondary small m-0 mt-1">
@@ -219,7 +220,7 @@ const FacultyAssessmentResults = () => {
 
           <div className="d-flex align-items-center gap-2 flex-wrap">
             <select
-              className="form-select bg-dark text-light border-primary font-monospace fw-bold"
+              className="form-select bg-body-tertiary text-body border-primary font-monospace fw-bold"
               style={{ minWidth: 260 }}
               value={selectedAssessmentId}
               onChange={(e) => setSelectedAssessmentId(e.target.value)}
@@ -246,27 +247,27 @@ const FacultyAssessmentResults = () => {
       {stats && (
         <div className="row g-3 mb-4">
           <div className="col-12 col-sm-6 col-lg-3">
-            <div className="p-3 bg-dark border border-secondary rounded-4 shadow-sm h-100">
+            <div className="p-3 bg-body-tertiary border rounded-3 shadow-sm h-100">
               <div className="text-secondary small font-monospace">Assigned Students</div>
-              <h3 className="fw-extrabold text-info m-0 mt-1">{stats.totalAssigned}</h3>
+              <h3 className="fw-bold text-info m-0 mt-1">{stats.totalAssigned}</h3>
               <div className="extra-small text-muted mt-1">
-                Attempted: <strong className="text-light">{stats.totalAttempted}</strong> | Pending: <strong className="text-warning">{stats.notAttemptedCount}</strong>
+                Attempted: <strong className="text-body">{stats.totalAttempted}</strong> | Pending: <strong className="text-warning">{stats.notAttemptedCount}</strong>
               </div>
             </div>
           </div>
 
           <div className="col-12 col-sm-6 col-lg-3">
-            <div className="p-3 bg-dark border border-secondary rounded-4 shadow-sm h-100">
+            <div className="p-3 bg-body-tertiary border rounded-3 shadow-sm h-100">
               <div className="text-secondary small font-monospace">Total Attempts</div>
-              <h3 className="fw-extrabold text-primary m-0 mt-1">{stats.totalAttempts}</h3>
+              <h3 className="fw-bold text-primary m-0 mt-1">{stats.totalAttempts}</h3>
               <div className="extra-small text-muted mt-1">Total attempt submissions logged</div>
             </div>
           </div>
 
           <div className="col-12 col-sm-6 col-lg-3">
-            <div className="p-3 bg-dark border border-secondary rounded-4 shadow-sm h-100">
+            <div className="p-3 bg-body-tertiary border rounded-3 shadow-sm h-100">
               <div className="text-secondary small font-monospace">Average Score</div>
-              <h3 className="fw-extrabold text-success m-0 mt-1">{stats.averageScore} pts</h3>
+              <h3 className="fw-bold text-success m-0 mt-1">{stats.averageScore} pts</h3>
               <div className="extra-small text-muted mt-1">
                 High: <strong className="text-success">{stats.highestScore}</strong> | Low: <strong className="text-danger">{stats.lowestScore}</strong>
               </div>
@@ -274,7 +275,7 @@ const FacultyAssessmentResults = () => {
           </div>
 
           <div className="col-12 col-sm-6 col-lg-3">
-            <div className="p-3 bg-dark border border-secondary rounded-4 shadow-sm h-100">
+            <div className="p-3 bg-body-tertiary border rounded-3 shadow-sm h-100">
               <div className="text-secondary small font-monospace">Pass / Fail Ratio</div>
               <div className="d-flex align-items-center gap-2 mt-1">
                 <span className="badge bg-success fs-6 px-3">{stats.passCount} Pass</span>
@@ -287,16 +288,16 @@ const FacultyAssessmentResults = () => {
       )}
 
       {/* Search & Filtering Toolbar */}
-      <div className="glass-card p-3 rounded-4 border border-secondary mb-4 shadow-sm">
+      <div className="card p-3 rounded-3 border mb-4 shadow-sm">
         <div className="row g-3 align-items-center">
           <div className="col-12 col-md-5">
             <div className="input-group input-group-sm">
-              <span className="input-group-text bg-dark border-secondary text-muted">
+              <span className="input-group-text bg-body-tertiary border text-muted">
                 <Search size={16} />
               </span>
               <input
                 type="text"
-                className="form-control bg-dark text-light border-secondary font-monospace"
+                className="form-control bg-body-tertiary text-body border font-monospace"
                 placeholder="Search Student by name, email or roll no..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -306,7 +307,7 @@ const FacultyAssessmentResults = () => {
 
           <div className="col-6 col-md-3">
             <select
-              className="form-select form-select-sm bg-dark text-light border-secondary font-monospace"
+              className="form-select form-select-sm bg-body-tertiary text-body border font-monospace"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
@@ -318,7 +319,7 @@ const FacultyAssessmentResults = () => {
 
           <div className="col-6 col-md-4">
             <select
-              className="form-select form-select-sm bg-dark text-light border-secondary font-monospace"
+              className="form-select form-select-sm bg-body-tertiary text-body border font-monospace"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
@@ -331,7 +332,7 @@ const FacultyAssessmentResults = () => {
       </div>
 
       {/* Student Results Matrix Table */}
-      <div className="glass-card rounded-4 border border-secondary shadow-lg overflow-hidden">
+      <div className="card rounded-3 border  overflow-hidden">
         {loading ? (
           <div className="text-center py-5">
             <div className="spinner-border text-primary mb-2" />
@@ -344,8 +345,8 @@ const FacultyAssessmentResults = () => {
           </div>
         ) : (
           <div className="table-responsive">
-            <table className="table table-dark table-hover align-middle mb-0 font-monospace">
-              <thead className="table-secondary text-uppercase extra-small border-bottom border-secondary">
+            <table className="table table-hover align-middle mb-0 font-monospace">
+              <thead className="table-secondary text-uppercase extra-small border-bottom border">
                 <tr>
                   <th className="py-3 px-3">Student Info</th>
                   <th className="py-3 px-2">Roll No</th>
@@ -364,18 +365,18 @@ const FacultyAssessmentResults = () => {
                   return (
                     <tr key={st.studentId._id || st.studentId}>
                       <td className="py-3 px-3">
-                        <div className="fw-bold text-light">{st.studentName}</div>
+                        <div className="fw-bold text-body">{st.studentName}</div>
                         <div className="extra-small text-muted">{st.email}</div>
                       </td>
                       <td className="py-3 px-2 small text-secondary">{st.rollNumber}</td>
                       <td className="py-3 px-2 text-center">
-                        <span className="badge bg-primary px-2.5 py-1 fs-6">{st.attemptCount}</span>
+                        <span className="badge bg-primary px-3 py-1 fs-6">{st.attemptCount}</span>
                       </td>
                       <td className="py-3 px-2 text-center fw-bold text-success fs-6">{st.bestScore} pts</td>
                       <td className="py-3 px-2 text-center fw-bold text-info fs-6">{st.latestScore} pts</td>
                       <td className="py-3 px-2 text-center font-bold">{st.latestPercentage}%</td>
                       <td className="py-3 px-2 text-center">
-                        <span className={`badge ${st.latestStatus === 'Pass' ? 'bg-success' : 'bg-danger'} px-2.5 py-1`}>
+                        <span className={`badge ${st.latestStatus === 'Pass' ? 'bg-success' : 'bg-danger'} px-3 py-1`}>
                           {st.latestStatus}
                         </span>
                       </td>
@@ -383,10 +384,10 @@ const FacultyAssessmentResults = () => {
                         {st.latestSubmittedAt ? new Date(st.latestSubmittedAt).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="py-3 px-3 text-end">
-                        <div className="d-flex align-items-center justify-content-end gap-1.5">
+                        <div className="d-flex align-items-center justify-content-end gap-2">
                           <button
                             type="button"
-                            className="btn btn-outline-info btn-sm rounded-pill px-2.5 py-1 extra-small fw-bold"
+                            className="btn btn-outline-info btn-sm rounded-pill px-3 py-1 extra-small fw-bold"
                             onClick={() => handleViewResultDetail(latestResult)}
                             title="View Full Result Detail"
                           >
@@ -394,7 +395,7 @@ const FacultyAssessmentResults = () => {
                           </button>
                           <button
                             type="button"
-                            className="btn btn-outline-primary btn-sm rounded-pill px-2.5 py-1 extra-small fw-bold"
+                            className="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 extra-small fw-bold"
                             onClick={() => handleOpenAttemptsModal(st)}
                             title="View Attempt History"
                           >
@@ -402,7 +403,7 @@ const FacultyAssessmentResults = () => {
                           </button>
                           <button
                             type="button"
-                            className="btn btn-outline-danger btn-sm rounded-pill px-2.5 py-1 extra-small fw-bold"
+                            className="btn btn-outline-danger btn-sm rounded-pill px-3 py-1 extra-small fw-bold"
                             onClick={() => handleOpenDeleteModal(latestResult, st)}
                             title="Delete Attempt Result"
                           >
@@ -454,18 +455,18 @@ const FacultyAssessmentResults = () => {
           style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)', zIndex: 2060, backdropFilter: 'blur(8px)' }}
         >
           <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content text-light border border-secondary shadow-lg rounded-4 bg-dark">
-              <div className="modal-header border-bottom border-secondary px-4 pt-4 pb-3">
+            <div className="modal-content text-body border  rounded-3 bg-body-tertiary">
+              <div className="modal-header border-bottom border px-4 pt-4 pb-3">
                 <h5 className="modal-title text-info fw-bold font-monospace">
                   Detailed Result Breakdown - Attempt #{viewingResultDoc.attemptNumber || 1}
                 </h5>
-                <button type="button" className="btn-close btn-close-white" onClick={() => setViewResultModalOpen(false)} />
+                <button type="button" className="btn-close" aria-label="Close dialog" onClick={() => setViewResultModalOpen(false)} />
               </div>
               <div className="modal-body px-4 py-3 font-monospace" style={{ maxHeight: 460, overflowY: 'auto' }}>
-                <div className="p-3 bg-black rounded-3 border border-secondary mb-3">
+                <div className="p-3 bg-body-tertiary rounded-3 border mb-3">
                   <div className="row g-2 small">
                     <div className="col-6">
-                      <span className="text-muted">Student:</span> <strong className="text-light">{viewingResultDoc.studentId?.name}</strong>
+                      <span className="text-muted">Student:</span> <strong className="text-body">{viewingResultDoc.studentId?.name}</strong>
                     </div>
                     <div className="col-6">
                       <span className="text-muted">Assessment:</span> <strong className="text-info">{viewingResultDoc.examId?.title}</strong>
@@ -480,13 +481,13 @@ const FacultyAssessmentResults = () => {
                 </div>
 
                 <div className="small text-muted mb-2">Question Breakdown:</div>
-                <div className="p-3 bg-black rounded-3 border border-secondary small">
+                <div className="p-3 bg-body-tertiary rounded-3 border small">
                   <div>Correct Answers: <strong className="text-success">{viewingResultDoc.correctAnswers || 0}</strong></div>
                   <div>Wrong Answers: <strong className="text-danger">{viewingResultDoc.wrongAnswers || 0}</strong></div>
                   <div>Skipped Questions: <strong className="text-warning">{viewingResultDoc.skippedAnswers || 0}</strong></div>
                 </div>
               </div>
-              <div className="modal-footer border-top border-secondary px-4 py-3">
+              <div className="modal-footer border-top border px-4 py-3">
                 <button type="button" className="btn btn-secondary btn-sm rounded-pill px-4" onClick={() => setViewResultModalOpen(false)}>
                   Close
                 </button>

@@ -53,7 +53,7 @@ const Timer = ({ initialSeconds = 0, onTimeUp }) => {
           ? 'bg-danger bg-opacity-25 text-danger border-danger shadow-sm'
           : isWarning
             ? 'bg-warning bg-opacity-25 text-warning border-warning'
-            : 'bg-dark text-light border-secondary'
+            : 'bg-body-tertiary text-body border'
         }`}
       style={{ minWidth: '130px', justifyContent: 'center' }}
     >

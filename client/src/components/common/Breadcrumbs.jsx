@@ -6,7 +6,7 @@ const Breadcrumbs = ({ items = [] }) => {
   if (!items || items.length === 0) return null;
 
   return (
-    <nav aria-label="breadcrumb" className="mb-4">
+    <nav aria-label="breadcrumb" className="ui-breadcrumbs mb-4">
       <ol className="breadcrumb bg-transparent p-0 m-0 small align-items-center">
         <li className="breadcrumb-item">
           <Link to="/" className="text-muted text-decoration-none d-inline-flex align-items-center gap-1 transition-all hover-primary">

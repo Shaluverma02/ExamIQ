@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import API from '../../services/api';
 import { toast } from 'react-toastify';
 import {
@@ -462,7 +462,7 @@ const CodingArena = () => {
         );
 
         toast.success(
-          '🎉 Solution Accepted!'
+          'ðŸŽ‰ Solution Accepted!'
         );
       } else {
         setOutputStatus('wrong');
@@ -712,7 +712,7 @@ const CodingArena = () => {
 
   if (loadingProblems) {
     return (
-      <div className="text-center text-light py-5">
+      <div className="text-center text-body py-5">
         <RefreshCw
           size={30}
           className="spinner-border"
@@ -733,7 +733,7 @@ const CodingArena = () => {
 
   if (!problems.length) {
     return (
-      <div className="glass-card p-5 text-center text-light">
+      <div className="card p-5 text-center text-body">
         <Code2
           size={50}
           className="text-info mb-3"
@@ -777,7 +777,7 @@ const CodingArena = () => {
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
 
         <div>
-          <h3 className="fw-extrabold text-light m-0 d-flex align-items-center gap-2">
+          <h3 className="fw-bold text-body m-0 d-flex align-items-center gap-2">
 
             <div className="p-2 bg-primary bg-opacity-20 text-primary rounded-3">
               <Cpu size={26} />
@@ -833,7 +833,7 @@ const CodingArena = () => {
           {/* Language */}
 
           <select
-            className="form-select form-select-sm bg-dark text-light border-secondary font-monospace"
+            className="form-select form-select-sm bg-dark text-body border font-monospace"
             value={language}
             onChange={(e) =>
               handleLanguageChange(
@@ -928,9 +928,9 @@ const CodingArena = () => {
 
         <div className="col-12 col-lg-5 col-xl-4">
 
-          <div className="glass-card p-4 h-100 border border-secondary">
+          <div className="card p-4 h-100 border">
 
-            <h6 className="fw-bold text-light mb-3 d-flex align-items-center gap-2">
+            <h6 className="fw-bold text-body mb-3 d-flex align-items-center gap-2">
 
               <Layers
                 size={18}
@@ -955,7 +955,7 @@ const CodingArena = () => {
                     key={problem._id}
                     className={`btn btn-sm text-start d-flex justify-content-between align-items-center rounded-3 px-3 py-3 ${isSelected
                       ? 'bg-primary text-white fw-bold border-0'
-                      : 'bg-dark text-light border border-secondary'
+                      : 'bg-dark text-body border'
                       }`}
                     onClick={() =>
                       setSelectedProblem(
@@ -1009,7 +1009,7 @@ const CodingArena = () => {
               </div>
             ) : (
               problemDetails && (
-                <div className="pt-3 border-top border-secondary">
+                <div className="pt-3 border-top border">
 
                   <h5 className="fw-bold text-info mb-2">
                     {problemDetails.title}
@@ -1046,7 +1046,7 @@ const CodingArena = () => {
 
                   {/* Description */}
 
-                  <p className="text-light small mb-3">
+                  <p className="text-body small mb-3">
                     {problemDetails.description}
                   </p>
 
@@ -1059,8 +1059,8 @@ const CodingArena = () => {
                         Input Format
                       </div>
 
-                      <div className="p-2 rounded bg-dark border border-secondary text-light small">
-                        <pre className="m-0 text-light">
+                      <div className="p-2 rounded bg-dark border text-body small">
+                        <pre className="m-0 text-body">
                           {
                             problemDetails.inputFormat
                           }
@@ -1079,8 +1079,8 @@ const CodingArena = () => {
                         Output Format
                       </div>
 
-                      <div className="p-2 rounded bg-dark border border-secondary text-light small">
-                        <pre className="m-0 text-light">
+                      <div className="p-2 rounded bg-dark border text-body small">
+                        <pre className="m-0 text-body">
                           {
                             problemDetails.outputFormat
                           }
@@ -1099,8 +1099,8 @@ const CodingArena = () => {
                         Constraints
                       </div>
 
-                      <div className="p-2 rounded bg-dark border border-secondary text-light small">
-                        <pre className="m-0 text-light">
+                      <div className="p-2 rounded bg-dark border text-body small">
+                        <pre className="m-0 text-body">
                           {
                             problemDetails.constraints
                           }
@@ -1114,10 +1114,10 @@ const CodingArena = () => {
 
                   {publicTestCases.length >
                     0 && (
-                      <div className="pt-3 border-top border-secondary">
+                      <div className="pt-3 border-top border">
 
-                        <h6 className="fw-bold text-light mb-3">
-                          Sample Test Cases
+                        <h6 className="fw-bold text-body mb-3">
+                          Public Test Cases
                         </h6>
 
                         {publicTestCases.map(
@@ -1127,7 +1127,7 @@ const CodingArena = () => {
                                 tc._id ||
                                 index
                               }
-                              className="p-3 rounded-3 bg-dark border border-secondary mb-2"
+                              className="p-3 rounded-3 bg-dark border mb-2"
                             >
 
                               <div className="text-muted small mb-1">
@@ -1167,11 +1167,11 @@ const CodingArena = () => {
 
         <div className="col-12 col-lg-7 col-xl-8">
 
-          <div className="glass-card overflow-hidden border border-secondary">
+          <div className="card overflow-hidden border">
 
             {/* Editor Header */}
 
-            <div className="d-flex justify-content-between align-items-center px-3 py-2 bg-dark border-bottom border-secondary">
+            <div className="d-flex justify-content-between align-items-center px-3 py-2 bg-dark border-bottom border">
 
               <div className="d-flex align-items-center gap-2">
 
@@ -1180,7 +1180,7 @@ const CodingArena = () => {
                   className="text-info"
                 />
 
-                <span className="text-light small fw-bold font-monospace">
+                <span className="text-body small fw-bold font-monospace">
                   {currentLanguage?.label ||
                     language}
                 </span>
@@ -1237,15 +1237,15 @@ const CodingArena = () => {
                 INPUT / OUTPUT
             ================================================== */}
 
-            <div className="row g-0 border-top border-secondary bg-dark">
+            <div className="row g-0 border-top border bg-dark">
 
               {/* Input */}
 
-              <div className="col-12 col-md-6 border-end border-secondary">
+              <div className="col-12 col-md-6 border-end border">
 
                 <div className="p-3">
 
-                  <label className="form-label small text-light fw-bold d-flex align-items-center gap-1 mb-2 font-monospace">
+                  <label className="form-label small text-body fw-bold d-flex align-items-center gap-1 mb-2 font-monospace">
 
                     <ChevronRight
                       size={14}
@@ -1256,7 +1256,7 @@ const CodingArena = () => {
                   </label>
 
                   <textarea
-                    className="form-control bg-black text-success border-secondary font-monospace small"
+                    className="form-control bg-black text-success border font-monospace small"
                     rows={7}
                     value={customInput}
                     onChange={(e) =>
@@ -1279,7 +1279,7 @@ const CodingArena = () => {
 
                   <div className="d-flex align-items-center justify-content-between mb-2">
 
-                    <label className="form-label small text-light fw-bold d-flex align-items-center gap-1 mb-0 font-monospace">
+                    <label className="form-label small text-body fw-bold d-flex align-items-center gap-1 mb-0 font-monospace">
 
                       <ChevronRight
                         size={14}
@@ -1340,7 +1340,7 @@ const CodingArena = () => {
                         : outputStatus ===
                           'wrong'
                           ? 'text-warning'
-                          : 'text-light'
+                          : 'text-body'
                       }`}
                     style={{
                       minHeight: '170px',
@@ -1351,9 +1351,9 @@ const CodingArena = () => {
                     }}
                   >
                     {running
-                      ? '⏳ Executing code...'
+                      ? 'â³ Executing code...'
                       : submitting
-                        ? '⏳ Running all test cases...'
+                        ? 'â³ Running all test cases...'
                         : output ||
                         '// Output will appear here'}
                   </pre>
@@ -1367,9 +1367,9 @@ const CodingArena = () => {
             ================================================== */}
 
             {submissionResult && (
-              <div className="border-top border-secondary p-3 bg-dark">
+              <div className="border-top border p-3 bg-dark">
 
-                <h6 className="text-light fw-bold mb-3">
+                <h6 className="text-body fw-bold mb-3">
                   Submission Result
                 </h6>
 
@@ -1377,7 +1377,7 @@ const CodingArena = () => {
 
                   <div className="col-6 col-md-3">
 
-                    <div className="p-3 rounded bg-black border border-secondary">
+                    <div className="p-3 rounded bg-black border">
 
                       <div className="text-muted small">
                         Status
@@ -1400,13 +1400,13 @@ const CodingArena = () => {
 
                   <div className="col-6 col-md-3">
 
-                    <div className="p-3 rounded bg-black border border-secondary">
+                    <div className="p-3 rounded bg-black border">
 
                       <div className="text-muted small">
                         Test Cases
                       </div>
 
-                      <div className="text-light fw-bold">
+                      <div className="text-body fw-bold">
                         {
                           submissionResult.passedTestCases
                         }
@@ -1421,7 +1421,7 @@ const CodingArena = () => {
 
                   <div className="col-6 col-md-3">
 
-                    <div className="p-3 rounded bg-black border border-secondary">
+                    <div className="p-3 rounded bg-black border">
 
                       <div className="text-muted small">
                         Score
@@ -1443,7 +1443,7 @@ const CodingArena = () => {
 
                   <div className="col-6 col-md-3">
 
-                    <div className="p-3 rounded bg-black border border-secondary">
+                    <div className="p-3 rounded bg-black border">
 
                       <div className="text-muted small d-flex align-items-center gap-1">
 
@@ -1477,13 +1477,13 @@ const CodingArena = () => {
                   0 && (
                     <div className="mt-3">
 
-                      <h6 className="text-light small fw-bold mb-2">
+                      <h6 className="text-body small fw-bold mb-2">
                         Test Case Results
                       </h6>
 
                       <div className="table-responsive">
 
-                        <table className="table table-dark table-sm align-middle mb-0">
+                        <table className="table table-sm align-middle mb-0">
 
                           <thead>
                             <tr className="text-muted small">
@@ -1590,7 +1590,7 @@ const CodingArena = () => {
           }}
         >
           <div
-            className="bg-dark border border-warning rounded-3 p-4 text-center shadow-lg"
+            className="bg-dark border-warning rounded-3 p-4 text-center shadow-lg"
             style={{
               width: '420px',
               maxWidth: '90%',
@@ -1605,11 +1605,11 @@ const CodingArena = () => {
               Assessment Warning
             </h4>
 
-            <p className="text-light mt-3 mb-4">
+            <p className="text-body mt-3 mb-4">
               {warningMessage}
             </p>
 
-            <h5 className="text-light">
+            <h5 className="text-body">
               Warning {warningCount}/3
             </h5>
 

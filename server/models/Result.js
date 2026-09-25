@@ -4,6 +4,7 @@ const resultSchema = new mongoose.Schema(
   {
     studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     examId: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam', required: true },
+    collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'College', default: null, index: true },
     attemptId: { type: mongoose.Schema.Types.ObjectId, ref: 'ExamAttempt', required: true },
     attemptNumber: { type: Number, default: 1 },
     objectiveScore: { type: Number, default: 0 },

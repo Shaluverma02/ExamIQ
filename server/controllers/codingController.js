@@ -1,4 +1,4 @@
-const CodingProblem = require('../models/CodingProblem');
+﻿const CodingProblem = require('../models/CodingProblem');
 const TestCase = require('../models/TestCase');
 const CodingSubmission = require('../models/CodingSubmission');
 const CodingSession = require('../models/CodingSession');
@@ -59,6 +59,7 @@ const updateBestSubmission = async (submission) => {
   const previousBest = await CodingSubmission.find({
     studentId: submission.studentId,
     problemId: submission.problemId,
+    ...(submission.collegeId ? { collegeId: submission.collegeId } : {}),
     _id: { $ne: submission._id },
     isBest: true,
   }).sort({
@@ -94,6 +95,7 @@ const updateBestSubmission = async (submission) => {
       {
         studentId: submission.studentId,
         problemId: submission.problemId,
+        ...(submission.collegeId ? { collegeId: submission.collegeId } : {}),
         _id: { $ne: submission._id },
       },
       {
@@ -133,7 +135,7 @@ exports.getCodingProblems = async (req, res, next) => {
       sort = 'newest',
     } = req.query;
 
-    const query = {};
+    const query = req.collegeId ? { collegeId: req.collegeId } : {};
 
     if (category && category !== 'All') {
       query.category = category;
@@ -239,7 +241,7 @@ exports.getCodingProblems = async (req, res, next) => {
      *
      * This lets frontend show:
      *
-     * ✓ Solved
+     * âœ“ Solved
      * Attempted
      * Unsolved
      */
@@ -256,6 +258,7 @@ exports.getCodingProblems = async (req, res, next) => {
       const submissions =
         await CodingSubmission.find({
           studentId: req.user._id,
+          ...(req.collegeId ? { collegeId: req.collegeId } : {}),
           problemId: {
             $in: problemIds,
           },
@@ -368,9 +371,7 @@ exports.getCodingProblemById = async (
 ) => {
   try {
     const problem =
-      await CodingProblem.findById(
-        req.params.id
-      )
+      await CodingProblem.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
         .populate(
           'createdBy',
           'name email role'
@@ -442,6 +443,7 @@ exports.getCodingProblemById = async (
       const submissions =
         await CodingSubmission.find({
           studentId: req.user._id,
+          ...(req.collegeId ? { collegeId: req.collegeId } : {}),
           problemId: problem._id,
         })
           .select(
@@ -534,6 +536,7 @@ exports.createCodingProblem = async (
      */
     problemData.createdBy =
       req.user._id;
+    problemData.collegeId = req.collegeId || undefined;
 
     /**
      * Normalize tags.
@@ -706,9 +709,7 @@ exports.updateCodingProblem = async (
     } = req.body;
 
     let problem =
-      await CodingProblem.findById(
-        req.params.id
-      );
+      await CodingProblem.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
 
     if (!problem) {
       return res.status(404).json({
@@ -811,8 +812,8 @@ exports.updateCodingProblem = async (
     }
 
     problem =
-      await CodingProblem.findByIdAndUpdate(
-        req.params.id,
+      await CodingProblem.findOneAndUpdate(
+        { _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) },
         problemData,
         {
           new: true,
@@ -902,9 +903,7 @@ exports.deleteCodingProblem = async (
 ) => {
   try {
     const problem =
-      await CodingProblem.findById(
-        req.params.id
-      );
+      await CodingProblem.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
 
     if (!problem) {
       return res.status(404).json({
@@ -1093,9 +1092,7 @@ exports.submitCode = async (
      * Get problem.
      */
     const problem =
-      await CodingProblem.findById(
-        problemId
-      );
+      await CodingProblem.findOne({ _id: problemId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
 
     if (!problem) {
       return res.status(404).json({
@@ -1503,6 +1500,9 @@ exports.submitCode = async (
         studentId:
           req.user._id,
 
+        collegeId:
+          req.collegeId || problem.collegeId || undefined,
+
         examId:
           examId || null,
 
@@ -1563,10 +1563,12 @@ exports.submitCode = async (
     ] = await Promise.all([
       CodingSubmission.countDocuments({
         problemId,
+        ...(req.collegeId ? { collegeId: req.collegeId } : {}),
       }),
 
       CodingSubmission.countDocuments({
         problemId,
+        ...(req.collegeId ? { collegeId: req.collegeId } : {}),
 
         status:
           'Accepted',
@@ -1586,8 +1588,8 @@ exports.submitCode = async (
      * Update problem statistics
      * if fields exist in model.
      */
-    await CodingProblem.findByIdAndUpdate(
-      problemId,
+    await CodingProblem.findOneAndUpdate(
+      { _id: problemId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) },
       {
         totalSubmissions,
 
@@ -1731,6 +1733,7 @@ exports.getMySubmissions = async (
     const query = {
       studentId:
         req.user._id,
+      ...(req.collegeId ? { collegeId: req.collegeId } : {}),
       problemId:
         req.params.problemId,
     };
@@ -1828,6 +1831,7 @@ exports.getMySubmissionById =
 
             studentId:
               req.user._id,
+            ...(req.collegeId ? { collegeId: req.collegeId } : {}),
           }
         )
           .populate(
@@ -1891,6 +1895,7 @@ exports.getMyBestSubmission =
           {
             studentId:
               req.user._id,
+            ...(req.collegeId ? { collegeId: req.collegeId } : {}),
 
             problemId:
               req.params
@@ -1986,6 +1991,7 @@ exports.getMySubmissionCode =
 
             studentId:
               req.user._id,
+            ...(req.collegeId ? { collegeId: req.collegeId } : {}),
           }
         )
           .select(
@@ -2063,7 +2069,7 @@ exports.submitCode = async (req, res, next) => {
       });
     }
 
-    const problem = await CodingProblem.findById(problemId);
+    const problem = await CodingProblem.findOne({ _id: problemId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     if (!problem) {
       return res.status(404).json({
         success: false,
@@ -2071,7 +2077,7 @@ exports.submitCode = async (req, res, next) => {
       });
     }
 
-    const testCases = await TestCase.find({ problemId }).lean();
+    const testCases = await TestCase.find({ $or: [{ problemId }, { codingProblemId: problemId }] }).lean();
     if (!testCases || testCases.length === 0) {
       return res.status(400).json({
         success: false,
@@ -2138,6 +2144,7 @@ exports.submitCode = async (req, res, next) => {
 
     let submission = new CodingSubmission({
       studentId: req.user ? req.user._id : null,
+      collegeId: req.collegeId || problem.collegeId || undefined,
       problemId,
       language,
       sourceCode,
@@ -2188,12 +2195,14 @@ exports.startAssessmentSession = async (req, res, next) => {
     let session = await CodingSession.findOne({
       studentId: req.user._id,
       problemId,
+      ...(req.collegeId ? { collegeId: req.collegeId } : {}),
       status: 'active',
     });
 
     if (!session) {
       session = new CodingSession({
         studentId: req.user._id,
+        collegeId: req.collegeId || undefined,
         problemId,
         examId: examId || null,
         warningCount: 0,
@@ -2230,6 +2239,7 @@ exports.recordViolation = async (req, res, next) => {
     const session = await CodingSession.findOne({
       studentId: req.user._id,
       problemId,
+      ...(req.collegeId ? { collegeId: req.collegeId } : {}),
       status: 'active',
     });
 

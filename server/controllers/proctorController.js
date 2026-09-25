@@ -1,6 +1,7 @@
 const ExamAttempt = require('../models/ExamAttempt');
 const AuditLog = require('../models/AuditLog');
 const User = require('../models/User');
+const Exam = require('../models/Exam');
 
 // In-memory active live stream registry for real-time faculty proctoring
 const liveProctorSessions = new Map();
@@ -40,21 +41,26 @@ exports.getLiveSessions = async (req, res, next) => {
     const now = Date.now();
 
     // Fetch active attempts from DB
-    const attempts = await ExamAttempt.find({ examId, status: 'in-progress' })
-      .populate('userId', 'name email role')
+    const exam = await Exam.findOne({ _id: examId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
+    if (!exam || (req.user.role === 'faculty' && exam.facultyId.toString() !== req.user._id.toString())) {
+      return res.status(404).json({ success: false, message: 'Assessment not found' });
+    }
+
+    const attempts = await ExamAttempt.find({ examId, status: 'started', ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
+      .populate('studentId', 'name email role')
       .lean();
 
     const sessions = attempts.map((att) => {
-      const uId = att.userId?._id?.toString() || att.userId?.toString();
+      const uId = att.studentId?._id?.toString() || att.studentId?.toString();
       const liveData = liveProctorSessions.get(`${examId}_${uId}`) || {};
       const isOnline = liveData.lastSeen ? now - liveData.lastSeen < 15000 : false;
 
       return {
         attemptId: att._id,
-        userId: att.userId,
+        userId: att.studentId,
         examId: att.examId,
-        studentName: att.userId?.name || 'Candidate',
-        studentEmail: att.userId?.email || '',
+        studentName: att.studentId?.name || 'Candidate',
+        studentEmail: att.studentId?.email || '',
         status: isOnline ? 'Live Online' : 'Offline / Idle',
         isOnline,
         snapshot: liveData.snapshot || '',
@@ -81,8 +87,12 @@ exports.sendWarning = async (req, res, next) => {
 
     await AuditLog.create({
       userId,
+      collegeId: req.collegeId || null,
+      role: req.user?.role || 'faculty',
       action: 'FACULTY_PROCTOR_WARNING',
-      details: message || 'Official warning issued by faculty proctor',
+      resource: 'Proctor',
+      resourceId: examId || '',
+      metadata: { details: message || 'Official warning issued by faculty proctor' },
     });
 
     res.status(200).json({ success: true, message: 'Warning dispatched to candidate' });

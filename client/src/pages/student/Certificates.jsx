@@ -1,3 +1,6 @@
+import '../../styles/student.css';
+import PageHeader from '../../components/common/PageHeader';
+import EmptyState from '../../components/common/EmptyState';
 import React, { useEffect, useState } from 'react';
 import API from '../../services/api';
 import { QRCodeSVG } from 'qrcode.react';
@@ -9,6 +12,8 @@ import { toast } from 'react-toastify';
 const Certificates = () => {
   const [certificates, setCertificates] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [downloadingId, setDownloadingId] = useState(null);
 
   useEffect(() => {
     fetchCertificates();
@@ -17,10 +22,11 @@ const Certificates = () => {
   const fetchCertificates = async () => {
     try {
       setLoading(true);
+      setError('');
       const res = await API.get('/certificates');
       setCertificates(res.data.certificates || []);
     } catch (err) {
-      console.error(err);
+      setError('We could not load your certificates. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -31,121 +37,71 @@ const Certificates = () => {
     if (!input) return;
 
     try {
-      toast.info('Generating high-resolution Certificate PDF...');
+      setDownloadingId(certId);
+      toast.info('Preparing your certificate PDF…');
       const canvas = await html2canvas(input, { scale: 2.5, useCORS: true, logging: false });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('landscape', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const imageHeight = Math.min(pdfHeight - 20, (canvas.height * (pdfWidth - 20)) / canvas.width);
+      const imageWidth = imageHeight * canvas.width / canvas.height;
+      pdf.addImage(imgData, 'PNG', (pdfWidth - imageWidth) / 2, (pdfHeight - imageHeight) / 2, imageWidth, imageHeight);
       pdf.save(`Certificate_${certId}.pdf`);
       toast.success('Certificate downloaded successfully!');
     } catch (err) {
       toast.error('Failed to download PDF');
+    } finally {
+      setDownloadingId(null);
     }
   };
 
   return (
-    <div>
-      <div className="mb-4">
-        <h3 className="fw-extrabold text-light m-0 d-flex align-items-center gap-2">
-          <Award className="text-warning" size={28} /> Verified Credentials & Certificates
-        </h3>
-        <p className="text-muted small m-0">Cryptographically verifiable certificates issued upon successful assessment completion</p>
-      </div>
-
+    <div className="student-page">
+      <PageHeader eyebrow="Your achievements" title="Certificates" description="A record of your hard work. Download and share your verified assessment credentials." actions={<span className="badge bg-primary">{loading ? 'Loading…' : certificates.length + ' credentials'}</span>} />
       {loading ? (
-        <div className="text-center py-5 text-muted">Fetching credentials...</div>
+        <div className="student-loading card" role="status"><span className="spinner-border text-primary" aria-hidden="true" /><p>Loading your certificates…</p></div>
+      ) : error ? (
+        <EmptyState title="Certificates unavailable" description={error} actionLabel="Try again" onAction={fetchCertificates} />
       ) : certificates.length === 0 ? (
-        <div className="text-center py-5 glass-card text-muted">
-          No certificates earned yet. Pass an examination to unlock your verified credential.
-        </div>
+        <EmptyState icon={Award} title="Your achievements belong here" description="Pass an eligible assessment to earn your first certificate. Your verified credentials will appear here." />
       ) : (
         <div className="row g-4">
           {certificates.map((cert) => (
             <div key={cert._id} className="col-12 col-xl-6">
-              {/* Luxury Gold-Framed Certificate Card */}
-              <div
-                id={`cert-card-${cert.certificateId}`}
-                className="p-4 p-md-5 rounded-4 position-relative overflow-hidden shadow-lg border"
-                style={{
-                  background: 'linear-gradient(135deg, #0b0f19 0%, #151c2e 50%, #0f172a 100%)',
-                  borderImage: 'linear-gradient(45deg, #f59e0b, #3b82f6, #f59e0b) 1',
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.8)',
-                }}
-              >
-                {/* Certificate Background Pattern Overlay */}
-                <div
-                  className="position-absolute top-0 start-0 w-100 h-100 opacity-10 pointer-events-none"
-                  style={{
-                    backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)',
-                    backgroundSize: '20px 20px',
-                  }}
-                />
-
-                {/* Header Header Seals */}
-                <div className="d-flex justify-content-between align-items-start mb-4 position-relative">
-                  <div className="d-flex align-items-center gap-2">
-                    <div className="rounded-circle bg-warning bg-opacity-20 text-warning p-2 border border-warning">
-                      <Sparkles size={24} />
-                    </div>
+              <article className="card p-3 h-100">
+                <div id={'cert-card-' + cert.certificateId} className="student-certificate h-100">
+                  <div className="student-certificate-topline">
                     <div>
-                      <span className="badge bg-warning text-dark text-uppercase font-monospace px-3 py-1 fw-extrabold">
-                        Verified Academic Credential
-                      </span>
-                      <div className="small text-muted font-monospace mt-1">ID: {cert.certificateId}</div>
+                      <div className="d-flex align-items-center gap-2 text-body fw-bold mb-2"><Award size={25} /> ExamIQ</div>
+                      <div className="small text-muted">Verified assessment credential</div>
+                      <div className="small text-muted mt-1" style={{ overflowWrap: 'anywhere' }}>ID: {cert.certificateId}</div>
+                    </div>
+                    <div className="bg-white p-2 rounded-3 align-self-start">
+                      <QRCodeSVG value={cert.verificationUrl || window.location.origin + '/verify-certificate/' + cert.certificateId} size={64} />
                     </div>
                   </div>
-
-                  <div className="bg-white p-2 rounded-3 shadow-sm">
-                    <QRCodeSVG value={cert.verificationUrl || `http://localhost:5173/verify-certificate/${cert.certificateId}`} size={70} />
-                  </div>
-                </div>
-
-                {/* Body Content */}
-                <div className="text-center my-4 py-2 position-relative">
-                  <div className="text-uppercase text-muted fw-bold small mb-1" style={{ letterSpacing: '2px' }}>
-                    Certificate of Achievement
-                  </div>
-                  <h2 className="fw-extrabold text-light mb-3">{cert.studentId?.name || 'Candidate Student'}</h2>
-                  <p className="text-secondary small mb-3" style={{ maxWidth: 500, margin: '0 auto' }}>
-                    has successfully passed the comprehensive assessment for
-                  </p>
-                  <h4 className="fw-bold text-warning mb-3">{cert.examId?.title || 'Examination Assessment'}</h4>
-                  <div className="d-inline-flex gap-3 px-4 py-2 rounded-pill bg-dark border border-secondary text-light small font-monospace">
-                    <span>Grade: <strong className="text-success">{cert.grade || 'Pass'}</strong></span>
-                    <span>•</span>
-                    <span>Score: <strong className="text-info">{cert.percentage}%</strong> ({cert.score} pts)</span>
-                  </div>
-                </div>
-
-                {/* Footer Signatures */}
-                <div className="d-flex justify-content-between align-items-end border-top border-secondary pt-3 mt-4 position-relative">
-                  <div className="small text-muted">
-                    <div>Issued: <strong className="text-light">{new Date(cert.issueDate || Date.now()).toLocaleDateString()}</strong></div>
-                    <div className="text-success d-flex align-items-center gap-1 mt-1">
-                      <ShieldCheck size={14} /> Official ExamiQ Digital Seal
+                  <div className="text-center py-3">
+                    <div className="text-uppercase text-muted small fw-semibold mb-3" style={{ letterSpacing: '0.16em' }}>Certificate of achievement</div>
+                    <h2 className="h3 mb-3">{cert.studentId?.name || 'Student'}</h2>
+                    <p className="text-muted small mb-2">has successfully completed the assessment</p>
+                    <h3 className="h5 text-body mb-4">{cert.examId?.title || 'Assessment'}</h3>
+                    <div className="d-inline-flex flex-wrap justify-content-center gap-3 px-4 py-3 rounded-3 bg-body-tertiary small">
+                      <span>Grade <strong className="text-success ms-1">{cert.grade || 'Pass'}</strong></span>
+                      <span>Score <strong className="text-info ms-1">{cert.percentage}%</strong></span>
+                      <span className="text-muted">{cert.score} points</span>
                     </div>
                   </div>
-
-                  <div className="d-flex gap-2">
-                    <a
-                      href={cert.verificationUrl || `/verify-certificate/${cert.certificateId}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="btn btn-outline-light btn-sm d-flex align-items-center gap-1 rounded-pill px-3"
-                    >
-                      <ExternalLink size={14} /> Verify Online
-                    </a>
-                    <button
-                      className="btn btn-warning btn-sm fw-bold d-flex align-items-center gap-1 rounded-pill px-3"
-                      onClick={() => handleDownloadPDF(cert.certificateId)}
-                    >
-                      <Download size={14} /> Download PDF
-                    </button>
+                  <div className="d-flex flex-wrap justify-content-between gap-3 border-top pt-4 mt-3">
+                    <div className="small text-muted">Issued {cert.issueDate ? new Date(cert.issueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Date unavailable'}</div>
+                    <div className="small text-success d-flex align-items-center gap-1"><ShieldCheck size={16} /> ExamIQ digital credential</div>
                   </div>
                 </div>
-              </div>
+                <div className="student-certificate-actions" data-html2canvas-ignore="true">
+                  <a href={cert.verificationUrl || '/verify-certificate/' + cert.certificateId} target="_blank" rel="noreferrer" className="btn btn-outline-secondary btn-sm"><ExternalLink size={15} /> Verify credential</a>
+                  <button type="button" className="btn btn-primary btn-sm" disabled={Boolean(downloadingId)} onClick={() => handleDownloadPDF(cert.certificateId)}><Download size={15} /> {downloadingId === cert.certificateId ? 'Preparing PDF…' : 'Download PDF'}</button>
+                </div>
+              </article>
             </div>
           ))}
         </div>

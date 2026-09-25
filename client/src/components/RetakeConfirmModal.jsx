@@ -23,8 +23,8 @@ const RetakeConfirmModal = ({
       style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)', zIndex: 2050, backdropFilter: 'blur(8px)' }}
     >
       <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: 480 }}>
-        <div className="modal-content text-light border border-info shadow-lg rounded-4" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
-          <div className="modal-header border-bottom border-secondary px-4 pt-4 pb-3">
+        <div className="modal-content text-body border-info shadow-lg rounded-3" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
+          <div className="modal-header border-bottom border px-4 pt-4 pb-3">
             <h5 className="modal-title text-info d-flex align-items-center gap-2 fw-bold">
               <RefreshCw size={22} className="text-info" />
               <span>Retake Assessment Confirmation</span>
@@ -33,11 +33,11 @@ const RetakeConfirmModal = ({
           </div>
 
           <div className="modal-body px-4 py-3">
-            <p className="fw-semibold text-light mb-3 fs-6">
+            <p className="fw-semibold text-body mb-3 fs-6">
               Are you sure you want to retake this assessment?
             </p>
 
-            <div className="p-3 rounded-3 bg-dark border border-secondary mb-3 font-monospace">
+            <div className="p-3 rounded-3 bg-body-tertiary border mb-3 font-monospace">
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted small">Assessment:</span>
                 <span className="text-info fw-bold">{assessmentTitle}</span>
@@ -48,13 +48,13 @@ const RetakeConfirmModal = ({
               </div>
             </div>
 
-            <div className="p-2.5 rounded-3 bg-info bg-opacity-10 border border-info border-opacity-25 text-info small">
+            <div className="p-2.5 rounded-3 bg-info bg-opacity-10 border-info border-opacity-25 text-info small">
               <AlertCircle size={16} className="me-1 mb-0.5 inline-block" />
               Starting a retake will generate a <strong>brand-new attempt</strong>. Your previous scores will remain safely stored.
             </div>
           </div>
 
-          <div className="modal-footer border-top border-secondary px-4 py-3 d-flex justify-content-end gap-2">
+          <div className="modal-footer border-top border px-4 py-3 d-flex justify-content-end gap-2">
             <button
               type="button"
               className="btn btn-outline-secondary btn-sm px-4 rounded-pill font-monospace"

@@ -7,7 +7,9 @@ const {
   updateProfile,
   forgotPassword,
   resetPassword,
-  verifyEmail,
+  requestPhoneVerification,
+  verifyPhone,
+  requestMagicLogin,
   magicLogin,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
@@ -18,7 +20,9 @@ router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:resetToken', resetPassword);
-router.get('/verify-email', verifyEmail);
+router.post('/phone/request-code', requestPhoneVerification);
+router.post('/phone/verify', verifyPhone);
+router.post('/magic-login', requestMagicLogin);
 router.get('/magic-login', magicLogin);
 
 module.exports = router;

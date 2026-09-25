@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useContext, useEffect, useState } from 'react';
 import API from '../../services/api';
 import { toast } from 'react-toastify';
+import { AuthContext } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
+import PageHeader from '../../components/common/PageHeader';
 import {
   Users,
   Plus,
@@ -18,6 +20,7 @@ import {
 } from 'lucide-react';
 
 const GroupManagement = () => {
+  const { activeCollege } = useContext(AuthContext);
   const [groups, setGroups] = useState([]);
   const [courses, setCourses] = useState([]);
   const [allStudents, setAllStudents] = useState([]);
@@ -36,12 +39,12 @@ const GroupManagement = () => {
   const [groupForm, setGroupForm] = useState({
     name: '',
     code: '',
-    college: 'Engineering College',
-    course: 'B.Tech',
-    department: 'Computer Science',
-    semester: '1st',
-    section: 'A',
-    academicYear: '2025-2026',
+    college: '',
+    course: '',
+    department: '',
+    semester: '',
+    section: '',
+    academicYear: '',
     description: '',
     isActive: true,
   });
@@ -64,18 +67,26 @@ const GroupManagement = () => {
       if (semesterFilter) queryParams.append('semester', semesterFilter);
       if (statusFilter) queryParams.append('isActive', statusFilter);
 
-      const [gRes, cRes, sRes] = await Promise.all([
+      const [groupsResult, coursesResult, studentsResult] = await Promise.allSettled([
         API.get(`/groups?${queryParams.toString()}`),
         API.get('/admin/courses'),
         API.get('/admin/users?role=student'),
       ]);
 
-      setGroups(gRes.data.groups || []);
-      setCourses(cRes.data.courses || []);
-      setAllStudents(sRes.data.users || []);
+      if (groupsResult.status === 'fulfilled') {
+        setGroups(groupsResult.value.data.groups || []);
+      } else {
+        throw groupsResult.reason;
+      }
+
+      if (coursesResult.status === 'fulfilled') setCourses(coursesResult.value.data.courses || []);
+      else setCourses([]);
+
+      if (studentsResult.status === 'fulfilled') setAllStudents(studentsResult.value.data.users || []);
+      else setAllStudents([]);
     } catch (e) {
       console.error(e);
-      toast.error('Failed to load group data');
+      toast.error(e.response?.data?.message || 'Failed to load group data');
     } finally {
       setLoading(false);
     }
@@ -86,12 +97,12 @@ const GroupManagement = () => {
     setGroupForm({
       name: '',
       code: '',
-      college: 'Engineering College',
-      course: 'B.Tech',
-      department: 'Computer Science',
-      semester: '1st',
-      section: 'A',
-      academicYear: '2025-2026',
+      college: activeCollege?.name || '',
+      course: '',
+      department: '',
+      semester: '',
+      section: '',
+      academicYear: '',
       description: '',
       isActive: true,
     });
@@ -103,12 +114,12 @@ const GroupManagement = () => {
     setGroupForm({
       name: group.name || '',
       code: group.code || '',
-      college: group.college || 'Engineering College',
-      course: group.course || 'B.Tech',
-      department: group.department || 'Computer Science',
-      semester: group.semester || '1st',
-      section: group.section || 'A',
-      academicYear: group.academicYear || '2025-2026',
+      college: group.college || '',
+      course: group.course || '',
+      department: group.department || '',
+      semester: group.semester || '',
+      section: group.section || '',
+      academicYear: group.academicYear || '',
       description: group.description || '',
       isActive: group.isActive !== false,
     });
@@ -201,36 +212,27 @@ const GroupManagement = () => {
   );
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-        <div>
-          <h3 className="fw-extrabold text-light m-0 d-flex align-items-center gap-2">
-            <Users size={28} className="text-primary" /> Group Management Console
-          </h3>
-          <p className="text-muted small m-0">Organize students into structured college & departmental groups</p>
-        </div>
-
-        <button
-          className="btn btn-primary fw-bold btn-sm px-4 rounded-pill d-flex align-items-center gap-2 shadow-sm"
-          onClick={handleOpenCreateModal}
-        >
-          <Plus size={16} /> Create Group
-        </button>
-      </div>
+    <div className="workspace-page management-page">
+      <PageHeader
+        eyebrow="Batches"
+        title="Groups & batches"
+        description="Organize students into structured college, course, department, semester, and section groups."
+        actions={(<button className="btn btn-primary" onClick={handleOpenCreateModal}><Plus size={16} /> Create Group</button>)}
+      />
 
       {/* Filter Toolbar */}
-      <div className="glass-card p-3 mb-4">
+      <div className="card"><div className="card-body p-3">
         <div className="row g-2 align-items-center">
           <div className="col-12 col-md-3">
             <div className="input-group input-group-sm">
-              <span className="input-group-text bg-dark border-secondary text-muted">
+              <span className="input-group-text bg-body-tertiary border text-muted">
                 <Search size={14} />
               </span>
               <input
                 type="text"
-                className="form-control bg-dark border-secondary text-light"
+                className="form-control bg-body-tertiary border text-body"
                 placeholder="Search groups..."
+                aria-label="Search groups"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -240,8 +242,9 @@ const GroupManagement = () => {
           <div className="col-6 col-md-2">
             <input
               type="text"
-              className="form-control form-control-sm bg-dark border-secondary text-light"
+              className="form-control form-control-sm bg-body-tertiary border text-body"
               placeholder="Filter College..."
+              aria-label="Filter by college"
               value={collegeFilter}
               onChange={(e) => setCollegeFilter(e.target.value)}
             />
@@ -250,8 +253,9 @@ const GroupManagement = () => {
           <div className="col-6 col-md-2">
             <input
               type="text"
-              className="form-control form-control-sm bg-dark border-secondary text-light"
+              className="form-control form-control-sm bg-body-tertiary border text-body"
               placeholder="Filter Course..."
+              aria-label="Filter by course"
               value={courseFilter}
               onChange={(e) => setCourseFilter(e.target.value)}
             />
@@ -259,8 +263,9 @@ const GroupManagement = () => {
 
           <div className="col-6 col-md-2">
             <select
-              className="form-select form-select-sm bg-dark border-secondary text-light"
+              className="form-select form-select-sm bg-body-tertiary border text-body"
               value={semesterFilter}
+              aria-label="Filter by semester"
               onChange={(e) => setSemesterFilter(e.target.value)}
             >
               <option value="">All Semesters</option>
@@ -277,8 +282,9 @@ const GroupManagement = () => {
 
           <div className="col-6 col-md-3">
             <select
-              className="form-select form-select-sm bg-dark border-secondary text-light"
+              className="form-select form-select-sm bg-body-tertiary border text-body"
               value={statusFilter}
+              aria-label="Filter by group status"
               onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="">All Statuses</option>
@@ -288,18 +294,19 @@ const GroupManagement = () => {
           </div>
         </div>
       </div>
+      </div>
 
       {loading ? (
         <div className="text-center py-5 text-muted">Loading groups...</div>
       ) : filteredGroups.length === 0 ? (
-        <div className="glass-card text-center py-5 text-muted">
+        <div className="card text-center py-5 text-muted">
           No groups found. Click "+ Create Group" to create the first group.
         </div>
       ) : (
         <div className="row g-4">
           {filteredGroups.map((group) => (
             <div key={group._id} className="col-12 col-md-6 col-lg-4">
-              <div className="glass-card p-4 rounded-4 h-100 d-flex flex-column justify-content-between border border-secondary">
+              <div className="card p-4 rounded-3 h-100 d-flex flex-column justify-content-between border">
                 <div>
                   <div className="d-flex justify-content-between align-items-start mb-2">
                     <span className="badge bg-primary font-monospace px-3 py-1 fw-bold">{group.code}</span>
@@ -331,7 +338,7 @@ const GroupManagement = () => {
                     </div>
                   </div>
 
-                  <h5 className="fw-bold text-light mb-1">{group.name}</h5>
+                  <h5 className="fw-bold text-body mb-1">{group.name}</h5>
 
                   <div className="text-muted small mb-2 d-flex align-items-center gap-1">
                     <Building size={13} className="text-primary" />
@@ -339,15 +346,15 @@ const GroupManagement = () => {
                   </div>
 
                   <div className="d-flex flex-wrap gap-1 mb-3">
-                    <span className="badge bg-dark border border-secondary text-info">{group.course}</span>
-                    <span className="badge bg-dark border border-secondary text-light">Dept: {group.department}</span>
-                    <span className="badge bg-dark border border-secondary text-warning">Sem: {group.semester}</span>
-                    <span className="badge bg-dark border border-secondary text-secondary">Sec: {group.section}</span>
+                    <span className="badge bg-body-tertiary border text-info">{group.course}</span>
+                    <span className="badge bg-body-tertiary border text-body">Dept: {group.department}</span>
+                    <span className="badge bg-body-tertiary border text-warning">Sem: {group.semester}</span>
+                    <span className="badge bg-body-tertiary border text-secondary">Sec: {group.section}</span>
                   </div>
 
                   <p className="text-secondary small mb-3">{group.description || 'No description provided.'}</p>
 
-                  <div className="p-3 rounded-3 bg-dark border border-secondary mb-3">
+                  <div className="p-3 rounded-3 bg-body-tertiary border mb-3">
                     <div className="d-flex justify-content-between align-items-center small">
                       <span className="text-muted fw-semibold">Enrolled Students:</span>
                       <span className="fw-bold text-success fs-6">{(group.students || []).length} Students</span>
@@ -357,7 +364,7 @@ const GroupManagement = () => {
 
                 <div className="d-flex gap-2">
                   <Link
-                    to={`/admin/groups/${group._id}`}
+                    to={`/college-admin/groups/${group._id}`}
                     className="btn btn-outline-info btn-sm w-50 fw-bold rounded-pill d-flex align-items-center justify-content-center gap-1"
                   >
                     <Eye size={14} /> Details
@@ -380,9 +387,9 @@ const GroupManagement = () => {
       {showModal && (
         <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
           <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content glass-card text-light">
+            <div className="modal-content card text-body">
               <form onSubmit={handleSaveGroup}>
-                <div className="modal-header border-secondary">
+                <div className="modal-header border">
                   <h5 className="modal-title fw-bold">{editingGroupId ? 'Edit Group' : 'Create Group'}</h5>
                   <button type="button" className="btn-close btn-close-white" onClick={() => setShowModal(false)} />
                 </div>
@@ -392,7 +399,7 @@ const GroupManagement = () => {
                       <label className="form-label small text-muted">Group Name *</label>
                       <input
                         type="text"
-                        className="form-control bg-secondary text-light border-0"
+                        className="form-control bg-secondary text-body border-0"
                         placeholder="e.g. BCA-1A"
                         value={groupForm.name}
                         onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
@@ -404,7 +411,7 @@ const GroupManagement = () => {
                       <label className="form-label small text-muted">Group Code *</label>
                       <input
                         type="text"
-                        className="form-control bg-secondary text-light border-0 uppercase font-monospace"
+                        className="form-control bg-secondary text-body border-0 uppercase font-monospace"
                         placeholder="e.g. BCA-1A"
                         value={groupForm.code}
                         onChange={(e) => setGroupForm({ ...groupForm, code: e.target.value })}
@@ -413,22 +420,22 @@ const GroupManagement = () => {
                     </div>
 
                     <div className="col-12 col-md-6">
-                      <label className="form-label small text-muted">College / Institution *</label>
+                      <label className="form-label small text-muted">College / Institution</label>
                       <input
                         type="text"
-                        className="form-control bg-secondary text-light border-0"
-                        placeholder="e.g. Lucknow College"
+                        className="form-control bg-secondary text-body border-0"
+                        placeholder="Active institution"
                         value={groupForm.college}
-                        onChange={(e) => setGroupForm({ ...groupForm, college: e.target.value })}
-                        required
+                        readOnly
                       />
+                      <div className="form-text">Automatically mapped to {activeCollege?.name || 'your active institute'}.</div>
                     </div>
 
                     <div className="col-12 col-md-6">
                       <label className="form-label small text-muted">Course</label>
                       <input
                         type="text"
-                        className="form-control bg-secondary text-light border-0"
+                        className="form-control bg-secondary text-body border-0"
                         placeholder="e.g. BCA"
                         value={groupForm.course}
                         onChange={(e) => setGroupForm({ ...groupForm, course: e.target.value })}
@@ -439,7 +446,7 @@ const GroupManagement = () => {
                       <label className="form-label small text-muted">Department</label>
                       <input
                         type="text"
-                        className="form-control bg-secondary text-light border-0"
+                        className="form-control bg-secondary text-body border-0"
                         placeholder="e.g. Computer Science"
                         value={groupForm.department}
                         onChange={(e) => setGroupForm({ ...groupForm, department: e.target.value })}
@@ -450,7 +457,7 @@ const GroupManagement = () => {
                       <label className="form-label small text-muted">Semester</label>
                       <input
                         type="text"
-                        className="form-control bg-secondary text-light border-0"
+                        className="form-control bg-secondary text-body border-0"
                         placeholder="e.g. 1st"
                         value={groupForm.semester}
                         onChange={(e) => setGroupForm({ ...groupForm, semester: e.target.value })}
@@ -461,7 +468,7 @@ const GroupManagement = () => {
                       <label className="form-label small text-muted">Section</label>
                       <input
                         type="text"
-                        className="form-control bg-secondary text-light border-0"
+                        className="form-control bg-secondary text-body border-0"
                         placeholder="e.g. A"
                         value={groupForm.section}
                         onChange={(e) => setGroupForm({ ...groupForm, section: e.target.value })}
@@ -472,7 +479,7 @@ const GroupManagement = () => {
                       <label className="form-label small text-muted">Academic Year</label>
                       <input
                         type="text"
-                        className="form-control bg-secondary text-light border-0"
+                        className="form-control bg-secondary text-body border-0"
                         placeholder="e.g. 2025-2026"
                         value={groupForm.academicYear}
                         onChange={(e) => setGroupForm({ ...groupForm, academicYear: e.target.value })}
@@ -482,7 +489,7 @@ const GroupManagement = () => {
                     <div className="col-12 col-md-6">
                       <label className="form-label small text-muted">Status</label>
                       <select
-                        className="form-select bg-secondary text-light border-0"
+                        className="form-select bg-secondary text-body border-0"
                         value={groupForm.isActive}
                         onChange={(e) => setGroupForm({ ...groupForm, isActive: e.target.value === 'true' })}
                       >
@@ -494,7 +501,7 @@ const GroupManagement = () => {
                     <div className="col-12">
                       <label className="form-label small text-muted">Description</label>
                       <textarea
-                        className="form-control bg-secondary text-light border-0"
+                        className="form-control bg-secondary text-body border-0"
                         rows={2}
                         placeholder="Brief notes about this group..."
                         value={groupForm.description}
@@ -504,7 +511,7 @@ const GroupManagement = () => {
                   </div>
                 </div>
 
-                <div className="modal-footer border-secondary">
+                <div className="modal-footer border">
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowModal(false)}>
                     Cancel
                   </button>
@@ -522,10 +529,10 @@ const GroupManagement = () => {
       {selectedGroup && (
         <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
           <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content glass-card text-light">
-              <div className="modal-header border-secondary">
+            <div className="modal-content card text-body">
+              <div className="modal-header border">
                 <div>
-                  <h5 className="modal-title fw-bold">Group Roster — {selectedGroup.name}</h5>
+                  <h5 className="modal-title fw-bold">Group Roster â€” {selectedGroup.name}</h5>
                   <span className="badge bg-primary font-monospace small">{selectedGroup.code} ({selectedGroup.college})</span>
                 </div>
                 <button type="button" className="btn-close btn-close-white" onClick={() => setSelectedGroup(null)} />
@@ -535,7 +542,7 @@ const GroupManagement = () => {
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <input
                     type="text"
-                    className="form-control bg-secondary text-light border-0"
+                    className="form-control bg-secondary text-body border-0"
                     placeholder="Search students..."
                     value={studentSearch}
                     onChange={(e) => setStudentSearch(e.target.value)}
@@ -546,7 +553,7 @@ const GroupManagement = () => {
                 </div>
 
                 <div className="table-responsive" style={{ maxHeight: 340, overflowY: 'auto' }}>
-                  <table className="table table-dark table-hover align-middle m-0">
+                  <table className="table table-hover align-middle m-0">
                     <thead>
                       <tr className="text-muted small">
                         <th style={{ width: 40 }}>Select</th>
@@ -572,9 +579,9 @@ const GroupManagement = () => {
                                 onChange={() => {}}
                               />
                             </td>
-                            <td className="fw-bold text-light">{student.name}</td>
+                            <td className="fw-bold text-body">{student.name}</td>
                             <td>
-                              <span className="badge bg-dark text-info font-monospace">
+                              <span className="badge bg-body-tertiary text-info font-monospace">
                                 {student.studentProfile?.rollNumber || 'Unassigned'}
                               </span>
                             </td>
@@ -587,7 +594,7 @@ const GroupManagement = () => {
                 </div>
               </div>
 
-              <div className="modal-footer border-secondary">
+              <div className="modal-footer border">
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelectedGroup(null)}>
                   Cancel
                 </button>
@@ -604,3 +611,7 @@ const GroupManagement = () => {
 };
 
 export default GroupManagement;
+
+
+
+

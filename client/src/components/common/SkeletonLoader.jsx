@@ -7,7 +7,7 @@ const SkeletonLoader = ({ count = 3, type = 'card' }) => {
         {Array.from({ length: count }).map((_, i) => (
           <div
             key={i}
-            className="p-3 rounded-3 bg-secondary border animate-pulse"
+            className="ui-skeleton-row p-3 rounded-3 bg-secondary border animate-pulse"
             style={{ height: 48, opacity: 0.65 }}
           />
         ))}
@@ -20,7 +20,7 @@ const SkeletonLoader = ({ count = 3, type = 'card' }) => {
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="col-12 col-md-4">
           <div
-            className="card border-0 shadow-sm animate-pulse"
+            className="card ui-skeleton-card shadow-sm animate-pulse"
             style={{ height: 130, opacity: 0.65, backgroundColor: 'var(--bg-secondary)' }}
           />
         </div>

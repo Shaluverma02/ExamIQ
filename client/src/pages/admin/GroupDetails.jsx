@@ -77,7 +77,7 @@ const GroupDetails = () => {
 
   if (!data || !data.group) {
     return (
-      <div className="glass-card text-center py-5 text-muted">
+      <div className="card text-center py-5 text-muted">
         <h4>Group Not Found</h4>
         <Link to="/admin/groups" className="btn btn-outline-primary btn-sm rounded-pill mt-3">
           Back to Groups
@@ -89,7 +89,7 @@ const GroupDetails = () => {
   const { group, assignedExams = [], stats = {}, results = [] } = data;
 
   return (
-    <div>
+    <div className="workspace-page management-page">
       {/* Header */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
@@ -97,8 +97,8 @@ const GroupDetails = () => {
             <ArrowLeft size={16} /> Back to All Groups
           </Link>
 
-          <div className="d-flex align-items-center gap-3">
-            <h3 className="fw-extrabold text-light m-0">{group.name}</h3>
+          <div className="d-flex align-items-center flex-wrap gap-3">
+            <h1 className="page-title">{group.name}</h1>
             <span className="badge bg-primary font-monospace fs-6 px-3 py-1">{group.code}</span>
             <span className={`badge ${group.isActive ? 'bg-success' : 'bg-secondary'}`}>
               {group.isActive ? 'Active' : 'Inactive'}
@@ -153,48 +153,48 @@ const GroupDetails = () => {
       {/* Overview Stat Cards */}
       <div className="row g-3 mb-4">
         <div className="col-12 col-sm-6 col-lg-3">
-          <div className="glass-card p-3 d-flex align-items-center gap-3">
+          <div className="card p-3 d-flex align-items-center gap-3">
             <div className="p-3 bg-primary bg-opacity-20 rounded-3 text-primary">
               <Users size={24} />
             </div>
             <div>
-              <h3 className="fw-extrabold m-0 text-light">{stats.totalStudents || 0}</h3>
+              <h3 className="fw-bold m-0 text-body">{stats.totalStudents || 0}</h3>
               <span className="text-muted small">Enrolled Students</span>
             </div>
           </div>
         </div>
 
         <div className="col-12 col-sm-6 col-lg-3">
-          <div className="glass-card p-3 d-flex align-items-center gap-3">
+          <div className="card p-3 d-flex align-items-center gap-3">
             <div className="p-3 bg-info bg-opacity-20 rounded-3 text-info">
               <BookOpen size={24} />
             </div>
             <div>
-              <h3 className="fw-extrabold m-0 text-light">{stats.totalExamsAssigned || 0}</h3>
+              <h3 className="fw-bold m-0 text-body">{stats.totalExamsAssigned || 0}</h3>
               <span className="text-muted small">Assigned Exams</span>
             </div>
           </div>
         </div>
 
         <div className="col-12 col-sm-6 col-lg-3">
-          <div className="glass-card p-3 d-flex align-items-center gap-3">
+          <div className="card p-3 d-flex align-items-center gap-3">
             <div className="p-3 bg-warning bg-opacity-20 rounded-3 text-warning">
               <Trophy size={24} />
             </div>
             <div>
-              <h3 className="fw-extrabold m-0 text-light">{stats.averageScore || 0}%</h3>
+              <h3 className="fw-bold m-0 text-body">{stats.averageScore || 0}%</h3>
               <span className="text-muted small">Average Pass Score</span>
             </div>
           </div>
         </div>
 
         <div className="col-12 col-sm-6 col-lg-3">
-          <div className="glass-card p-3 d-flex align-items-center gap-3">
+          <div className="card p-3 d-flex align-items-center gap-3">
             <div className="p-3 bg-success bg-opacity-20 rounded-3 text-success">
               <FileCheck size={24} />
             </div>
             <div>
-              <h3 className="fw-extrabold m-0 text-light">{stats.passCount || 0} / {stats.totalAttempts || 0}</h3>
+              <h3 className="fw-bold m-0 text-body">{stats.passCount || 0} / {stats.totalAttempts || 0}</h3>
               <span className="text-muted small">Passed Attempts</span>
             </div>
           </div>
@@ -202,10 +202,10 @@ const GroupDetails = () => {
       </div>
 
       {/* Tabs Header */}
-      <ul className="nav nav-tabs border-secondary mb-4">
+      <ul className="nav nav-tabs border mb-4">
         <li className="nav-item">
           <button
-            className={`nav-link text-light fw-bold ${activeTab === 'info' ? 'active bg-primary border-primary text-white' : ''}`}
+            className={`nav-link text-body fw-bold ${activeTab === 'info' ? 'active bg-primary border-primary text-white' : ''}`}
             onClick={() => setActiveTab('info')}
           >
             Group Information
@@ -213,7 +213,7 @@ const GroupDetails = () => {
         </li>
         <li className="nav-item">
           <button
-            className={`nav-link text-light fw-bold ${activeTab === 'students' ? 'active bg-primary border-primary text-white' : ''}`}
+            className={`nav-link text-body fw-bold ${activeTab === 'students' ? 'active bg-primary border-primary text-white' : ''}`}
             onClick={() => setActiveTab('students')}
           >
             Enrolled Students ({group.students?.length || 0})
@@ -221,7 +221,7 @@ const GroupDetails = () => {
         </li>
         <li className="nav-item">
           <button
-            className={`nav-link text-light fw-bold ${activeTab === 'exams' ? 'active bg-primary border-primary text-white' : ''}`}
+            className={`nav-link text-body fw-bold ${activeTab === 'exams' ? 'active bg-primary border-primary text-white' : ''}`}
             onClick={() => setActiveTab('exams')}
           >
             Assigned Exams ({assignedExams.length})
@@ -229,7 +229,7 @@ const GroupDetails = () => {
         </li>
         <li className="nav-item">
           <button
-            className={`nav-link text-light fw-bold ${activeTab === 'results' ? 'active bg-primary border-primary text-white' : ''}`}
+            className={`nav-link text-body fw-bold ${activeTab === 'results' ? 'active bg-primary border-primary text-white' : ''}`}
             onClick={() => setActiveTab('results')}
           >
             Exam Results ({results.length})
@@ -239,62 +239,62 @@ const GroupDetails = () => {
 
       {/* Tab 1: Group Information */}
       {activeTab === 'info' && (
-        <div className="glass-card p-4">
-          <h5 className="fw-bold text-light mb-3">Group Details & Attributes</h5>
+        <div className="card p-4">
+          <h5 className="fw-bold text-body mb-3">Group Details & Attributes</h5>
           <div className="row g-3 small">
             <div className="col-12 col-md-6">
-              <div className="p-3 rounded-3 bg-dark border border-secondary">
+              <div className="p-3 rounded-3 bg-body-tertiary border">
                 <div className="text-muted mb-1">Group Name:</div>
-                <div className="fw-bold fs-6 text-light">{group.name}</div>
+                <div className="fw-bold fs-6 text-body">{group.name}</div>
               </div>
             </div>
 
             <div className="col-12 col-md-6">
-              <div className="p-3 rounded-3 bg-dark border border-secondary">
+              <div className="p-3 rounded-3 bg-body-tertiary border">
                 <div className="text-muted mb-1">Group Code:</div>
                 <div className="fw-bold fs-6 text-primary font-monospace">{group.code}</div>
               </div>
             </div>
 
             <div className="col-12 col-md-4">
-              <div className="p-3 rounded-3 bg-dark border border-secondary">
+              <div className="p-3 rounded-3 bg-body-tertiary border">
                 <div className="text-muted mb-1">College / Institution:</div>
-                <div className="fw-bold text-light">{group.college}</div>
+                <div className="fw-bold text-body">{group.college}</div>
               </div>
             </div>
 
             <div className="col-12 col-md-4">
-              <div className="p-3 rounded-3 bg-dark border border-secondary">
+              <div className="p-3 rounded-3 bg-body-tertiary border">
                 <div className="text-muted mb-1">Course & Department:</div>
-                <div className="fw-bold text-light">{group.course} ({group.department})</div>
+                <div className="fw-bold text-body">{group.course} ({group.department})</div>
               </div>
             </div>
 
             <div className="col-12 col-md-4">
-              <div className="p-3 rounded-3 bg-dark border border-secondary">
+              <div className="p-3 rounded-3 bg-body-tertiary border">
                 <div className="text-muted mb-1">Semester & Section:</div>
-                <div className="fw-bold text-light">Sem {group.semester} · Sec {group.section}</div>
+                <div className="fw-bold text-body">Sem {group.semester} · Sec {group.section}</div>
               </div>
             </div>
 
             <div className="col-12 col-md-6">
-              <div className="p-3 rounded-3 bg-dark border border-secondary">
+              <div className="p-3 rounded-3 bg-body-tertiary border">
                 <div className="text-muted mb-1">Academic Year:</div>
-                <div className="fw-bold text-light">{group.academicYear}</div>
+                <div className="fw-bold text-body">{group.academicYear}</div>
               </div>
             </div>
 
             <div className="col-12 col-md-6">
-              <div className="p-3 rounded-3 bg-dark border border-secondary">
+              <div className="p-3 rounded-3 bg-body-tertiary border">
                 <div className="text-muted mb-1">Created By:</div>
-                <div className="fw-bold text-light">{group.createdBy?.name || 'Administrator'} ({group.createdBy?.email || ''})</div>
+                <div className="fw-bold text-body">{group.createdBy?.name || 'Administrator'} ({group.createdBy?.email || ''})</div>
               </div>
             </div>
 
             <div className="col-12">
-              <div className="p-3 rounded-3 bg-dark border border-secondary">
+              <div className="p-3 rounded-3 bg-body-tertiary border">
                 <div className="text-muted mb-1">Description / Notes:</div>
-                <div className="text-light">{group.description || 'No description provided.'}</div>
+                <div className="text-body">{group.description || 'No description provided.'}</div>
               </div>
             </div>
           </div>
@@ -303,13 +303,13 @@ const GroupDetails = () => {
 
       {/* Tab 2: Enrolled Students */}
       {activeTab === 'students' && (
-        <div className="glass-card p-4">
-          <h5 className="fw-bold text-light mb-3">Enrolled Student Roster</h5>
+        <div className="card p-4">
+          <h5 className="fw-bold text-body mb-3">Enrolled Student Roster</h5>
           {(!group.students || group.students.length === 0) ? (
             <div className="text-center py-4 text-muted">No students currently assigned to this group.</div>
           ) : (
             <div className="table-responsive">
-              <table className="table table-dark table-hover align-middle m-0">
+              <table className="table table-hover align-middle m-0">
                 <thead>
                   <tr className="text-muted small text-uppercase">
                     <th>#</th>
@@ -323,7 +323,7 @@ const GroupDetails = () => {
                   {group.students.map((st, idx) => (
                     <tr key={st._id}>
                       <td>{idx + 1}</td>
-                      <td><strong className="text-light">{st.name}</strong></td>
+                      <td><strong className="text-body">{st.name}</strong></td>
                       <td>
                         <span className="badge bg-secondary font-monospace">
                           {st.profile?.rollNumber || 'Not assigned'}
@@ -342,13 +342,13 @@ const GroupDetails = () => {
 
       {/* Tab 3: Assigned Exams */}
       {activeTab === 'exams' && (
-        <div className="glass-card p-4">
-          <h5 className="fw-bold text-light mb-3">Exams Assigned to Group</h5>
+        <div className="card p-4">
+          <h5 className="fw-bold text-body mb-3">Exams Assigned to Group</h5>
           {assignedExams.length === 0 ? (
             <div className="text-center py-4 text-muted">No active exams assigned to this group yet.</div>
           ) : (
             <div className="table-responsive">
-              <table className="table table-dark table-hover align-middle m-0">
+              <table className="table table-hover align-middle m-0">
                 <thead>
                   <tr className="text-muted small text-uppercase">
                     <th>Exam Title</th>
@@ -362,7 +362,7 @@ const GroupDetails = () => {
                 <tbody>
                   {assignedExams.map((as) => (
                     <tr key={as._id}>
-                      <td><strong className="text-light">{as.title || as.examId?.title}</strong></td>
+                      <td><strong className="text-body">{as.title || as.examId?.title}</strong></td>
                       <td className="small text-muted">
                         {new Date(as.startDate).toLocaleDateString()} – {new Date(as.endDate).toLocaleDateString()}
                       </td>
@@ -385,13 +385,13 @@ const GroupDetails = () => {
 
       {/* Tab 4: Results & Performance Analytics */}
       {activeTab === 'results' && (
-        <div className="glass-card p-4">
-          <h5 className="fw-bold text-light mb-3">Group Exam Performance Results</h5>
+        <div className="card p-4">
+          <h5 className="fw-bold text-body mb-3">Group Exam Performance Results</h5>
           {results.length === 0 ? (
             <div className="text-center py-4 text-muted">No submission results evaluated for this group yet.</div>
           ) : (
             <div className="table-responsive">
-              <table className="table table-dark table-hover align-middle m-0">
+              <table className="table table-hover align-middle m-0">
                 <thead>
                   <tr className="text-muted small text-uppercase">
                     <th>Student</th>
@@ -405,7 +405,7 @@ const GroupDetails = () => {
                 <tbody>
                   {results.map((r) => (
                     <tr key={r._id}>
-                      <td><strong className="text-light">{r.studentId?.name}</strong></td>
+                      <td><strong className="text-body">{r.studentId?.name}</strong></td>
                       <td>{r.examId?.title}</td>
                       <td>{r.totalScore} / {r.totalMarks}</td>
                       <td className="fw-bold text-info">{r.percentage}%</td>

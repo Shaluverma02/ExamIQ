@@ -35,14 +35,14 @@ const AIStudyRoadmapModal = ({ isOpen, onClose, resultData }) => {
       style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1050 }}
     >
       <div className="modal-dialog modal-dialog-centered modal-lg">
-        <div className="modal-content glass-card text-light border border-info shadow-lg rounded-4">
-          <div className="modal-header border-bottom border-secondary px-4 py-3">
+        <div className="modal-content card text-body border-info shadow-lg rounded-3">
+          <div className="modal-header border-bottom border px-4 py-3">
             <div className="d-flex align-items-center gap-3">
               <div className="p-2 bg-info bg-opacity-20 text-info rounded-3">
                 <Brain size={24} />
               </div>
               <div>
-                <h5 className="modal-title fw-bold text-light m-0">AI Weak-Topic Diagnostic & Study Roadmap</h5>
+                <h5 className="modal-title fw-bold text-body m-0">AI Weak-Topic Diagnostic & Study Roadmap</h5>
                 <p className="text-muted small m-0">Personalized revision plan based on evaluation insights</p>
               </div>
             </div>
@@ -53,7 +53,7 @@ const AIStudyRoadmapModal = ({ isOpen, onClose, resultData }) => {
             {!roadmap ? (
               <div className="text-center py-5">
                 <Sparkles size={48} className="text-info mb-3 opacity-75 animate-bounce" />
-                <h5 className="fw-bold text-light mb-2">Generate Your AI Performance Diagnostic</h5>
+                <h5 className="fw-bold text-body mb-2">Generate Your AI Performance Diagnostic</h5>
                 <p className="text-muted small mb-4" style={{ maxWidth: 460, margin: '0 auto' }}>
                   Analyze your wrong answers, identify conceptual weak areas, and receive a customized 7-day revision roadmap.
                 </p>
@@ -67,7 +67,7 @@ const AIStudyRoadmapModal = ({ isOpen, onClose, resultData }) => {
               </div>
             ) : (
               <div>
-                <div className="p-3 bg-dark rounded-3 border border-secondary mb-4">
+                <div className="p-3 bg-body-tertiary rounded-3 border mb-4">
                   <h6 className="fw-bold text-info mb-1 d-flex align-items-center gap-2">
                     <Target size={18} /> Diagnostic Summary
                   </h6>
@@ -77,13 +77,13 @@ const AIStudyRoadmapModal = ({ isOpen, onClose, resultData }) => {
                 <div className="row g-3 mb-4">
                   {/* Weak Topics */}
                   <div className="col-12 col-md-6">
-                    <div className="glass-card p-3 border border-danger border-opacity-50 h-100">
+                    <div className="card p-3 border-danger border-opacity-50 h-100">
                       <h6 className="fw-bold text-danger mb-2 d-flex align-items-center gap-2">
                         <AlertTriangle size={18} /> Weak Topics (Focus Needed)
                       </h6>
                       <ul className="list-group list-group-flush bg-transparent">
                         {roadmap.weakTopics.map((wt, idx) => (
-                          <li key={idx} className="list-group-item bg-transparent text-light border-secondary-subtle px-0 py-2 small d-flex align-items-center gap-2">
+                          <li key={idx} className="list-group-item bg-transparent text-body border-subtle px-0 py-2 small d-flex align-items-center gap-2">
                             <span className="badge bg-danger rounded-circle p-1"> </span> {wt}
                           </li>
                         ))}
@@ -93,13 +93,13 @@ const AIStudyRoadmapModal = ({ isOpen, onClose, resultData }) => {
 
                   {/* Strong Topics */}
                   <div className="col-12 col-md-6">
-                    <div className="glass-card p-3 border border-success border-opacity-50 h-100">
+                    <div className="card p-3 border-success border-opacity-50 h-100">
                       <h6 className="fw-bold text-success mb-2 d-flex align-items-center gap-2">
                         <CheckCircle2 size={18} /> Mastered Concept Areas
                       </h6>
                       <ul className="list-group list-group-flush bg-transparent">
                         {roadmap.strongTopics.map((st, idx) => (
-                          <li key={idx} className="list-group-item bg-transparent text-light border-secondary-subtle px-0 py-2 small d-flex align-items-center gap-2">
+                          <li key={idx} className="list-group-item bg-transparent text-body border-subtle px-0 py-2 small d-flex align-items-center gap-2">
                             <span className="badge bg-success rounded-circle p-1"> </span> {st}
                           </li>
                         ))}
@@ -109,13 +109,13 @@ const AIStudyRoadmapModal = ({ isOpen, onClose, resultData }) => {
                 </div>
 
                 {/* 7-Day Action Plan */}
-                <h6 className="fw-bold text-light mb-3 d-flex align-items-center gap-2">
+                <h6 className="fw-bold text-body mb-3 d-flex align-items-center gap-2">
                   <Calendar size={18} className="text-warning" /> 7-Day Revision & Mastery Roadmap
                 </h6>
                 <div className="row g-2">
                   {roadmap.dailyPlan.map((dp, idx) => (
                     <div key={idx} className="col-12 col-md-6">
-                      <div className="p-3 bg-dark rounded-3 border border-secondary h-100">
+                      <div className="p-3 bg-body-tertiary rounded-3 border h-100">
                         <div className="d-flex justify-content-between align-items-center mb-1">
                           <span className="badge bg-warning text-dark font-monospace fw-bold">{dp.day}</span>
                           <span className="text-info small fw-bold">{dp.focus}</span>
@@ -129,7 +129,7 @@ const AIStudyRoadmapModal = ({ isOpen, onClose, resultData }) => {
             )}
           </div>
 
-          <div className="modal-footer border-top border-secondary px-4 py-3">
+          <div className="modal-footer border-top border px-4 py-3">
             <button type="button" className="btn btn-outline-secondary rounded-pill px-4" onClick={onClose}>
               Close
             </button>

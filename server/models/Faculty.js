@@ -8,8 +8,14 @@ const facultySchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    department: { type: String, default: 'Computer Science & Engineering' },
-    designation: { type: String, default: 'Assistant Professor' },
+    collegeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'College',
+      default: null,
+      index: true,
+    },
+    department: { type: String, default: '' },
+    designation: { type: String, default: '' },
     employeeId: { type: String, default: '' },
   },
   { timestamps: true }

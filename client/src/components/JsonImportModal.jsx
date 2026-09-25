@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { questionAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import {
@@ -78,7 +78,7 @@ const SAMPLE_CODING_JSON = [
     outputFormat: "A single line with reversed words",
     testCases: [
       { input: "the sky is blue", expectedOutput: "blue is sky the", isHidden: false },
-      { input: "  hello world  ", expectedOutput: "world hello", isHidden: true }
+      { input: " hello world ", expectedOutput: "world hello", isHidden: true }
     ]
   },
   {
@@ -112,35 +112,35 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
 
   if (!isOpen) return null;
 
-  const handleDownloadSample = () => {
+  const handleDownloadTemplate = () => {
     const jsonStr = JSON.stringify(SAMPLE_JSON_DATA, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'sample_mcq_questions.json';
+    link.download = 'mcq_questions_template.json';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast.info('Sample MCQ JSON file downloaded');
+    toast.info('MCQ JSON template downloaded');
   };
 
-  const handleDownloadSampleCoding = () => {
+  const handleDownloadTemplateCoding = () => {
     const jsonStr = JSON.stringify(SAMPLE_CODING_JSON, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'sample_coding_problems.json';
+    link.download = 'coding_problems_template.json';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast.info('Sample Coding JSON file downloaded');
+    toast.info('Coding JSON template downloaded');
   };
 
-  const handleDownloadSampleCsv = () => {
+  const handleDownloadTemplateCsv = () => {
     const csvContent =
       'question,type,optionA,optionB,optionC,optionD,correctAnswer,difficulty,category,topic,marks,explanation\n' +
       '"What is Binary Search?",single,O(1),O(log n),O(n),O(n log n),O(log n),medium,Data Structures,Algorithms,2,"Halves search space"\n' +
@@ -150,12 +150,12 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'sample_questions_import.csv';
+    link.download = 'questions_import_template.csv';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast.info('Sample CSV file downloaded');
+    toast.info('CSV import template downloaded');
   };
 
   const handleFileChange = (e) => {
@@ -231,9 +231,9 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
   return (
     <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1060 }}>
       <div className="modal-dialog modal-dialog-centered modal-xl">
-        <div className="modal-content glass-card text-light border border-secondary shadow-lg">
+        <div className="modal-content card text-body border shadow-lg">
           {/* Header */}
-          <div className="modal-header border-secondary">
+          <div className="modal-header border">
             <div className="d-flex align-items-center gap-2">
               <FileJson className="text-primary" size={24} />
               <h5 className="modal-title fw-bold">Bulk Question Import (JSON)</h5>
@@ -247,16 +247,16 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
           </div>
 
           {/* Stepper Indicator */}
-          <div className="px-4 py-2 border-bottom border-secondary bg-dark bg-opacity-50">
+          <div className="px-4 py-2 border-bottom border bg-body-tertiary bg-opacity-50">
             <div className="d-flex align-items-center justify-content-center gap-2 small">
               <span className={`badge ${step >= 1 ? 'bg-primary' : 'bg-secondary'} px-3 py-1 font-monospace`}>
                 1. Upload JSON
               </span>
-              <span className="text-muted">───</span>
+              <span className="text-muted">â”€â”€â”€</span>
               <span className={`badge ${step >= 2 ? 'bg-primary' : 'bg-secondary'} px-3 py-1 font-monospace`}>
                 2. Preview & Validate
               </span>
-              <span className="text-muted">───</span>
+              <span className="text-muted">â”€â”€â”€</span>
               <span className={`badge ${step >= 3 ? 'bg-success' : 'bg-secondary'} px-3 py-1 font-monospace`}>
                 3. Import Result
               </span>
@@ -280,32 +280,32 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
                     <button
                       type="button"
                       className="btn btn-outline-info btn-sm rounded-pill px-3 d-flex align-items-center gap-2"
-                      onClick={handleDownloadSample}
+                      onClick={handleDownloadTemplate}
                     >
-                      <Download size={15} /> Sample MCQ JSON
+                      <Download size={15} /> MCQ JSON Template
                     </button>
                     <button
                       type="button"
                       className="btn btn-outline-success btn-sm rounded-pill px-3 d-flex align-items-center gap-2"
-                      onClick={handleDownloadSampleCoding}
+                      onClick={handleDownloadTemplateCoding}
                     >
-                      <Download size={15} /> Sample Coding JSON
+                      <Download size={15} /> Coding JSON Template
                     </button>
                     <button
                       type="button"
                       className="btn btn-outline-warning btn-sm rounded-pill px-3 d-flex align-items-center gap-2"
-                      onClick={handleDownloadSampleCsv}
+                      onClick={handleDownloadTemplateCsv}
                     >
-                      <Download size={15} /> Sample CSV
+                      <Download size={15} /> CSV Template
                     </button>
                   </div>
                 </div>
 
                 {/* Dropzone */}
-                <div className="border border-2 border-dashed border-secondary rounded-4 p-5 text-center bg-dark bg-opacity-20 mb-4">
+                <div className="border-2 border-dashed border rounded-3 p-5 text-center bg-body-tertiary bg-opacity-20 mb-4">
                   <Upload size={48} className="text-primary mb-3 opacity-75" />
 
-                  <h6 className="fw-bold text-light mb-2">
+                  <h6 className="fw-bold text-body mb-2">
                     {file ? file.name : 'Drag & drop your .json file here'}
                   </h6>
 
@@ -330,8 +330,8 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
                   </div>
                 </div>
 
-                <div className="p-3 rounded-3 bg-dark border border-secondary small text-muted">
-                  <div className="fw-bold text-light mb-1">Supported JSON Fields:</div>
+                <div className="p-3 rounded-3 bg-body-tertiary border small text-muted">
+                  <div className="fw-bold text-body mb-1">Supported JSON Fields:</div>
                   <code>question</code> (or <code>questionText</code>), <code>type</code> (single, multiple, boolean), <code>options</code> (array), <code>correctAnswer</code>, <code>difficulty</code>, <code>category</code>, <code>topic</code>, <code>marks</code>, <code>explanation</code>.
                 </div>
               </div>
@@ -343,36 +343,36 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
                 {/* Stats Header */}
                 <div className="row g-3 mb-3">
                   <div className="col-6 col-md-3">
-                    <div className="border border-secondary rounded-3 p-3 text-center bg-dark">
+                    <div className="border rounded-3 p-3 text-center bg-body-tertiary">
                       <div className="text-muted small">Total Questions</div>
-                      <div className="fs-4 fw-extrabold text-light">{previewData.total}</div>
+                      <div className="fs-4 fw-bold text-body">{previewData.total}</div>
                     </div>
                   </div>
 
                   <div className="col-6 col-md-3">
-                    <div className="border border-success border-opacity-50 rounded-3 p-3 text-center bg-success bg-opacity-10">
+                    <div className="border-success border-opacity-50 rounded-3 p-3 text-center bg-success bg-opacity-10">
                       <div className="text-success small fw-semibold">Valid Questions</div>
-                      <div className="fs-4 fw-extrabold text-success">{previewData.validCount}</div>
+                      <div className="fs-4 fw-bold text-success">{previewData.validCount}</div>
                     </div>
                   </div>
 
                   <div className="col-6 col-md-3">
-                    <div className="border border-danger border-opacity-50 rounded-3 p-3 text-center bg-danger bg-opacity-10">
+                    <div className="border-danger border-opacity-50 rounded-3 p-3 text-center bg-danger bg-opacity-10">
                       <div className="text-danger small fw-semibold">Invalid / Errors</div>
-                      <div className="fs-4 fw-extrabold text-danger">{previewData.invalidCount}</div>
+                      <div className="fs-4 fw-bold text-danger">{previewData.invalidCount}</div>
                     </div>
                   </div>
 
                   <div className="col-6 col-md-3">
-                    <div className="border border-warning border-opacity-50 rounded-3 p-3 text-center bg-warning bg-opacity-10">
+                    <div className="border-warning border-opacity-50 rounded-3 p-3 text-center bg-warning bg-opacity-10">
                       <div className="text-warning small fw-semibold">Duplicates Detected</div>
-                      <div className="fs-4 fw-extrabold text-warning">{previewData.duplicates}</div>
+                      <div className="fs-4 fw-bold text-warning">{previewData.duplicates}</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Duplicate Action Checkbox */}
-                <div className="d-flex justify-content-between align-items-center mb-3 p-2 rounded-3 bg-dark border border-secondary">
+                <div className="d-flex justify-content-between align-items-center mb-3 p-2 rounded-3 bg-body-tertiary border">
                   <div className="form-check m-0 small ms-2">
                     <input
                       type="checkbox"
@@ -381,7 +381,7 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
                       checked={skipDuplicates}
                       onChange={(e) => setSkipDuplicates(e.target.checked)}
                     />
-                    <label className="form-check-label text-light fw-medium" htmlFor="skipDupCheck">
+                    <label className="form-check-label text-body fw-medium" htmlFor="skipDupCheck">
                       Skip duplicate questions during import ({previewData.duplicates} detected)
                     </label>
                   </div>
@@ -392,8 +392,8 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
                 </div>
 
                 {/* Preview Table */}
-                <div className="table-responsive border border-secondary rounded-3" style={{ maxHeight: 260, overflowY: 'auto' }}>
-                  <table className="table table-dark table-hover align-middle m-0 small">
+                <div className="table-responsive border rounded-3" style={{ maxHeight: 260, overflowY: 'auto' }}>
+                  <table className="table table-hover align-middle m-0 small">
                     <thead>
                       <tr className="text-muted text-uppercase">
                         <th style={{ width: 40 }}>#</th>
@@ -412,7 +412,7 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
                         return (
                           <tr key={item.index} className={!isValid && !isDup ? 'bg-danger bg-opacity-10' : ''}>
                             <td>{item.index}</td>
-                            <td className="fw-semibold text-light text-truncate" style={{ maxWidth: 300 }}>
+                            <td className="fw-semibold text-body text-truncate" style={{ maxWidth: 300 }}>
                               {item.questionText}
                             </td>
                             <td><span className="badge bg-secondary font-monospace">{item.type}</span></td>
@@ -453,28 +453,28 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
                   <CheckCircle2 size={48} />
                 </div>
 
-                <h4 className="fw-extrabold text-light mb-1">Import Process Complete!</h4>
+                <h4 className="fw-bold text-body mb-1">Import Process Complete!</h4>
                 <p className="text-muted small mb-4">
                   Questions have been validated and inserted into the Question Bank.
                 </p>
 
                 <div className="row justify-content-center g-3 mb-4">
                   <div className="col-12 col-md-3">
-                    <div className="border border-success rounded-3 p-3 bg-success bg-opacity-10">
+                    <div className="border-success rounded-3 p-3 bg-success bg-opacity-10">
                       <div className="text-success small fw-semibold">Successfully Imported</div>
                       <div className="fs-3 fw-bold text-success">{importResult.imported}</div>
                     </div>
                   </div>
 
                   <div className="col-12 col-md-3">
-                    <div className="border border-secondary rounded-3 p-3 bg-dark">
+                    <div className="border rounded-3 p-3 bg-body-tertiary">
                       <div className="text-muted small fw-semibold">Skipped / Invalid</div>
-                      <div className="fs-3 fw-bold text-light">{importResult.skipped}</div>
+                      <div className="fs-3 fw-bold text-body">{importResult.skipped}</div>
                     </div>
                   </div>
 
                   <div className="col-12 col-md-3">
-                    <div className="border border-warning border-opacity-50 rounded-3 p-3 bg-warning bg-opacity-10">
+                    <div className="border-warning border-opacity-50 rounded-3 p-3 bg-warning bg-opacity-10">
                       <div className="text-warning small fw-semibold">Duplicates Detected</div>
                       <div className="fs-3 fw-bold text-warning">{importResult.duplicates}</div>
                     </div>
@@ -485,7 +485,7 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
           </div>
 
           {/* Modal Footer */}
-          <div className="modal-footer border-secondary">
+          <div className="modal-footer border">
             {step === 1 && (
               <>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
@@ -548,3 +548,4 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
 };
 
 export default JsonImportModal;
+

@@ -1,382 +1,295 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Mic, MicOff, Sparkles, CheckCircle2, Play, Volume2, RotateCcw, Award, ChevronRight, MessageSquare, AlertCircle, RefreshCcw } from 'lucide-react';
-import API from '../../services/api';
+import '../../styles/student.css';
+import PageHeader from '../../components/common/PageHeader';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Bot, ChevronRight, Loader2, Mic, RefreshCw, Send, Sparkles, Volume2 } from 'lucide-react';
 import { toast } from 'react-toastify';
-
-const INTERVIEW_TOPICS = [
-  {
-    id: 'dsa',
-    title: 'Data Structures & Algorithms',
-    count: '3 Questions',
-    icon: '💻',
-    color: 'success',
-    questions: [
-      { id: 1, text: 'Explain the difference between QuickSort and MergeSort. Which one has a better space complexity?' },
-      { id: 2, text: 'How do you detect a cycle in a Singly Linked List using Floyd Cycle Detection?' },
-      { id: 3, text: 'What is a Hash Collision, and how do Chaining and Open Addressing resolve it?' },
-    ],
-  },
-  {
-    id: 'system_design',
-    title: 'System Design & Scalability',
-    count: '3 Questions',
-    icon: '🏗️',
-    color: 'warning',
-    questions: [
-      { id: 1, text: 'How would you design a Rate Limiter to prevent API abuse in microservices?' },
-      { id: 2, text: 'Explain the CAP Theorem and how databases choose between Availability and Consistency.' },
-      { id: 3, text: 'What is the role of Redis Caching in reducing database read latency?' },
-    ],
-  },
-  {
-    id: 'web',
-    title: 'Full-Stack Web Dev (MERN)',
-    count: '3 Questions',
-    icon: '🌐',
-    color: 'info',
-    questions: [
-      { id: 1, text: 'How does Node.js Event Loop process asynchronous non-blocking I/O operations?' },
-      { id: 2, text: 'Explain Virtual DOM in React and how Reconciliation algorithm optimizes renders.' },
-      { id: 3, text: 'What are JWT tokens and how do you securely store them against XSS and CSRF attacks?' },
-    ],
-  },
-  {
-    id: 'behavioral',
-    title: 'Behavioral & HR Leadership',
-    count: '3 Questions',
-    icon: '🗣️',
-    color: 'primary',
-    questions: [
-      { id: 1, text: 'Tell me about a time you faced a critical bug in production right before a deadline.' },
-      { id: 2, text: 'How do you handle technical disagreements with senior team members regarding architecture?' },
-      { id: 3, text: 'Describe a complex technical concept you explained to a non-technical stakeholder.' },
-    ],
-  },
-];
+import API from '../../services/api';
+import Button from '../../components/common/Button';
 
 const AIInterviewPrep = () => {
-  const [selectedCategory, setSelectedCategory] = useState(INTERVIEW_TOPICS[0]);
-  const [currentQIndex, setCurrentQIndex] = useState(0);
-  const [candidateAnswer, setCandidateAnswer] = useState('');
-
-  const [isSpeakingAI, setIsSpeakingAI] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [evaluating, setEvaluating] = useState(false);
-
-  const [feedback, setFeedback] = useState(null);
-
   const recognitionRef = useRef(null);
+  const [topics, setTopics] = useState([]);
+  const [recentAttempts, setRecentAttempts] = useState([]);
+  const [selectedTopicId, setSelectedTopicId] = useState('');
+  const [currentQIndex, setCurrentQIndex] = useState(0);
+  const [answer, setAnswer] = useState('');
+  const [feedback, setFeedback] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [evaluating, setEvaluating] = useState(false);
+  const [isListening, setIsListening] = useState(false);
 
-  const currentQuestion = selectedCategory.questions[currentQIndex];
+  const selectedTopic = useMemo(
+    () => topics.find((topic) => topic.id === selectedTopicId) || topics[0],
+    [topics, selectedTopicId]
+  );
 
-  // AI Voice Speech Synthesis (AI reads question aloud)
-  const speakAIQuestion = (text) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.95;
-      utterance.pitch = 1.0;
-      utterance.onstart = () => setIsSpeakingAI(true);
-      utterance.onend = () => setIsSpeakingAI(false);
-      utterance.onerror = () => setIsSpeakingAI(false);
-      window.speechSynthesis.speak(utterance);
-    }
-  };
+  const activeQuestion = selectedTopic?.questions?.[currentQIndex];
 
-  // Auto read out question on switch
   useEffect(() => {
-    speakAIQuestion(currentQuestion.text);
-    setCandidateAnswer('');
-    setFeedback(null);
-  }, [currentQIndex, selectedCategory]);
+    fetchTopics();
 
-  // Speech Recognition (Candidate Answer Speech to Text)
-  const toggleRecording = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      toast.warning('Browser speech recognition not supported. You can type your answer below!');
-      return;
-    }
-
-    if (isRecording) {
+    return () => {
       if (recognitionRef.current) recognitionRef.current.stop();
-      setIsRecording(false);
-      return;
-    }
+      window.speechSynthesis?.cancel?.();
+    };
+  }, []);
 
+  const fetchTopics = async () => {
     try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onstart = () => {
-        setIsRecording(true);
-        toast.info('🎙️ Listening... Speak your technical response now!');
-      };
-
-      recognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
-        setCandidateAnswer((prev) => (prev ? prev + ' ' + transcript : transcript));
-      };
-
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        setIsRecording(false);
-      };
-
-      recognition.onend = () => {
-        setIsRecording(false);
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch (e) {
-      console.error(e);
-      setIsRecording(false);
+      setLoading(true);
+      const res = await API.get('/ai/interview/topics');
+      const loadedTopics = res.data?.topics || [];
+      setTopics(loadedTopics);
+      setRecentAttempts(res.data?.recentAttempts || []);
+      setSelectedTopicId(loadedTopics[0]?.id || '');
+      setCurrentQIndex(0);
+      setFeedback(null);
+      setAnswer('');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Unable to load interview topics');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Evaluate Candidate Answer
+  const handleTopicChange = (topicId) => {
+    setSelectedTopicId(topicId);
+    setCurrentQIndex(0);
+    setAnswer('');
+    setFeedback(null);
+  };
+
+  const handleSpeakQuestion = () => {
+    if (!activeQuestion?.text || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(activeQuestion.text);
+    utterance.rate = 0.92;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const handleVoiceAnswer = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error('Speech recognition is not supported in this browser');
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-IN';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((result) => result[0]?.transcript || '')
+        .join(' ');
+      setAnswer(transcript.trim());
+    };
+    recognition.onerror = () => {
+      setIsListening(false);
+      toast.error('Voice capture stopped. Please try again.');
+    };
+    recognition.onend = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    setIsListening(true);
+    recognition.start();
+  };
+
   const handleEvaluateAnswer = async () => {
-    if (!candidateAnswer.trim()) {
-      toast.warning('Please speak or type your answer before submitting!');
+    if (!activeQuestion || !answer.trim()) {
+      toast.warning('Write or record an answer before evaluation');
       return;
     }
 
     try {
       setEvaluating(true);
-
-      // Call AI endpoint or generate live feedback score
-      const res = await API.post('/ai/analyze-code', {
-        code: candidateAnswer,
-        language: 'text',
-        problemTitle: currentQuestion.text,
-      }).catch(() => null);
-
-      // Construct detailed AI oral feedback report
-      const textLen = candidateAnswer.split(' ').length;
-      const techScore = Math.min(98, Math.max(65, Math.floor(textLen * 2.5) + 60));
-      const clarityScore = textLen > 20 ? 'Excellent (Structured)' : 'Good (Needs Detail)';
-      const confidenceScore = isRecording ? 'High (Oral Speech)' : 'Moderate (Written Text)';
-
-      setFeedback({
-        score: `${techScore} / 100`,
-        clarity: clarityScore,
-        confidence: confidenceScore,
-        strengths: 'Demonstrated good fundamental understanding of core concepts.',
-        improvementTips: 'Try using industry keywords like space-time tradeoffs, edge cases, and architectural STAR structure.',
-        sampleAnswer: `An ideal response: "${currentQuestion.text} - Key aspects include analyzing algorithmic bounds, edge cases, and real-world system tradeoffs."`,
+      const res = await API.post('/ai/interview/evaluate', {
+        categoryId: selectedTopic.id,
+        categoryTitle: selectedTopic.title,
+        question: activeQuestion.text,
+        answer,
+        sourceType: activeQuestion.sourceType,
+        sourceId: activeQuestion.sourceId,
+        inputMode: isListening ? 'voice' : 'text',
       });
-
-      toast.success('🎉 AI Oral Answer Evaluated!');
+      setFeedback(res.data?.feedback || null);
+      toast.success('Interview answer evaluated');
+      fetchTopics();
     } catch (err) {
-      toast.error('AI Evaluation completed with score feedback!');
+      toast.error(err.response?.data?.message || 'Unable to evaluate answer');
     } finally {
       setEvaluating(false);
     }
   };
 
+  const goToQuestion = (offset) => {
+    if (!selectedTopic?.questions?.length) return;
+    const nextIndex = Math.max(0, Math.min(selectedTopic.questions.length - 1, currentQIndex + offset));
+    setCurrentQIndex(nextIndex);
+    setAnswer('');
+    setFeedback(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="card p-5 text-center">
+        <Loader2 className="text-primary mx-auto mb-3 spin" size={34} />
+        <h5 className="fw-bold">Loading interview practice...</h5>
+        <p className="text-secondary mb-0">Preparing questions from your current question bank.</p>
+      </div>
+    );
+  }
+
+  if (topics.length === 0) {
+    return (
+      <div className="card p-5 text-center">
+        <Bot className="text-primary mx-auto mb-3" size={42} />
+        <h4 className="fw-bold">No interview content available</h4>
+        <p className="text-secondary mb-4">
+          Interview topics will appear when your faculty makes practice content available.
+        </p>
+        <Button variant="primary" onClick={fetchTopics} icon={RefreshCw}>Refresh</Button>
+      </div>
+    );
+  }
+
   return (
-    <div className="container-fluid px-0">
-      {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <div>
-          <h3 className="fw-extrabold text-light m-0 d-flex align-items-center gap-2">
-            <div className="p-2 bg-info bg-opacity-20 text-info rounded-3">
-              <Bot size={26} />
+    <div className="student-page">
+      <PageHeader eyebrow="Career readiness" title="Interview practice" description="Build a clear, confident answer. Practice a topic, record your response, and review your feedback." actions={<Button variant="outline-secondary" onClick={fetchTopics} icon={RefreshCw}>Refresh topics</Button>} />
+      <div className="row g-4">
+        <div className="col-lg-4">
+          <div className="card p-3 h-100">
+            <div className="section-label mb-3">Topics</div>
+            <div className="d-flex flex-column gap-2 student-topic-list">
+              {topics.map((topic) => (
+                <button
+                  key={topic.id}
+                  type="button"
+                  aria-pressed={selectedTopic?.id === topic.id}
+                  className={`btn text-start border rounded-3 p-3 ${selectedTopic?.id === topic.id ? 'btn-primary text-white' : 'btn-light'}`}
+                  onClick={() => handleTopicChange(topic.id)}
+                >
+                  <div className="fw-bold">{topic.title}</div>
+                  <div className={`small ${selectedTopic?.id === topic.id ? 'text-white-50' : 'text-secondary'}`}>
+                    {topic.count} prompt{topic.count === 1 ? '' : 's'} from platform content
+                  </div>
+                </button>
+              ))}
             </div>
-            AI Voice Oral Technical Interview Simulator
-          </h3>
-          <p className="text-muted small m-0 mt-1">
-            Voice-enabled interactive interview practice with AI speech synthesis & real-time response evaluation
-          </p>
-        </div>
-      </div>
 
-      {/* Topics Tabs */}
-      <div className="row g-3 mb-4">
-        {INTERVIEW_TOPICS.map((topic) => (
-          <div key={topic.id} className="col-12 col-md-6 col-lg-3">
-            <div
-              className={`glass-card p-3 border cursor-pointer ${
-                selectedCategory.id === topic.id ? 'border-info bg-info bg-opacity-10' : 'border-secondary'
-              }`}
-              onClick={() => {
-                setSelectedCategory(topic);
-                setCurrentQIndex(0);
-              }}
-            >
-              <div className="d-flex align-items-center justify-content-between mb-2">
-                <span className="fs-3">{topic.icon}</span>
-                <span className="badge bg-secondary">{topic.count}</span>
+            {recentAttempts.length > 0 && (
+              <div className="mt-4 pt-3 border-top">
+                <div className="section-label mb-2">Recent attempts</div>
+                <div className="d-flex flex-column gap-2">
+                  {recentAttempts.slice(0, 4).map((attempt) => (
+                    <div key={attempt._id} className="surface-muted border rounded-3 p-2 small">
+                      <div className="fw-semibold text-truncate">{attempt.categoryTitle || 'Interview practice'}</div>
+                      <div className="text-secondary">Score: {attempt.score}%</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <h6 className="fw-bold text-light m-0">{topic.title}</h6>
-            </div>
+            )}
           </div>
-        ))}
-      </div>
-
-      {/* Simulation Arena Card */}
-      <div className="glass-card p-4 border border-secondary shadow-lg rounded-4">
-        {/* Question Bar */}
-        <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 border-bottom border-secondary pb-3">
-          <div>
-            <span className="badge bg-info mb-2 font-monospace">
-              {selectedCategory.title} • Question {currentQIndex + 1} of {selectedCategory.questions.length}
-            </span>
-            <h4 className="fw-extrabold text-light m-0 d-flex align-items-center gap-2">
-              "{currentQuestion.text}"
-            </h4>
-          </div>
-
-          <button
-            className="btn btn-outline-info btn-sm rounded-pill d-flex align-items-center gap-1"
-            onClick={() => speakAIQuestion(currentQuestion.text)}
-          >
-            <Volume2 size={16} className={isSpeakingAI ? 'text-warning animate-bounce' : ''} />
-            {isSpeakingAI ? 'AI Speaking...' : 'Read Aloud'}
-          </button>
         </div>
 
-        {/* Audio Visualizer & Speech Input Area */}
-        <div className="p-4 rounded-4 bg-dark border border-secondary text-center my-4">
-          {isRecording ? (
-            <div className="py-3">
-              <div className="p-3 bg-danger bg-opacity-20 text-danger rounded-circle d-inline-block mb-3 border border-danger animate-pulse">
-                <Mic size={42} />
+        <div className="col-lg-8">
+          <div className="card p-4">
+            <div className="d-flex justify-content-between align-items-center gap-3 border-bottom pb-3 mb-3">
+              <div>
+                <div className="section-label">Question {currentQIndex + 1} of {selectedTopic.questions.length}</div>
+                <h5 className="fw-bold mb-0">{selectedTopic.title}</h5>
               </div>
-              <h5 className="fw-bold text-danger mb-1">🎙️ AI Listening & Transcribing Speech...</h5>
-              <p className="text-muted small mb-3">Speak clearly into your microphone. Click Stop when finished.</p>
+              <Button variant="outline-secondary" size="sm" onClick={handleSpeakQuestion} icon={Volume2}>Read aloud</Button>
+            </div>
 
-              {/* Audio Wave Visualizer Simulation */}
-              <div className="d-flex justify-content-center align-items-center gap-1 mb-4" style={{ height: 30 }}>
-                {[40, 70, 30, 90, 50, 80, 40, 100, 60, 30].map((h, i) => (
-                  <div
-                    key={i}
-                    className="bg-danger rounded-pill animate-pulse"
-                    style={{ width: 6, height: `${h}%`, animationDelay: `${i * 0.1}s` }}
-                  />
-                ))}
+            <div className="student-prompt border rounded-3 mb-4">
+              <p className="fw-semibold mb-0">{activeQuestion?.text}</p>
+            </div>
+
+            <div className="mb-3">
+              <label htmlFor="interview-answer" className="ui-label mb-2">Your answer</label>
+              <textarea
+                id="interview-answer"
+                className="form-control"
+                rows={8}
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                placeholder="Explain your answer with reasoning, examples, edge cases, and complexity where relevant."
+              />
+            </div>
+
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+              <Button variant={isListening ? 'danger' : 'outline-primary'} onClick={handleVoiceAnswer} icon={Mic}>
+                {isListening ? 'Stop recording' : 'Record answer'}
+              </Button>
+              <Button variant="primary" onClick={handleEvaluateAnswer} loading={evaluating} icon={Send}>
+                Evaluate answer
+              </Button>
+            </div>
+
+            {feedback && (
+              <div className="student-feedback p-4 mb-4" aria-live="polite">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h5 className="fw-bold mb-0 d-flex align-items-center gap-2"><Sparkles size={18} className="text-warning" /> Evaluation</h5>
+                  <span className="badge bg-primary fs-6">{feedback.score}%</span>
+                </div>
+
+                <div className="row g-2 mb-3">
+                  {[
+                    ['Clarity', feedback.clarity],
+                    ['Relevance', feedback.relevance],
+                    ['Structure', feedback.structure],
+                    ['Specificity', feedback.specificity],
+                  ].map(([label, value]) => (
+                    <div className="col-6 col-md-3" key={label}>
+                      <div className="surface-muted border rounded-3 p-2 text-center">
+                        <div className="small text-secondary">{label}</div>
+                        <div className="fw-bold text-primary">{value}%</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <div className="fw-semibold mb-2">Strengths</div>
+                    <ul className="small text-secondary mb-0">
+                      {feedback.strengths?.map((item) => <li key={item}>{item}</li>)}
+                    </ul>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="fw-semibold mb-2">Improve next</div>
+                    <ul className="small text-secondary mb-0">
+                      {feedback.improvementTips?.map((item) => <li key={item}>{item}</li>)}
+                    </ul>
+                  </div>
+                </div>
+
+                {feedback.keyTerms?.length > 0 && (
+                  <div className="mt-3 pt-3 border-top small">
+                    <span className="text-secondary me-2">Matched prompt terms:</span>
+                    {feedback.keyTerms.map((term) => <span key={term} className="badge bg-light text-dark border me-1">{term}</span>)}
+                  </div>
+                )}
               </div>
+            )}
 
-              <button className="btn btn-danger fw-bold rounded-pill px-4" onClick={toggleRecording}>
-                <MicOff size={18} className="me-1" /> Stop Recording
+            <div className="d-flex justify-content-between align-items-center border-top pt-3">
+              <button className="btn btn-outline-secondary btn-sm rounded-pill" onClick={() => goToQuestion(-1)} disabled={currentQIndex === 0}>
+                Previous Question
+              </button>
+              <span className="text-secondary small font-monospace">{currentQIndex + 1} / {selectedTopic.questions.length}</span>
+              <button className="btn btn-info btn-sm rounded-pill px-3" onClick={() => goToQuestion(1)} disabled={currentQIndex === selectedTopic.questions.length - 1}>
+                Next Question <ChevronRight size={14} />
               </button>
             </div>
-          ) : (
-            <div className="py-3">
-              <div className="p-3 bg-primary bg-opacity-20 text-primary rounded-circle d-inline-block mb-3 border border-primary">
-                <Sparkles size={42} />
-              </div>
-              <h5 className="fw-bold text-light mb-1">Ready for Candidate Response</h5>
-              <p className="text-muted small mb-3">Click Record to speak your answer or type manually into the response box below.</p>
-
-              <button className="btn btn-primary fw-bold rounded-pill px-4 me-2" onClick={toggleRecording}>
-                <Mic size={18} className="me-1" /> Record Voice Answer
-              </button>
-            </div>
-          )}
-
-          {/* Response Textarea */}
-          <div className="mt-4 text-start">
-            <label className="form-label text-muted small fw-bold">YOUR ORAL RESPONSE TRANSCRIPT / WRITTEN ANSWER:</label>
-            <textarea
-              rows={4}
-              className="form-control bg-secondary text-light border-secondary"
-              placeholder="Your spoken transcript will appear here automatically, or type your answer..."
-              value={candidateAnswer}
-              onChange={(e) => setCandidateAnswer(e.target.value)}
-            />
           </div>
-
-          {/* Submit Action */}
-          <div className="d-flex justify-content-end gap-2 mt-3">
-            <button
-              className="btn btn-warning fw-bold text-dark rounded-pill px-4 d-flex align-items-center gap-2 shadow"
-              onClick={handleEvaluateAnswer}
-              disabled={evaluating || !candidateAnswer.trim()}
-            >
-              {evaluating ? (
-                <>
-                  <span className="spinner-border spinner-border-sm" /> Evaluating Technical Quality...
-                </>
-              ) : (
-                <>
-                  <Bot size={18} /> Evaluate Answer with AI
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* AI Performance Evaluation Report Card */}
-        {feedback && (
-          <div className="p-4 rounded-4 bg-black border border-success mb-4">
-            <h5 className="fw-bold text-success mb-3 d-flex align-items-center gap-2">
-              <CheckCircle2 size={22} /> AI Technical Evaluation & Feedback Report
-            </h5>
-
-            <div className="row g-3 mb-3">
-              <div className="col-12 col-md-4">
-                <div className="p-3 rounded bg-dark text-center border border-secondary">
-                  <span className="text-muted small d-block mb-1">Technical Score</span>
-                  <strong className="fw-extrabold text-success fs-3">{feedback.score}</strong>
-                </div>
-              </div>
-
-              <div className="col-12 col-md-4">
-                <div className="p-3 rounded bg-dark text-center border border-secondary">
-                  <span className="text-muted small d-block mb-1">Clarity & Depth</span>
-                  <strong className="fw-bold text-info fs-5">{feedback.clarity}</strong>
-                </div>
-              </div>
-
-              <div className="col-12 col-md-4">
-                <div className="p-3 rounded bg-dark text-center border border-secondary">
-                  <span className="text-muted small d-block mb-1">Delivery Confidence</span>
-                  <strong className="fw-bold text-warning fs-5">{feedback.confidence}</strong>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-3 rounded bg-dark text-light border border-secondary mb-3 small">
-              <strong className="text-success d-block mb-1">💡 Key Strengths:</strong>
-              {feedback.strengths}
-            </div>
-
-            <div className="p-3 rounded bg-dark text-light border border-secondary small">
-              <strong className="text-warning d-block mb-1">🎯 Ideal Benchmark Model Answer:</strong>
-              {feedback.sampleAnswer}
-            </div>
-          </div>
-        )}
-
-        {/* Footer Question Navigator */}
-        <div className="d-flex justify-content-between align-items-center border-top border-secondary pt-3">
-          <button
-            className="btn btn-outline-secondary btn-sm rounded-pill"
-            onClick={() => setCurrentQIndex((prev) => Math.max(0, prev - 1))}
-            disabled={currentQIndex === 0}
-          >
-            Previous Question
-          </button>
-
-          <span className="text-muted small font-monospace">
-            Question {currentQIndex + 1} of {selectedCategory.questions.length}
-          </span>
-
-          <button
-            className="btn btn-info btn-sm rounded-pill px-3"
-            onClick={() => setCurrentQIndex((prev) => Math.min(selectedCategory.questions.length - 1, prev + 1))}
-            disabled={currentQIndex === selectedCategory.questions.length - 1}
-          >
-            Next Question <ChevronRight size={14} />
-          </button>
         </div>
       </div>
     </div>

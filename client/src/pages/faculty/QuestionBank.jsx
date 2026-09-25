@@ -1,3 +1,4 @@
+import '../../styles/faculty.css';
 import React, { useEffect, useState } from 'react';
 import API from '../../services/api';
 import {
@@ -33,9 +34,9 @@ const LANGUAGES = [
 const DEFAULT_STARTER_CODE = {
   javascript: `const fs = require('fs');\nconst input = fs.readFileSync(0, 'utf8').trim();\n\n// Write your solution here\n`,
   python: `import sys\ninput_data = sys.stdin.read().strip()\n\n# Write your solution here\n`,
-  java: `import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        // Write your solution here\n    }\n}`,
-  cpp: `#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // Write your solution here\n    return 0;\n}`,
-  c: `#include <stdio.h>\n\nint main() {\n    // Write your solution here\n    return 0;\n}`,
+  java: `import java.util.*;\n\npublic class Main {\n public static void main(String[] args) {\n Scanner sc = new Scanner(System.in);\n // Write your solution here\n }\n}`,
+  cpp: `#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n // Write your solution here\n return 0;\n}`,
+  c: `#include <stdio.h>\n\nint main() {\n // Write your solution here\n return 0;\n}`,
 };
 
 const createEmptyTestCase = (isHidden = false) => ({
@@ -374,7 +375,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
       {/* Header Bar */}
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-          <h3 className="fw-extrabold text-light m-0 d-flex align-items-center gap-2">
+          <h3 className="fw-bold text-body m-0 d-flex align-items-center gap-2">
             <BookOpen size={28} className="text-primary" /> Question Bank
           </h3>
           <p className="text-muted small m-0">Manage and organize your assessment questions</p>
@@ -420,10 +421,10 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
       </div>
 
       {/* Tabs Bar */}
-      <ul className="nav nav-tabs border-secondary mb-4">
+      <ul className="nav nav-tabs border mb-4">
         <li className="nav-item">
           <button
-            className={`nav-link fw-bold ${activeTab === 'mcq' ? 'active bg-dark text-light border-secondary' : 'text-muted'}`}
+            className={`nav-link fw-bold ${activeTab === 'mcq' ? 'active bg-body-tertiary text-body border' : 'text-muted'}`}
             onClick={() => setActiveTab('mcq')}
           >
             MCQ & Objective ({questions.length})
@@ -431,7 +432,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
         </li>
         <li className="nav-item">
           <button
-            className={`nav-link fw-bold ${activeTab === 'coding' ? 'active bg-dark text-light border-secondary' : 'text-muted'}`}
+            className={`nav-link fw-bold ${activeTab === 'coding' ? 'active bg-body-tertiary text-body border' : 'text-muted'}`}
             onClick={() => setActiveTab('coding')}
           >
             Coding Problems ({problems.length})
@@ -440,16 +441,16 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
       </ul>
 
       {/* Filter & Search Bar */}
-      <div className="glass-card p-3 mb-4 rounded-4 border border-secondary">
+      <div className="card p-3 mb-4 rounded-3 border">
         <div className="row g-2 align-items-center">
           <div className="col-12 col-md-4">
             <div className="input-group input-group-sm">
-              <span className="input-group-text bg-dark border-secondary text-muted">
+              <span className="input-group-text bg-body-tertiary border text-muted">
                 <Search size={15} />
               </span>
               <input
                 type="text"
-                className="form-control bg-dark border-secondary text-light"
+                className="form-control bg-body-tertiary border text-body"
                 placeholder="Search questions by text or keyword..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -459,7 +460,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
 
           <div className="col-6 col-md-2">
             <select
-              className="form-select form-select-sm bg-dark border-secondary text-light"
+              className="form-select form-select-sm bg-body-tertiary border text-body"
               value={difficultyFilter}
               onChange={(e) => setDifficultyFilter(e.target.value)}
             >
@@ -472,7 +473,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
 
           <div className="col-6 col-md-2">
             <select
-              className="form-select form-select-sm bg-dark border-secondary text-light"
+              className="form-select form-select-sm bg-body-tertiary border text-body"
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
             >
@@ -486,7 +487,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
           <div className="col-6 col-md-2">
             <input
               type="text"
-              className="form-control form-control-sm bg-dark border-secondary text-light"
+              className="form-control form-control-sm bg-body-tertiary border text-body"
               placeholder="Filter Category..."
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
@@ -523,9 +524,9 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
       {!loading && activeTab === 'mcq' && (
         <>
           {filteredQuestions.length === 0 ? (
-            <div className="glass-card text-center py-5 text-muted rounded-4 border border-secondary">
+            <div className="card text-center py-5 text-muted rounded-3 border">
               <FileQuestion size={48} className="text-secondary mb-3 opacity-50" />
-              <h5 className="fw-bold text-light mb-1">No Questions Found</h5>
+              <h5 className="fw-bold text-body mb-1">No Questions Found</h5>
               <p className="small text-muted mb-4">No assessment questions match your search or filter criteria.</p>
               <div className="d-flex justify-content-center gap-2">
                 <button
@@ -538,7 +539,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                   <Plus size={16} /> Add Question
                 </button>
                 <button
-                  className="btn btn-outline-light btn-sm rounded-pill fw-bold px-3 d-flex align-items-center gap-2"
+                  className="btn btn-outline-secondary btn-sm rounded-pill fw-bold px-3 d-flex align-items-center gap-2"
                   onClick={() => setShowImportModal(true)}
                 >
                   <FileJson size={16} /> Import JSON
@@ -546,11 +547,11 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
               </div>
             </div>
           ) : (
-            <div className="card border-0 shadow-sm rounded-4 bg-dark overflow-hidden border border-secondary">
+            <div className="card shadow-sm rounded-3 bg-body-tertiary overflow-hidden border">
               <div className="table-responsive m-0">
-                <table className="table table-dark table-hover align-middle m-0" style={{ fontSize: '0.88rem' }}>
+                <table className="table table-hover align-middle m-0" style={{ fontSize: '0.88rem' }}>
                   <thead>
-                    <tr className="text-muted text-uppercase fs-7 border-bottom border-secondary">
+                    <tr className="text-muted text-uppercase fs-7 border-bottom border">
                       <th className="py-3 ps-4" style={{ width: 50 }}>#</th>
                       <th className="py-3">Question Text</th>
                       <th className="py-3">Type</th>
@@ -591,21 +592,21 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                             <button
                               className="btn btn-sm btn-outline-info p-1 px-2 border-0"
                               title="View Details"
-                              onClick={() => setSelectedQuestion(q)}
+                               aria-label="View Details" onClick={() => setSelectedQuestion(q)}
                             >
                               <Eye size={16} />
                             </button>
                             <button
                               className="btn btn-sm btn-outline-primary p-1 px-2 border-0"
                               title="Edit Question"
-                              onClick={() => handleOpenEditMcq(q)}
+                               aria-label="Edit Question" onClick={() => handleOpenEditMcq(q)}
                             >
                               <Edit3 size={16} />
                             </button>
                             <button
                               className="btn btn-sm btn-outline-danger p-1 px-2 border-0"
                               title="Delete Question"
-                              onClick={() => handleDeleteQuestion(q._id)}
+                               aria-label="Delete Question" onClick={() => handleDeleteQuestion(q._id)}
                             >
                               <Trash2 size={16} />
                             </button>
@@ -625,9 +626,9 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
       {!loading && activeTab === 'coding' && (
         <>
           {filteredProblems.length === 0 ? (
-            <div className="glass-card text-center py-5 text-muted rounded-4 border border-secondary">
+            <div className="card text-center py-5 text-muted rounded-3 border">
               <Code2 size={48} className="text-secondary mb-3 opacity-50" />
-              <h5 className="fw-bold text-light mb-1">No Coding Problems Found</h5>
+              <h5 className="fw-bold text-body mb-1">No Coding Problems Found</h5>
               <p className="small text-muted mb-4">No coding challenges match your search or filter criteria.</p>
               <button
                 className="btn btn-info btn-sm rounded-pill fw-bold px-4 text-dark d-inline-flex align-items-center gap-2"
@@ -643,7 +644,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
             <div className="row g-3">
               {filteredProblems.map((p) => (
                 <div key={p._id} className="col-12 col-md-6 col-lg-4">
-                  <div className="glass-card p-4 rounded-4 border border-secondary h-100 d-flex flex-column justify-content-between">
+                  <div className="card p-4 rounded-3 border h-100 d-flex flex-column justify-content-between">
                     <div>
                       <div className="d-flex justify-content-between align-items-start mb-2">
                         <span className={`badge ${p.difficulty === 'easy' ? 'bg-success' : p.difficulty === 'hard' ? 'bg-danger' : 'bg-warning'}`}>
@@ -652,7 +653,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                         <span className="badge bg-info text-dark font-monospace">{p.marks || 10} Marks</span>
                       </div>
 
-                      <h5 className="fw-bold text-light mb-1">{p.title}</h5>
+                      <h5 className="fw-bold text-body mb-1">{p.title}</h5>
 
                       <div className="text-muted small mb-3">
                         <span>{p.category}</span> · <span>Topic: {p.topic}</span>
@@ -663,7 +664,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                       </p>
                     </div>
 
-                    <div className="d-flex gap-2 border-top border-secondary pt-3 mt-2">
+                    <div className="d-flex gap-2 border-top border pt-3 mt-2">
                       <button
                         className="btn btn-outline-primary btn-sm flex-fill fw-bold rounded-pill d-flex align-items-center justify-content-center gap-1"
                         onClick={() => handleEditCoding(p._id)}
@@ -673,7 +674,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                       <button
                         className="btn btn-outline-danger btn-sm rounded-circle p-2"
                         title="Delete Problem"
-                        onClick={() => handleDeleteCoding(p._id)}
+                         aria-label="Delete Problem" onClick={() => handleDeleteCoding(p._id)}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -690,15 +691,15 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
       {selectedQuestion && (
         <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1055 }}>
           <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content glass-card text-light border border-secondary shadow-lg">
-              <div className="modal-header border-secondary">
+            <div className="modal-content card text-body border ">
+              <div className="modal-header border">
                 <div className="d-flex align-items-center gap-2">
                   <FileQuestion size={22} className="text-primary" />
                   <h5 className="modal-title fw-bold">Question Preview</h5>
                 </div>
                 <button
                   type="button"
-                  className="btn-close btn-close-white"
+                  className="btn-close" aria-label="Close dialog"
                   onClick={() => setSelectedQuestion(null)}
                 />
               </div>
@@ -709,12 +710,12 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                   <span className={`badge ${selectedQuestion.difficulty === 'easy' ? 'bg-success' : selectedQuestion.difficulty === 'hard' ? 'bg-danger' : 'bg-warning'}`}>
                     {selectedQuestion.difficulty}
                   </span>
-                  <span className="badge bg-dark border border-secondary text-info">{selectedQuestion.category || 'General'}</span>
-                  <span className="badge bg-dark border border-secondary text-light">Topic: {selectedQuestion.topic || 'General'}</span>
+                  <span className="badge bg-body-tertiary border text-info">{selectedQuestion.category || 'General'}</span>
+                  <span className="badge bg-body-tertiary border text-body">Topic: {selectedQuestion.topic || 'General'}</span>
                   <span className="badge bg-info text-dark font-monospace">{selectedQuestion.marks} Marks</span>
                 </div>
 
-                <h5 className="fw-bold text-light mb-4">{selectedQuestion.questionText}</h5>
+                <h5 className="fw-bold text-body mb-4">{selectedQuestion.questionText}</h5>
 
                 <h6 className="fw-bold text-muted small text-uppercase mb-2">Options</h6>
                 <div className="d-flex flex-column gap-2 mb-4">
@@ -724,7 +725,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                       className={`p-3 rounded-3 border d-flex justify-content-between align-items-center ${
                         opt.isCorrect
                           ? 'border-success bg-success bg-opacity-10 text-success'
-                          : 'border-secondary bg-dark text-light'
+                          : 'border bg-body-tertiary text-body'
                       }`}
                     >
                       <span><strong>{String.fromCharCode(65 + i)}.</strong> {opt.optionText}</span>
@@ -734,14 +735,14 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                 </div>
 
                 {selectedQuestion.explanation && (
-                  <div className="p-3 rounded-3 bg-dark border border-secondary mb-3">
+                  <div className="p-3 rounded-3 bg-body-tertiary border mb-3">
                     <h6 className="fw-bold text-info small mb-1">Explanation:</h6>
                     <p className="text-secondary small m-0">{selectedQuestion.explanation}</p>
                   </div>
                 )}
               </div>
 
-              <div className="modal-footer border-secondary">
+              <div className="modal-footer border">
                 <button
                   type="button"
                   className="btn btn-outline-primary btn-sm rounded-pill px-3"
@@ -770,15 +771,15 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
       {showMcqModal && (
         <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1055 }}>
           <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content glass-card text-light border border-secondary shadow-lg">
+            <div className="modal-content card text-body border ">
               <form onSubmit={handleSaveMcq}>
-                <div className="modal-header border-secondary">
+                <div className="modal-header border">
                   <h5 className="modal-title fw-bold">
                     {editingMcqId ? 'Edit MCQ Question' : 'Add MCQ Question'}
                   </h5>
                   <button
                     type="button"
-                    className="btn-close btn-close-white"
+                    className="btn-close" aria-label="Close dialog"
                     onClick={() => {
                       setShowMcqModal(false);
                       resetMcqForm();
@@ -790,7 +791,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                   <div className="mb-3">
                     <label className="form-label small text-muted fw-semibold">Question Text *</label>
                     <textarea
-                      className="form-control bg-dark border-secondary text-light"
+                      className="form-control bg-body-tertiary border text-body"
                       rows={3}
                       placeholder="e.g. What is the time complexity of Binary Search?"
                       value={mcqForm.questionText}
@@ -804,7 +805,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                       <label className="form-label small text-muted fw-semibold">Option A *</label>
                       <input
                         type="text"
-                        className="form-control bg-dark border-secondary text-light"
+                        className="form-control bg-body-tertiary border text-body"
                         placeholder="Option A string"
                         value={mcqForm.optionA}
                         onChange={(e) => setMcqForm({ ...mcqForm, optionA: e.target.value })}
@@ -815,7 +816,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                       <label className="form-label small text-muted fw-semibold">Option B *</label>
                       <input
                         type="text"
-                        className="form-control bg-dark border-secondary text-light"
+                        className="form-control bg-body-tertiary border text-body"
                         placeholder="Option B string"
                         value={mcqForm.optionB}
                         onChange={(e) => setMcqForm({ ...mcqForm, optionB: e.target.value })}
@@ -826,7 +827,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                       <label className="form-label small text-muted fw-semibold">Option C *</label>
                       <input
                         type="text"
-                        className="form-control bg-dark border-secondary text-light"
+                        className="form-control bg-body-tertiary border text-body"
                         placeholder="Option C string"
                         value={mcqForm.optionC}
                         onChange={(e) => setMcqForm({ ...mcqForm, optionC: e.target.value })}
@@ -837,7 +838,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                       <label className="form-label small text-muted fw-semibold">Option D *</label>
                       <input
                         type="text"
-                        className="form-control bg-dark border-secondary text-light"
+                        className="form-control bg-body-tertiary border text-body"
                         placeholder="Option D string"
                         value={mcqForm.optionD}
                         onChange={(e) => setMcqForm({ ...mcqForm, optionD: e.target.value })}
@@ -850,7 +851,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                     <div className="col-6 col-md-3">
                       <label className="form-label small text-muted fw-semibold">Correct Answer *</label>
                       <select
-                        className="form-select bg-dark border-secondary text-light fw-bold"
+                        className="form-select bg-body-tertiary border text-body fw-bold"
                         value={mcqForm.correctAnswer}
                         onChange={(e) => setMcqForm({ ...mcqForm, correctAnswer: e.target.value })}
                       >
@@ -864,7 +865,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                     <div className="col-6 col-md-3">
                       <label className="form-label small text-muted fw-semibold">Difficulty</label>
                       <select
-                        className="form-select bg-dark border-secondary text-light"
+                        className="form-select bg-body-tertiary border text-body"
                         value={mcqForm.difficulty}
                         onChange={(e) => setMcqForm({ ...mcqForm, difficulty: e.target.value })}
                       >
@@ -878,7 +879,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                       <label className="form-label small text-muted fw-semibold">Marks</label>
                       <input
                         type="number"
-                        className="form-control bg-dark border-secondary text-light"
+                        className="form-control bg-body-tertiary border text-body"
                         value={mcqForm.marks}
                         onChange={(e) => setMcqForm({ ...mcqForm, marks: e.target.value })}
                       />
@@ -889,7 +890,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                       <input
                         type="number"
                         step="0.25"
-                        className="form-control bg-dark border-secondary text-light"
+                        className="form-control bg-body-tertiary border text-body"
                         value={mcqForm.negativeMarks}
                         onChange={(e) => setMcqForm({ ...mcqForm, negativeMarks: e.target.value })}
                       />
@@ -901,7 +902,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                       <label className="form-label small text-muted fw-semibold">Category</label>
                       <input
                         type="text"
-                        className="form-control bg-dark border-secondary text-light"
+                        className="form-control bg-body-tertiary border text-body"
                         placeholder="e.g. Data Structures"
                         value={mcqForm.category}
                         onChange={(e) => setMcqForm({ ...mcqForm, category: e.target.value })}
@@ -911,7 +912,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                       <label className="form-label small text-muted fw-semibold">Topic</label>
                       <input
                         type="text"
-                        className="form-control bg-dark border-secondary text-light"
+                        className="form-control bg-body-tertiary border text-body"
                         placeholder="e.g. Algorithms"
                         value={mcqForm.topic}
                         onChange={(e) => setMcqForm({ ...mcqForm, topic: e.target.value })}
@@ -922,7 +923,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                   <div className="mb-2">
                     <label className="form-label small text-muted fw-semibold">Explanation (Optional)</label>
                     <textarea
-                      className="form-control bg-dark border-secondary text-light"
+                      className="form-control bg-body-tertiary border text-body"
                       rows={2}
                       placeholder="Brief notes explaining why the correct option is right..."
                       value={mcqForm.explanation}
@@ -931,7 +932,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                   </div>
                 </div>
 
-                <div className="modal-footer border-secondary">
+                <div className="modal-footer border">
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
@@ -956,9 +957,9 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
       {showCodingModal && (
         <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1055 }}>
           <div className="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
-            <div className="modal-content glass-card text-light border border-secondary shadow-lg">
+            <div className="modal-content card text-body border ">
               <form onSubmit={handleSaveCoding}>
-                <div className="modal-header border-secondary">
+                <div className="modal-header border">
                   <div>
                     <h5 className="modal-title fw-bold">
                       {editingCodingId ? 'Edit Coding Problem' : 'Add Coding Problem'}
@@ -967,7 +968,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                   </div>
                   <button
                     type="button"
-                    className="btn-close btn-close-white"
+                    className="btn-close" aria-label="Close dialog"
                     onClick={() => {
                       setShowCodingModal(false);
                       resetCodingForm();
@@ -982,7 +983,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                       <label className="form-label small text-muted">Title *</label>
                       <input
                         type="text"
-                        className="form-control bg-dark border-secondary text-light"
+                        className="form-control bg-body-tertiary border text-body"
                         value={codingForm.title}
                         onChange={(e) => setCodingForm({ ...codingForm, title: e.target.value })}
                         required
@@ -991,7 +992,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                     <div className="col-md-4">
                       <label className="form-label small text-muted">Difficulty</label>
                       <select
-                        className="form-select bg-dark border-secondary text-light"
+                        className="form-select bg-body-tertiary border text-body"
                         value={codingForm.difficulty}
                         onChange={(e) => setCodingForm({ ...codingForm, difficulty: e.target.value })}
                       >
@@ -1004,7 +1005,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                     <div className="col-12">
                       <label className="form-label small text-muted">Description *</label>
                       <textarea
-                        className="form-control bg-dark border-secondary text-light"
+                        className="form-control bg-body-tertiary border text-body"
                         rows="4"
                         value={codingForm.description}
                         onChange={(e) => setCodingForm({ ...codingForm, description: e.target.value })}
@@ -1015,7 +1016,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                     <div className="col-md-6">
                       <label className="form-label small text-muted">Input Format</label>
                       <textarea
-                        className="form-control bg-dark border-secondary text-light"
+                        className="form-control bg-body-tertiary border text-body"
                         rows="2"
                         value={codingForm.inputFormat}
                         onChange={(e) => setCodingForm({ ...codingForm, inputFormat: e.target.value })}
@@ -1025,7 +1026,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                     <div className="col-md-6">
                       <label className="form-label small text-muted">Output Format</label>
                       <textarea
-                        className="form-control bg-dark border-secondary text-light"
+                        className="form-control bg-body-tertiary border text-body"
                         rows="2"
                         value={codingForm.outputFormat}
                         onChange={(e) => setCodingForm({ ...codingForm, outputFormat: e.target.value })}
@@ -1034,7 +1035,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                   </div>
                 </div>
 
-                <div className="modal-footer border-secondary">
+                <div className="modal-footer border">
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"

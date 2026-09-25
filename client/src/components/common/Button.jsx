@@ -3,8 +3,8 @@ import { Loader2 } from 'lucide-react';
 
 const Button = ({
   children,
-  variant = 'primary', // 'primary' | 'secondary' | 'success' | 'danger' | 'ghost' | 'outline-primary' etc.
-  size = 'md',        // 'sm' | 'md' | 'lg'
+  variant = 'primary',
+  size = 'md',
   loading = false,
   disabled = false,
   icon: Icon = null,
@@ -13,7 +13,6 @@ const Button = ({
   className = '',
   ...props
 }) => {
-  // Map custom variants to clean Bootstrap 5 button classes
   const getBootstrapVariant = (v) => {
     switch (v) {
       case 'primary': return 'btn-primary';
@@ -29,35 +28,28 @@ const Button = ({
     }
   };
 
-  // Size mapping using Bootstrap standard spacing classes
   const sizeClass =
-    size === 'sm' ? 'btn-sm px-3 py-1 fs-7' :
-      size === 'lg' ? 'btn-lg px-4 py-2 fs-5' :
+    size === 'sm' ? 'btn-sm px-3' :
+      size === 'lg' ? 'btn-lg px-4' :
         'px-3 py-2';
-
-  const variantClass = getBootstrapVariant(variant);
 
   return (
     <button
       type={type}
-      className={`btn d-inline-flex align-items-center justify-content-center gap-2 fw-semibold transition-all ${variantClass} ${sizeClass} ${className}`}
+      className={`btn app-button ${getBootstrapVariant(variant)} ${sizeClass} ${className}`}
       disabled={disabled || loading}
       onClick={onClick}
+      aria-busy={loading || undefined}
       {...props}
     >
       {loading ? (
         <>
-          <Loader2
-            size={size === 'sm' ? 14 : 18}
-            className="spinner-border spinner-border-sm me-1 flex-shrink-0"
-            role="status"
-            aria-hidden="true"
-          />
-          <span>Processing...</span>
+          <Loader2 size={size === 'sm' ? 14 : 18} className="animate-spin" aria-hidden="true" />
+          <span>{children || 'Processing...'}</span>
         </>
       ) : (
         <>
-          {Icon && <Icon size={size === 'sm' ? 14 : 18} className="flex-shrink-0" />}
+          {Icon && <Icon size={size === 'sm' ? 14 : 18} aria-hidden="true" />}
           <span>{children}</span>
         </>
       )}

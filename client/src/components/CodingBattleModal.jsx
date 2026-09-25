@@ -10,7 +10,7 @@ const CodingBattleModal = ({ isOpen, onClose }) => {
   const [timerSeconds, setTimerSeconds] = useState(300); // 5 mins match
   const [opponent, setOpponent] = useState({ name: 'Alex (IIT Lucknow)', score: 0, status: 'Coding...' });
   const [myScore, setMyScore] = useState(0);
-  const [code, setCode] = useState('function solve(n) {\n  // Write optimal solution here\n  return n * (n + 1) / 2;\n}');
+  const [code, setCode] = useState('function solve(n) {\n // Write optimal solution here\n return n * (n + 1) / 2;\n}');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Matchmaking simulation countdown
@@ -80,15 +80,15 @@ const CodingBattleModal = ({ isOpen, onClose }) => {
       style={{ backgroundColor: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(10px)', zIndex: 1050 }}
     >
       <div className="modal-dialog modal-dialog-centered modal-xl">
-        <div className="modal-content glass-card text-light border border-warning shadow-lg rounded-4 overflow-hidden">
+        <div className="modal-content card text-body border-warning shadow-lg rounded-3 overflow-hidden">
           {/* Header */}
-          <div className="modal-header bg-dark border-bottom border-secondary px-4 py-3">
+          <div className="modal-header bg-body-tertiary border-bottom border px-4 py-3">
             <div className="d-flex align-items-center gap-3">
               <div className="p-2 bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center">
                 <Swords size={24} />
               </div>
               <div>
-                <h5 className="modal-title fw-extrabold text-light m-0 d-flex align-items-center gap-2">
+                <h5 className="modal-title fw-bold text-body m-0 d-flex align-items-center gap-2">
                   1v1 Real-Time Speed Coding Battle <span className="badge bg-danger">LIVE</span>
                 </h5>
                 <p className="text-muted small m-0">Compete live against opponent to solve the algorithm first!</p>
@@ -102,13 +102,13 @@ const CodingBattleModal = ({ isOpen, onClose }) => {
             {/* Matchmaking Screen */}
             {battleState === 'matchmaking' && (
               <div className="text-center py-5">
-                <div className="p-4 bg-warning bg-opacity-15 rounded-circle d-inline-block mb-3 border border-warning">
+                <div className="p-4 bg-warning bg-opacity-15 rounded-circle d-inline-block mb-3 border-warning">
                   <Swords size={56} className="text-warning animate-bounce" />
                 </div>
-                <h3 className="fw-extrabold text-light mb-2">Searching for Opponent...</h3>
+                <h3 className="fw-bold text-body mb-2">Searching for Opponent...</h3>
                 <p className="text-muted small mb-4">Matching you with an active candidate in your tier rating</p>
 
-                <div className="display-3 fw-extrabold text-warning font-monospace mb-3">{countdown}</div>
+                <div className="display-3 fw-bold text-warning font-monospace mb-3">{countdown}</div>
                 <div className="spinner-border text-warning" role="status" />
               </div>
             )}
@@ -120,9 +120,9 @@ const CodingBattleModal = ({ isOpen, onClose }) => {
                 <div className="row g-3 mb-3">
                   {/* My Card */}
                   <div className="col-6">
-                    <div className="p-3 glass-card border-primary border bg-primary bg-opacity-10 rounded-3">
+                    <div className="p-3 card border-primary border bg-primary bg-opacity-10 rounded-3">
                       <div className="d-flex justify-content-between align-items-center mb-1">
-                        <span className="fw-bold text-light">You (Candidate)</span>
+                        <span className="fw-bold text-body">You (Candidate)</span>
                         <span className="badge bg-primary fs-6">{myScore} / 100 PTS</span>
                       </div>
                       <div className="progress" style={{ height: 6 }}>
@@ -133,9 +133,9 @@ const CodingBattleModal = ({ isOpen, onClose }) => {
 
                   {/* Opponent Card */}
                   <div className="col-6">
-                    <div className="p-3 glass-card border-danger border bg-danger bg-opacity-10 rounded-3">
+                    <div className="p-3 card border-danger border bg-danger bg-opacity-10 rounded-3">
                       <div className="d-flex justify-content-between align-items-center mb-1">
-                        <span className="fw-bold text-light">{opponent.name}</span>
+                        <span className="fw-bold text-body">{opponent.name}</span>
                         <span className="badge bg-danger fs-6">{opponent.score} / 100 PTS</span>
                       </div>
                       <div className="progress" style={{ height: 6 }}>
@@ -146,7 +146,7 @@ const CodingBattleModal = ({ isOpen, onClose }) => {
                 </div>
 
                 {/* Match Timer */}
-                <div className="d-flex justify-content-between align-items-center bg-dark p-2 rounded-3 border border-secondary mb-3">
+                <div className="d-flex justify-content-between align-items-center bg-body-tertiary p-2 rounded-3 border mb-3">
                   <span className="text-muted small d-flex align-items-center gap-1">
                     <Clock size={16} className="text-warning" /> Match Time Remaining:
                   </span>
@@ -158,16 +158,16 @@ const CodingBattleModal = ({ isOpen, onClose }) => {
                 {/* Code Editor & Problem */}
                 <div className="row g-3 flex-grow-1">
                   <div className="col-12 col-md-5">
-                    <div className="p-3 bg-dark rounded-3 border border-secondary h-100">
+                    <div className="p-3 bg-body-tertiary rounded-3 border h-100">
                       <span className="badge bg-warning text-dark font-monospace mb-2">Problem: Sum of First N Numbers</span>
-                      <h6 className="fw-bold text-light">Write a function `solve(n)` returning sum $1 + 2 + \dots + n$.</h6>
+                      <h6 className="fw-bold text-body">Write a function `solve(n)` returning sum $1 + 2 + \dots + n$.</h6>
                       <p className="text-muted small mb-2">Input: Single integer `n` ($1 \le n \le 10^9$).</p>
-                      <pre className="bg-black p-2 rounded text-success small">Input: 5 &#10;Output: 15</pre>
+                      <pre className="bg-body-tertiary p-2 rounded text-success small">Input: 5 &#10;Output: 15</pre>
                     </div>
                   </div>
 
                   <div className="col-12 col-md-7">
-                    <div className="rounded-3 border border-secondary overflow-hidden h-100" style={{ minHeight: 280 }}>
+                    <div className="rounded-3 border overflow-hidden h-100" style={{ minHeight: 280 }}>
                       <MonacoEditor
                         height="280px"
                         language="javascript"
@@ -185,11 +185,11 @@ const CodingBattleModal = ({ isOpen, onClose }) => {
             {/* Battle Finished Screen */}
             {battleState === 'finished' && (
               <div className="text-center py-5">
-                <div className="p-4 bg-success bg-opacity-20 text-success rounded-circle d-inline-block mb-3 border border-success">
+                <div className="p-4 bg-success bg-opacity-20 text-success rounded-circle d-inline-block mb-3 border-success">
                   <Trophy size={64} className="text-warning animate-bounce" />
                 </div>
 
-                <h2 className="fw-extrabold text-light mb-1">
+                <h2 className="fw-bold text-body mb-1">
                   {myScore > opponent.score ? '🏆 VICTORY!' : myScore === opponent.score ? '🤝 DRAW MATCH!' : '💔 DEFEAT'}
                 </h2>
                 <p className="text-muted small mb-4">
@@ -210,7 +210,7 @@ const CodingBattleModal = ({ isOpen, onClose }) => {
 
           {/* Footer Actions */}
           {battleState === 'battle' && (
-            <div className="modal-footer border-top border-secondary px-4 py-3 justify-content-between">
+            <div className="modal-footer border-top border px-4 py-3 justify-content-between">
               <button className="btn btn-outline-secondary rounded-pill px-4" onClick={onClose}>
                 Surrender Match
               </button>

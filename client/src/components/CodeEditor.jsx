@@ -182,13 +182,13 @@ const CodeEditor = ({ problem, examId, onSubmissionSuccess }) => {
   const currentExample = problem?.examples?.[selectedTestCaseIdx] || problem?.examples?.[0];
 
   return (
-    <div className="d-flex flex-column h-100 rounded-4 overflow-hidden border border-secondary shadow-lg glass-card" style={{ backgroundColor: 'var(--bg-card)' }}>
+    <div className="d-flex flex-column h-100 rounded-3 overflow-hidden border shadow-lg card" style={{ backgroundColor: 'var(--bg-card)' }}>
       {/* Control Toolbar (Practice Playground Matching Style) */}
-      <div className="p-2.5 px-3 bg-dark border-bottom border-secondary d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <div className="p-2.5 px-3 bg-dark border-bottom border d-flex align-items-center justify-content-between flex-wrap gap-2">
         <div className="d-flex align-items-center gap-2">
           <Code2 size={18} className="text-info" />
           <select
-            className="form-select form-select-sm bg-dark text-light border-secondary font-monospace fw-bold"
+            className="form-select form-select-sm bg-dark text-body border font-monospace fw-bold"
             style={{ width: 180, borderRadius: '8px' }}
             value={language}
             onChange={handleLanguageChange}
@@ -260,7 +260,7 @@ const CodeEditor = ({ problem, examId, onSubmissionSuccess }) => {
             <div className="w-100 h-100 p-3 bg-black text-success font-monospace d-flex flex-column">
               <div className="text-info extra-small mb-2">⚡ Monaco Sandboxed Editor Loading...</div>
               <textarea
-                className="w-100 flex-grow-1 bg-black text-success font-monospace p-2 border border-secondary rounded"
+                className="w-100 flex-grow-1 bg-black text-success font-monospace p-2 border rounded"
                 value={code || DEFAULT_STARTER_CODE[language] || ''}
                 onChange={(e) => setCode(e.target.value)}
                 style={{ resize: 'none', outline: 'none' }}
@@ -289,13 +289,13 @@ const CodeEditor = ({ problem, examId, onSubmissionSuccess }) => {
       </div>
 
       {/* Test Case & Output Console Drawer */}
-      <div className="border-top border-secondary bg-dark flex-shrink-0 custom-ide-scrollbar" style={{ maxHeight: 220, overflowY: 'auto' }}>
+      <div className="border-top border bg-dark flex-shrink-0 custom-ide-scrollbar" style={{ maxHeight: 220, overflowY: 'auto' }}>
         {/* Console Header Tabs */}
-        <div className="px-3 py-1.5 border-bottom border-secondary bg-black bg-opacity-40 d-flex align-items-center justify-content-between">
+        <div className="px-3 py-1.5 border-bottom border bg-black bg-opacity-40 d-flex align-items-center justify-content-between">
           <div className="d-flex align-items-center gap-2">
             <button
               className={`btn btn-sm py-1 px-3 rounded-2 font-monospace extra-small fw-bold transition-all ${
-                activeConsoleTab === 'testcases' ? 'btn-secondary text-light' : 'text-muted hover-text-light'
+                activeConsoleTab === 'testcases' ? 'btn-secondary text-body' : 'text-muted hover-text-body'
               }`}
               onClick={() => setActiveConsoleTab('testcases')}
             >
@@ -303,7 +303,7 @@ const CodeEditor = ({ problem, examId, onSubmissionSuccess }) => {
             </button>
             <button
               className={`btn btn-sm py-1 px-3 rounded-2 font-monospace extra-small fw-bold transition-all ${
-                activeConsoleTab === 'custom' ? 'btn-secondary text-light' : 'text-muted hover-text-light'
+                activeConsoleTab === 'custom' ? 'btn-secondary text-body' : 'text-muted hover-text-body'
               }`}
               onClick={() => setActiveConsoleTab('custom')}
             >
@@ -311,7 +311,7 @@ const CodeEditor = ({ problem, examId, onSubmissionSuccess }) => {
             </button>
             <button
               className={`btn btn-sm py-1 px-3 rounded-2 font-monospace extra-small fw-bold transition-all ${
-                activeConsoleTab === 'result' ? 'btn-primary text-white' : 'text-muted hover-text-light'
+                activeConsoleTab === 'result' ? 'btn-primary text-white' : 'text-muted hover-text-body'
               }`}
               onClick={() => setActiveConsoleTab('result')}
             >
@@ -347,7 +347,7 @@ const CodeEditor = ({ problem, examId, onSubmissionSuccess }) => {
                       <button
                         key={idx}
                         className={`btn btn-sm px-3 py-1 rounded-2 font-monospace extra-small ${
-                          selectedTestCaseIdx === idx ? 'btn-info text-dark fw-bold' : 'btn-outline-secondary text-light'
+                          selectedTestCaseIdx === idx ? 'btn-info text-dark fw-bold' : 'btn-outline-secondary text-body'
                         }`}
                         onClick={() => setSelectedTestCaseIdx(idx)}
                       >
@@ -360,13 +360,13 @@ const CodeEditor = ({ problem, examId, onSubmissionSuccess }) => {
                     <div className="row g-2 extra-small font-monospace">
                       <div className="col-6">
                         <span className="text-muted">Input:</span>
-                        <pre className="bg-black text-success p-2 rounded border border-secondary mt-1 mb-0" style={{ maxHeight: 90 }}>
+                        <pre className="bg-black text-success p-2 rounded border mt-1 mb-0" style={{ maxHeight: 90 }}>
                           {currentExample.input}
                         </pre>
                       </div>
                       <div className="col-6">
                         <span className="text-muted">Expected Output:</span>
-                        <pre className="bg-black text-info p-2 rounded border border-secondary mt-1 mb-0" style={{ maxHeight: 90 }}>
+                        <pre className="bg-black text-info p-2 rounded border mt-1 mb-0" style={{ maxHeight: 90 }}>
                           {currentExample.output}
                         </pre>
                       </div>
@@ -384,7 +384,7 @@ const CodeEditor = ({ problem, examId, onSubmissionSuccess }) => {
             <div>
               <label className="text-muted extra-small font-monospace mb-1">Enter Stdin Arguments / Inputs:</label>
               <textarea
-                className="form-control form-control-sm bg-black text-success font-monospace border-secondary"
+                className="form-control form-control-sm bg-black text-success font-monospace border"
                 rows="3"
                 placeholder="Type custom test input here..."
                 value={customInput}
@@ -415,13 +415,13 @@ const CodeEditor = ({ problem, examId, onSubmissionSuccess }) => {
                   </div>
 
                   {(outputResult.errorMessage || outputResult.error) ? (
-                    <pre className="text-danger bg-black p-2.5 rounded border border-danger mb-0">
+                    <pre className="text-danger bg-black p-2.5 rounded border-danger mb-0">
                       {outputResult.errorMessage || outputResult.error}
                     </pre>
                   ) : (
                     <div>
                       <span className="text-muted">Standard Output (stdout):</span>
-                      <pre className="bg-black text-success p-2.5 rounded border border-secondary mt-1 mb-0" style={{ maxHeight: 90 }}>
+                      <pre className="bg-black text-success p-2.5 rounded border mt-1 mb-0" style={{ maxHeight: 90 }}>
                         {outputResult.output || '(No stdout output)'}
                       </pre>
                     </div>
@@ -431,7 +431,7 @@ const CodeEditor = ({ problem, examId, onSubmissionSuccess }) => {
 
               {/* Final Submission Result */}
               {submissionResult && (
-                <div className="font-monospace extra-small mt-3 pt-2 border-top border-secondary">
+                <div className="font-monospace extra-small mt-3 pt-2 border-top border">
                   <div className="d-flex align-items-center justify-content-between mb-2">
                     <span className={`fw-bold fs-6 ${submissionResult.status === 'Accepted' ? 'text-success' : 'text-danger'}`}>
                       Final Result: {submissionResult.status} ({submissionResult.passedTestCases} / {submissionResult.totalTestCases} Test Cases Passed)

@@ -36,14 +36,17 @@ const calculateCodeSimilarity = (codeA = '', codeB = '') => {
 exports.analyzeAssessmentPlagiarism = async (req, res, next) => {
   try {
     const { assessmentId } = req.params;
-    const exam = await Exam.findById(assessmentId);
+    const exam = await Exam.findOne({ _id: assessmentId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
 
     if (!exam) {
       return res.status(404).json({ success: false, message: 'Assessment not found' });
     }
+    if (req.user.role === 'faculty' && exam.facultyId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to inspect this assessment' });
+    }
 
     // Fetch all submissions for this exam
-    const submissions = await CodingSubmission.find({ examId: assessmentId })
+    const submissions = await CodingSubmission.find({ examId: assessmentId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
       .populate('studentId', 'name email rollNumber')
       .populate('problemId', 'title')
       .sort({ createdAt: -1 });

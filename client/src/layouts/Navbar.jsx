@@ -1,321 +1,264 @@
-import React, { useContext, useState, useEffect, useRef } from 'react';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Award, Building2, ChevronDown, ChevronRight, LogOut, Menu, Shield, Terminal, User } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
-import { ThemeContext } from '../context/ThemeContext';
-import { Link, useNavigate } from 'react-router-dom';
+import Brand from '../components/common/Brand';
+import ThemeToggle from '../components/common/ThemeToggle';
 
-import {
-  LogOut,
-  User,
-  Bell,
-  Shield,
-  Award,
-  Terminal,
-  Search,
-  Key,
-  Menu,
-  Sun,
-  Moon,
-} from 'lucide-react';
+const routeTitles = [
+  ['/student/dashboard', 'Student Dashboard'],
+  ['/student/exams', 'Assessments'],
+  ['/student/results', 'Results'],
+  ['/student/leaderboard', 'Leaderboard'],
+  ['/student/certificates', 'Certificates'],
+  ['/student/practice', 'Practice Arena'],
+  ['/student/problem-solving', 'Problem Solving'],
+  ['/student/ai-interview', 'AI Interview Prep'],
+  ['/student/versant', 'Versant Assessment'],
+  ['/faculty/dashboard', 'Faculty Dashboard'],
+  ['/faculty/exams/create', 'Create Exam'],
+  ['/faculty/exams', 'Manage Exams'],
+  ['/faculty/questions', 'Question Bank'],
+  ['/faculty/coding', 'Coding Questions'],
+  ['/faculty/exam-assignments', 'Exam Assignments'],
+  ['/faculty/results', 'Assessment Results'],
+  ['/faculty/ai-generator', 'AI Question Generator'],
+  ['/faculty/plagiarism', 'Plagiarism Detector'],
+  ['/faculty/live-monitor', 'Live Monitoring Room'],
+  ['/faculty/proctor', 'Live Proctor Center'],
+  ['/faculty/analytics', 'Faculty Analytics'],
+  ['/admin/dashboard', 'Admin Dashboard'],
+  ['/admin/colleges', 'College Management'],
+  ['/admin/users', 'User Directory'],
+  ['/admin/audit-logs', 'Audit Logs'],
+  ['/admin/analytics', 'System Analytics'],
+  ['/recruiter/dashboard', 'Recruiter Dashboard'],
+  ['/recruiter/drives', 'Hiring Drives'],
+  ['/recruiter/talent', 'Talent Pool'],
+  ['/recruiter/rules', 'Cutoff Rules'],
+  ['/recruiter/reports', 'Hiring Reports'],
+  ['/college-admin/dashboard', 'College Admin Dashboard'],
+  ['/college-admin/users', 'Faculty & Students'],
+  ['/college-admin/groups', 'College Groups'],
+  ['/college-admin/categories', 'Courses & Categories'],
+  ['/college-admin/analytics', 'College Analytics'],
+];
 
-const Navbar = ({ onToggleMobileSidebar }) => {
-  const { user, logout } = useContext(AuthContext);
-  const { theme, toggleTheme } = useContext(ThemeContext);
+// One accent per role so people can tell workspaces apart at a glance
+const roleStyles = {
+  admin: { icon: Shield, label: 'System Admin', color: 'var(--app-blue)' },
+  college_admin: { icon: Building2, label: 'College Admin', color: 'var(--app-blue)' },
+  faculty: { icon: Terminal, label: 'Faculty', color: 'var(--app-blue)' },
+  student: { icon: Award, label: 'Student', color: 'var(--app-blue)' },
+  recruiter: { icon: Building2, label: 'Recruiter', color: 'var(--app-blue)' },
+};
+
+const Navbar = ({ onToggleMobileSidebar, mobileSidebarOpen }) => {
+  const { user, logout, activeCollege, memberships, switchCollege } = useContext(AuthContext);
   const navigate = useNavigate();
-
-  const [showNotifications, setShowNotifications] = useState(false);
+  const location = useLocation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-
-  // Refs for click outside handling
-  const notificationRef = useRef(null);
   const profileMenuRef = useRef(null);
 
-  // Close dropdowns on outside click or Esc key
+  const pageTitle = useMemo(() => {
+    const match = [...routeTitles]
+      .sort((a, b) => b[0].length - a[0].length)
+      .find(([path]) => location.pathname.startsWith(path));
+    return match?.[1] || 'Workspace';
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.title = `${pageTitle} · ExamiQ`;
+    setShowProfileMenu(false);
+  }, [pageTitle, location.pathname]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-        setShowNotifications(false);
-      }
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
         setShowProfileMenu(false);
       }
     };
-
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        setShowNotifications(false);
-        setShowProfileMenu(false);
-      }
+      if (event.key === 'Escape') setShowProfileMenu(false);
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
+  const roleInfo = roleStyles[user?.role] || roleStyles.student;
+  const RoleIcon = roleInfo.icon;
+  // Deleted colleges populate as null and cannot be selected as workspaces.
+  const collegeMemberships = (memberships || []).filter((membership) => membership?.collegeId?._id);
+
+  const dashboardPath =
+    user?.role === 'admin'
+      ? '/admin/dashboard'
+      : user?.role === 'college_admin'
+        ? '/college-admin/dashboard'
+        : user?.role === 'faculty'
+          ? '/faculty/dashboard'
+          : user?.role === 'recruiter'
+            ? '/recruiter/dashboard'
+            : '/student/dashboard';
+
+  const initials = (user?.name || 'U')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+
   const handleLogout = () => {
+    setShowProfileMenu(false);
     logout();
     navigate('/login');
   };
 
-  const getRoleBadge = (role) => {
-    switch (role) {
-      case 'admin':
-        return (
-          <span className="badge bg-danger d-inline-flex align-items-center gap-1 text-uppercase">
-            <Shield size={10} />
-            Admin
-          </span>
-        );
-
-      case 'faculty':
-        return (
-          <span className="badge bg-warning text-dark d-inline-flex align-items-center gap-1 text-uppercase">
-            <Terminal size={10} />
-            Faculty
-          </span>
-        );
-
-      default:
-        return (
-          <span className="badge bg-primary d-inline-flex align-items-center gap-1 text-uppercase">
-            <Award size={10} />
-            Student
-          </span>
-        );
-    }
-  };
-
   return (
-    <nav className="navbar sticky-top bg-body border-bottom shadow-sm">
-      <div className="container-fluid px-3 px-md-4 py-2">
-
-        {/* LEFT SIDE */}
-        <div className="d-flex align-items-center">
-
-          {/* Mobile Menu */}
+    <nav className="app-navbar navbar sticky-top" aria-label="Workspace toolbar">
+      <div className="container-fluid px-3 px-lg-4">
+        <div className="d-flex align-items-center gap-3 min-width-0">
           <button
             type="button"
-            className="btn btn-outline-secondary d-md-none me-2 d-flex align-items-center justify-content-center"
+            className="btn btn-outline-secondary btn-sm d-lg-none"
             onClick={onToggleMobileSidebar}
-            title="Open Menu"
-            aria-label="Open Menu"
+            aria-label="Open navigation"
+            aria-expanded={mobileSidebarOpen}
+            aria-controls="mobile-navigation"
           >
-            <Menu size={20} />
+            <Menu size={18} />
           </button>
 
-          {/* Brand */}
-          <Link
-            to="/"
-            className="navbar-brand d-flex align-items-center gap-2 fw-bold fs-4 mb-0 text-body"
-          >
-            <span
-              className="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center shadow-sm"
-              style={{
-                width: '38px',
-                height: '38px',
-              }}
-            >
-              <Terminal size={20} />
-            </span>
-
-            <span>
-              Exami<span className="text-primary">Q</span>
-            </span>
+          <Link to={dashboardPath} className="navbar-brand d-lg-none m-0" aria-label="ExamiQ dashboard">
+            <Brand compact />
           </Link>
-        </div>
 
-        {/* CENTER SEARCH */}
-        <div
-          className="d-none d-md-flex mx-auto position-relative"
-          style={{ width: '280px' }}
-        >
-          <Search
-            size={17}
-            className="position-absolute top-50 translate-middle-y ms-3 text-secondary"
-          />
-
-          <input
-            type="search"
-            className="form-control rounded-pill ps-5 bg-body-tertiary"
-            placeholder="Search exams, questions..."
-            aria-label="Search"
-          />
-        </div>
-
-        {/* RIGHT SIDE */}
-        <div className="d-flex align-items-center gap-2">
-
-          {/* THEME TOGGLE */}
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary p-0 rounded-circle d-flex align-items-center justify-content-center"
-            style={{
-              width: '38px',
-              height: '38px',
-              minWidth: '38px',
-            }}
-            onClick={toggleTheme}
-            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-            aria-label="Toggle Theme"
-          >
-            {theme === 'dark' ? (
-              <Sun size={20} className="text-warning" style={{ color: '#fbbf24' }} />
-            ) : (
-              <Moon size={20} className="text-primary" style={{ color: '#2563eb' }} />
-            )}
-          </button>
-
-          {/* NOTIFICATION */}
-          <div className="position-relative" ref={notificationRef}>
-            <button
-              type="button"
-              className="btn btn-sm btn-outline-secondary p-0 rounded-circle d-flex align-items-center justify-content-center position-relative"
-              style={{
-                width: '38px',
-                height: '38px',
-                minWidth: '38px',
-              }}
-              onClick={() => setShowNotifications((prev) => !prev)}
-              title="Notifications"
-              aria-label="Notifications"
-            >
-              <Bell size={20} className="text-body-secondary" />
-              <span className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style={{ width: 8, height: 8 }}>
-                <span className="visually-hidden">New alerts</span>
-              </span>
-            </button>
-
-            {showNotifications && (
-              <div
-                className="position-absolute end-0 mt-2 shadow-lg rounded-3 border bg-body"
-                style={{
-                  width: '320px',
-                  maxWidth: '90vw',
-                  zIndex: 1050,
-                }}
-              >
-                {/* Header */}
-                <div className="p-3 border-bottom d-flex justify-content-between align-items-center">
-                  <h6 className="mb-0 fw-bold text-body">Notifications</h6>
-                  <span className="badge bg-primary">New</span>
-                </div>
-
-                {/* Notification Content */}
-                <div className="p-3">
-                  <div className="d-flex gap-2">
-                    <div
-                      className="bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                      }}
-                    >
-                      <Bell size={16} className="text-white" />
-                    </div>
-
-                    <div>
-                      <p className="mb-1 fw-semibold text-body">Assessment Portal Active</p>
-                      <p className="mb-0 small text-secondary">
-                        Proctored assessment portal active with real-time AI security checks.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+          <div className="navbar-breadcrumb min-width-0 d-none d-md-flex align-items-center gap-2">
+            <Link to={dashboardPath} className="text-capitalize">{user?.role?.replace('_', ' ') || 'Your'} workspace</Link>
+            <ChevronRight size={14} className="text-muted opacity-50" />
+            <span className="fw-semibold text-truncate" aria-current="page">{pageTitle}</span>
           </div>
+        </div>
 
-          {/* USER PROFILE */}
+        <div className="d-flex align-items-center gap-2">
+          <ThemeToggle />
+          <span className="navbar-divider" aria-hidden="true" />
+
           {user && (
             <div className="position-relative" ref={profileMenuRef}>
               <button
                 type="button"
-                className="btn d-flex align-items-center gap-2 rounded-pill border bg-body-tertiary text-body px-3 py-1 shadow-sm"
+                className="navbar-profile-button"
                 onClick={() => setShowProfileMenu((prev) => !prev)}
+                aria-expanded={showProfileMenu}
+                aria-label={`Account options for ${user.name || 'Portal User'}`}
+                aria-controls="account-options"
               >
-                {/* Avatar */}
                 <span
-                  className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                  }}
+                  className="profile-avatar"
+                  aria-hidden="true"
+                  style={{ boxShadow: `0 0 0 2px ${roleInfo.color}` }}
                 >
-                  <User size={16} />
+                  {initials}
                 </span>
-
-                {/* User Information */}
-                <span className="d-none d-md-block text-start">
-                  <span className="d-block fw-bold small text-truncate">
-                    {user.name}
+                <span className="d-none d-md-block text-start lh-sm">
+                  <span className="d-block fw-semibold text-truncate" style={{ maxWidth: 150 }}>
+                    {user.name || 'Portal User'}
                   </span>
-                  <span className="d-block mt-1">
-                    {getRoleBadge(user.role)}
+                  <span
+                    className="small d-flex align-items-center gap-1"
+                    style={{ color: roleInfo.color }}
+                  >
+                    <RoleIcon size={12} />
+                    {activeCollege?.name || roleInfo.label}
                   </span>
                 </span>
+                <ChevronDown
+                  size={15}
+                  className="d-none d-md-block text-muted"
+                  style={{ transform: showProfileMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }}
+                />
               </button>
 
-              {/* PROFILE DROPDOWN */}
               {showProfileMenu && (
                 <div
-                  className="position-absolute end-0 mt-2 shadow-lg rounded-3 border overflow-hidden bg-body"
-                  style={{
-                    width: '240px',
-                    zIndex: 1050,
-                  }}
+                  id="account-options"
+                  className="dropdown-menu show position-absolute end-0 mt-2 shadow-lg p-0 overflow-hidden"
+                  style={{ minWidth: 270 }}
                 >
-                  {/* Profile Header */}
-                  <div className="p-3 border-bottom">
-                    <div className="fw-bold text-truncate text-body">{user.name}</div>
-                    <div className="small text-truncate text-secondary">
-                      {user.email}
+                  <div className="px-3 py-3 border-bottom d-flex align-items-center gap-3">
+                    <span
+                      className="profile-avatar"
+                      aria-hidden="true"
+                      style={{ boxShadow: `0 0 0 2px ${roleInfo.color}` }}
+                    >
+                      {initials}
+                    </span>
+                    <div className="min-width-0">
+                      <div className="fw-semibold text-truncate">{user.name || 'Portal User'}</div>
+                      <div className="small text-muted text-truncate">{user.email || 'No email available'}</div>
                     </div>
                   </div>
 
-                  {/* Profile Link */}
-                  <Link
-                    to={
-                      user.role === 'student'
-                        ? '/student/dashboard'
-                        : user.role === 'admin'
-                          ? '/admin/dashboard'
-                          : '/faculty/dashboard'
-                    }
-                    className="d-flex align-items-center gap-2 px-3 py-2 text-decoration-none text-body"
-                    onClick={() => setShowProfileMenu(false)}
-                  >
-                    <User size={16} className="text-primary" />
-                    <span>My Profile</span>
-                  </Link>
+                  <div className="px-3 py-2 border-bottom d-flex align-items-center gap-2 small" style={{ color: roleInfo.color }}>
+                    <RoleIcon size={13} />
+                    <span>{roleInfo.label}</span>
+                    {activeCollege && (
+                      <>
+                        <span className="text-muted opacity-50">·</span>
+                        <span className="text-muted text-truncate">{activeCollege.name}</span>
+                      </>
+                    )}
+                  </div>
 
-                  {/* Change Password */}
-                  <Link
-                    to="/forgot-password"
-                    className="d-flex align-items-center gap-2 px-3 py-2 text-decoration-none text-body"
-                    onClick={() => setShowProfileMenu(false)}
-                  >
-                    <Key size={16} className="text-warning" />
-                    <span>Change Password</span>
-                  </Link>
+                  {collegeMemberships.length > 1 && (
+                    <div className="px-3 py-2 border-bottom">
+                      <label htmlFor="college-workspace" className="form-label small text-muted mb-1">
+                        Switch college workspace
+                      </label>
+                      <select
+                        id="college-workspace"
+                        className="form-select form-select-sm"
+                        value={activeCollege?._id || ''}
+                        onChange={(event) => switchCollege(event.target.value)}
+                      >
+                        {collegeMemberships.map((membership) => (
+                          <option key={membership._id || membership.collegeId._id} value={membership.collegeId._id}>
+                            {membership.collegeId?.name || 'College'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
-                  {/* Logout */}
-                  <button
-                    type="button"
-                    className="btn btn-link text-danger text-decoration-none w-100 d-flex align-items-center gap-2 px-3 py-2 rounded-0"
-                    onClick={handleLogout}
-                  >
-                    <LogOut size={16} />
-                    <span>Logout</span>
-                  </button>
+                  <div className="py-1">
+                    <Link
+                      to={dashboardPath}
+                      className="dropdown-item d-flex align-items-center gap-2"
+                      onClick={() => setShowProfileMenu(false)}
+                    >
+                      <User size={16} className="text-muted" />
+                    My dashboard
+                    </Link>
+
+                    <button
+                      type="button"
+                      className="dropdown-item d-flex align-items-center gap-2 text-danger"
+                      onClick={handleLogout}
+                    >
+                      <LogOut size={16} />
+                      Log out
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
           )}
-
         </div>
       </div>
     </nav>

@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import API from '../../services/api';
-import { Search, User, Edit2, FormInput } from 'lucide-react';
+import { Search, User, Edit2, FormInput, Users } from 'lucide-react';
+import PageHeader from '../../components/common/PageHeader';
 import { toast } from 'react-toastify';
 import DynamicFormBuilder from '../../components/DynamicFormBuilder';
 
@@ -77,10 +78,10 @@ const UserManagement = () => {
     setEditingStudent(u);
     setStudentForm({
       rollNumber: u.studentProfile?.rollNumber || '',
-      college: u.studentProfile?.college || 'Engineering College',
-      course: u.studentProfile?.course || 'Computer Science',
-      branch: u.studentProfile?.branch || 'CSE',
-      semester: u.studentProfile?.semester || '6th',
+      college: u.studentProfile?.college || '',
+      course: u.studentProfile?.course || '',
+      branch: u.studentProfile?.branch || '',
+      semester: u.studentProfile?.semester || '',
       groupId: u.studentProfile?.groupId?._id || u.studentProfile?.groupId || '',
     });
   };
@@ -106,22 +107,18 @@ const UserManagement = () => {
   );
 
   return (
-    <div className="container-fluid px-0">
-      {/* Header & Tabs */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 pb-2 border-bottom">
-        <div>
-          <h3 className="fw-bold m-0 text-body">User Directory & Student Management</h3>
-          <p className="text-secondary small mt-1 mb-0">
-            Manage user accounts, student roll numbers, and assigned groups.
-          </p>
-        </div>
-
-        <div className="nav nav-pills gap-2 bg-body-tertiary p-1 rounded-pill border">
+    <div className="workspace-page management-page">
+      <PageHeader
+        eyebrow="People"
+        title="People & access"
+        description="Manage user accounts, student roll numbers, academic profiles, and assigned groups."
+        actions={(<div className="nav nav-pills gap-2 bg-body-tertiary p-1 rounded-pill border">
           <button
             className={`nav-link fw-semibold px-4 py-2 rounded-pill small ${
               activeTab === 'users' ? 'active bg-primary text-white shadow-sm' : 'text-secondary bg-transparent'
             }`}
             onClick={() => setActiveTab('users')}
+            aria-pressed={activeTab === 'users'}
           >
             User Directory
           </button>
@@ -130,19 +127,21 @@ const UserManagement = () => {
               activeTab === 'form_builder' ? 'active bg-primary text-white shadow-sm' : 'text-secondary bg-transparent'
             }`}
             onClick={() => setActiveTab('form_builder')}
+            aria-pressed={activeTab === 'form_builder'}
           >
             <FormInput size={16} /> Dynamic Form Builder
           </button>
-        </div>
-      </div>
+        </div>)}
+      />
 
       {activeTab === 'form_builder' ? (
         <DynamicFormBuilder />
       ) : (
         <div>
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+          <div className="card"><div className="card-body p-3"><div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div className="d-flex flex-column flex-sm-row gap-2 w-100" style={{ maxWidth: 500 }}>
               <select
+                aria-label="Filter users by role"
                 className="form-select fw-semibold"
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
@@ -161,12 +160,13 @@ const UserManagement = () => {
                   type="text"
                   className="form-control border-start-0 ps-0"
                   placeholder="Search by name, email, college or group..."
+                  aria-label="Search people by name, email, college or group"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
             </div>
-          </div>
+          </div></div>
 
           {loading ? (
             <div className="d-flex justify-content-center align-items-center py-5">
@@ -175,7 +175,7 @@ const UserManagement = () => {
               </div>
             </div>
           ) : (
-            <div className="card border-0 shadow-sm rounded-4 bg-body-tertiary overflow-hidden">
+            <div className="overflow-hidden">
               <div className="table-responsive m-0">
                 <table className="table table-hover align-middle m-0" style={{ fontSize: '0.85rem' }}>
                   <thead>
@@ -226,7 +226,7 @@ const UserManagement = () => {
 
                             <td className="py-3">
                               {u.role === 'student' ? (
-                                <span className="small text-body fw-medium">{u.studentProfile?.college || '—'}</span>
+                                <span className="small text-body fw-medium">{u.studentProfile?.college || 'â€”'}</span>
                               ) : (
                                 <span className="text-secondary small">N/A</span>
                               )}
@@ -234,7 +234,7 @@ const UserManagement = () => {
 
                             <td className="py-3">
                               {u.role === 'student' ? (
-                                <span className="small text-body">{u.studentProfile?.course || '—'}</span>
+                                <span className="small text-body">{u.studentProfile?.course || 'â€”'}</span>
                               ) : (
                                 <span className="text-secondary small">N/A</span>
                               )}
@@ -305,13 +305,14 @@ const UserManagement = () => {
             </div>
           )}
         </div>
+        </div>
       )}
 
       {/* Edit Student Profile & Group Modal */}
       {editingStudent && (
         <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content border-0 shadow-lg rounded-4 bg-body">
+            <div className="modal-content shadow-lg rounded-3 bg-body">
               <div className="modal-header border-bottom">
                 <h5 className="modal-title fw-bold text-body">Edit Student Profile & Group</h5>
                 <button type="button" className="btn-close" onClick={() => setEditingStudent(null)} />
@@ -332,7 +333,7 @@ const UserManagement = () => {
                     <option value="">-- No Group (Unassigned) --</option>
                     {groups.map((g) => (
                       <option key={g._id} value={g._id}>
-                        {g.name} [{g.code}] — {g.college} ({g.course})
+                        {g.name} [{g.code}] â€” {g.college} ({g.course})
                       </option>
                     ))}
                   </select>
@@ -404,3 +405,5 @@ const UserManagement = () => {
 };
 
 export default UserManagement;
+
+

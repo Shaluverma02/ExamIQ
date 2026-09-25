@@ -1,3 +1,6 @@
+import '../../styles/student.css';
+import PageHeader from '../../components/common/PageHeader';
+import EmptyState from '../../components/common/EmptyState';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { examAssignmentAPI } from '../../services/api';
@@ -18,6 +21,7 @@ const StudentAssignedExams = () => {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [error, setError] = useState('');
 
   // Modal State for Printable Question Paper PDF
   const [showPdfModal, setShowPdfModal] = useState(false);
@@ -30,10 +34,11 @@ const StudentAssignedExams = () => {
   const fetchAssignments = async () => {
     try {
       setLoading(true);
+      setError('');
       const res = await examAssignmentAPI.getStudentAssignments();
       setAssignments(res.data.assignments || []);
     } catch (err) {
-      console.error(err);
+      setError('We could not load your assigned assessments. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -58,37 +63,28 @@ const StudentAssignedExams = () => {
   };
 
   return (
-    <div>
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-        <div>
-          <h3 className="fw-extrabold text-light m-0">Assigned Exams</h3>
-          <p className="text-muted small m-0">
-            Exams assigned to you by faculty — only these can be attempted
-          </p>
-        </div>
-
-        <div className="position-relative" style={{ width: 280 }}>
+    <div className="student-page">
+      <PageHeader eyebrow="Your schedule" title="Assigned assessments" description="Stay on top of your faculty assignments, due dates, and remaining attempts." />
+      <div className="student-toolbar">
+        <div className="position-relative student-search">
           <Search size={16} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" />
           <input
             type="text"
-            className="form-control bg-secondary text-light border-0 ps-5"
+            className="form-control ps-5" aria-label="Search assigned assessments"
             placeholder="Search assigned exams..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        <span className="small text-muted" role="status">{loading ? 'Loading assignments…' : `${filtered.length} assignments`}</span>
       </div>
 
       {loading ? (
-        <div className="text-center py-5 text-muted">Loading assigned exams...</div>
+        <div className="student-loading card" role="status"><span className="spinner-border text-primary" aria-hidden="true" /><p>Loading your assignments…</p></div>
+      ) : error ? (
+        <EmptyState icon={AlertCircle} title="Assignments unavailable" description={error} actionLabel="Try again" onAction={fetchAssignments} />
       ) : filtered.length === 0 ? (
-        <div className="glass-card p-5 text-center text-muted">
-          <AlertCircle size={40} className="mb-3 opacity-50" />
-          <h5 className="text-light">No assigned exams</h5>
-          <p className="small mb-0">
-            Your faculty has not assigned any exams to your batch yet.
-          </p>
-        </div>
+        <EmptyState icon={Calendar} title={search ? 'No matching assignments' : 'Your schedule is clear'} description={search ? 'Try a different assessment title.' : 'Your faculty assignments will appear here when they are available.'} actionLabel={search ? 'Clear search' : ''} onAction={() => setSearch('')} />
       ) : (
         <div className="row g-4">
           {filtered.map((assignment) => {
@@ -98,9 +94,10 @@ const StudentAssignedExams = () => {
             const isInProgress = assignment.attempt?.status === 'started';
 
             return (
-              <div key={assignment._id} className="col-12 col-md-6 col-lg-4">
-                <div className="glass-card p-4 h-100 d-flex flex-column border border-secondary">
-                  <div className="d-flex justify-content-between align-items-start mb-2">
+              <div key={assignment._id} className="col-12 col-md-6 col-xl-4">
+                <div className="card student-exam-card p-4 h-100 d-flex flex-column border">
+                  <div className="student-course-icon mb-4"><BookOpen size={23} aria-hidden="true" /></div>
+                  <div className="d-flex justify-content-between align-items-start mb-3">
                     <span className={`badge ${statusInfo.className}`}>{statusInfo.label}</span>
                     <span className="text-muted small d-flex align-items-center gap-1">
                       <Clock size={14} />
@@ -108,7 +105,7 @@ const StudentAssignedExams = () => {
                     </span>
                   </div>
 
-                  <h5 className="fw-bold text-light mb-1">
+                  <h5 className="fw-bold text-body mb-1">
                     {assignment.title || exam?.title}
                   </h5>
 
@@ -137,7 +134,7 @@ const StudentAssignedExams = () => {
                     </div>
                   )}
 
-                  <div className="d-flex justify-content-between align-items-center small text-muted mb-3 border-top border-bottom border-secondary py-2">
+                  <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center small text-muted mb-4 border-top border-bottom py-3">
                     <span>
                       Attempts: {assignment.attemptsUsed}/{assignment.attemptsAllowed}
                     </span>
@@ -173,7 +170,8 @@ const StudentAssignedExams = () => {
                         setSelectedPdfExamId(exam?._id);
                         setShowPdfModal(true);
                       }}
-                      title="Download Printable Question Paper PDF for Offline Practice"
+                      aria-label="Download printable question paper"
+                      title="Download printable question paper"
                     >
                       <FileText size={16} />
                     </button>

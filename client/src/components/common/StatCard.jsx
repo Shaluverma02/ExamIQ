@@ -1,36 +1,25 @@
 import React from 'react';
 
-const StatCard = ({ icon: Icon, label, value, trend, trendType = 'neutral', className = '' }) => {
-  return (
-    <div className={`card border-0 shadow-sm p-3 d-flex flex-row align-items-center gap-3 h-100 ${className}`}>
-      {Icon && (
-        <div
-          className="rounded-3 p-3 d-flex align-items-center justify-content-center flex-shrink-0"
-          style={{
-            backgroundColor: 'rgba(59, 130, 246, 0.12)',
-            color: 'var(--primary-color)',
-            width: 52,
-            height: 52,
-          }}
-        >
-          <Icon size={24} />
-        </div>
-      )}
+const StatCard = ({ icon: Icon, label, value, trend, trendType = 'neutral', loading = false, className = '' }) => {
+  const trendClass =
+    trendType === 'positive' ? 'text-success' : trendType === 'negative' ? 'text-danger' : 'text-muted';
 
-      <div className="flex-grow-1">
-        <div className="text-muted fw-semibold text-uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
-          {label}
+  return (
+    <div className={`card stat-card ui-stat-card h-100 ${className}`} aria-busy={loading}>
+      <div className="d-flex align-items-start justify-content-between gap-3">
+        <div className="min-width-0">
+          <div className="stat-label mb-3">{label}</div>
+          <div className={`stat-value ${loading ? 'stat-value-loading' : ''}`} aria-label={loading ? `Loading ${label}` : `${label}: ${value}`}>{loading ? <span aria-hidden="true">—</span> : value}</div>
+          {trend && (
+            <div className={`stat-trend mt-2 ${trendClass}`}>
+              {trend}
+            </div>
+          )}
         </div>
-        <h3 className="fw-bold m-0 mt-1 text-primary" style={{ fontSize: '1.5rem' }}>
-          {value}
-        </h3>
-        {trend && (
-          <div
-            className={`small mt-1 fw-semibold d-flex align-items-center gap-1 ${trendType === 'positive' ? 'text-success' : trendType === 'negative' ? 'text-danger' : 'text-muted'
-              }`}
-            style={{ fontSize: '0.75rem' }}
-          >
-            <span>{trend}</span>
+
+        {Icon && (
+          <div className="icon-box flex-shrink-0">
+            <Icon size={21} strokeWidth={1.8} aria-hidden="true" />
           </div>
         )}
       </div>

@@ -1,237 +1,244 @@
-import React, { useContext, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
-
+import React, { useContext, useEffect, useRef } from 'react';
+import { Link, NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  BookOpen,
-  Trophy,
-  Users,
-  PlusCircle,
-  FileQuestion,
+  Award,
   BarChart3,
-  Settings,
-  ShieldCheck,
-  Cpu,
-  Layers,
-  ShieldAlert,
-  Sparkles,
-  CheckSquare,
-  FileCheck,
+  BookOpen,
   Bot,
   Brain,
-  X,
-  LogOut,
+  Building,
+  Building2,
+  Camera,
+  CheckSquare,
   ClipboardList,
   Code2,
-  Camera,
+  Cpu,
+  FileCheck,
+  FileQuestion,
+  Layers,
+  LayoutDashboard,
+  PlusCircle,
+  Settings,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+  Trophy,
+  Users,
+  X,
 } from 'lucide-react';
+import { AuthContext } from '../context/AuthContext';
+import Brand from '../components/common/Brand';
+
+const studentSections = [
+  {
+    title: 'Learn',
+    items: [
+      { label: 'Dashboard', path: '/student/dashboard', icon: LayoutDashboard },
+      { label: 'Problem Solving', path: '/student/problem-solving', icon: Brain },
+      { label: 'Practice', path: '/student/practice', icon: Cpu },
+      { label: 'AI Interview Prep', path: '/student/ai-interview', icon: Bot },
+      { label: 'Versant', path: '/student/versant', icon: Sparkles },
+    ],
+  },
+  {
+    title: 'Assessments',
+    items: [
+      { label: 'Assessments', path: '/student/exams', icon: CheckSquare },
+      { label: 'Results', path: '/student/results', icon: FileCheck },
+      { label: 'Certificates', path: '/student/certificates', icon: Award },
+      { label: 'Leaderboard', path: '/student/leaderboard', icon: Trophy },
+    ],
+  },
+];
+
+const facultySections = [
+  {
+    title: 'Assessment Ops',
+    items: [
+      { label: 'Dashboard', path: '/faculty/dashboard', icon: LayoutDashboard, end: true },
+      { label: 'Create Exam', path: '/faculty/exams/create', icon: PlusCircle, end: true },
+      { label: 'Manage Exams', path: '/faculty/exams', icon: BookOpen, end: true },
+      { label: 'Assign Exam', path: '/faculty/exam-assignments', icon: ClipboardList, end: true },
+      { label: 'Groups & Batches', path: '/faculty/groups', icon: Layers, end: true },
+      { label: 'Results', path: '/faculty/results', icon: FileCheck, end: true },
+    ],
+  },
+  {
+    title: 'Tools',
+    items: [
+      { label: 'Question Bank', path: '/faculty/questions', icon: FileQuestion, end: true },
+      { label: 'Coding Questions', path: '/faculty/coding', icon: Code2, end: true },
+      { label: 'AI Question Gen', path: '/faculty/ai-generator', icon: Sparkles, end: true },
+      { label: 'Plagiarism Detector', path: '/faculty/plagiarism', icon: ShieldAlert, end: true },
+      { label: 'Live Monitoring', path: '/faculty/live-monitor', icon: Camera, end: true },
+      { label: 'Live Proctor Center', path: '/faculty/proctor', icon: ShieldAlert, end: false },
+      { label: 'Analytics', path: '/faculty/analytics', icon: BarChart3, end: true },
+    ],
+  },
+];
+
+const adminSections = [
+  {
+    title: 'Administration',
+    items: [
+      { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+      { label: 'Colleges', path: '/admin/colleges', icon: Building },
+      { label: 'Users & Forms', path: '/admin/users', icon: Users },
+      { label: 'Groups & Batches', path: '/admin/groups', icon: Layers },
+      { label: 'Audit Logs', path: '/admin/audit-logs', icon: ShieldCheck },
+      { label: 'System Analytics', path: '/admin/analytics', icon: BarChart3 },
+      { label: 'Live Monitoring', path: '/faculty/live-monitor', icon: Camera },
+    ],
+  },
+];
+
+const collegeAdminSections = [
+  {
+    title: 'College Management',
+    items: [
+      { label: 'Dashboard', path: '/college-admin/dashboard', icon: LayoutDashboard },
+      { label: 'Faculty & Students', path: '/college-admin/users', icon: Users },
+      { label: 'Groups & Batches', path: '/college-admin/groups', icon: Layers },
+      { label: 'Courses & Categories', path: '/college-admin/categories', icon: Settings },
+      { label: 'Analytics', path: '/college-admin/analytics', icon: BarChart3 },
+      { label: 'Live Monitoring', path: '/faculty/live-monitor', icon: Camera },
+    ],
+  },
+];
+
+const recruiterSections = [
+  {
+    title: 'Talent Operations',
+    items: [
+      { label: 'Dashboard', path: '/recruiter/dashboard', icon: LayoutDashboard },
+      { label: 'Hiring Drives', path: '/recruiter/drives', icon: Building2 },
+      { label: 'Talent Pool', path: '/recruiter/talent', icon: Users },
+      { label: 'Cutoff Rules', path: '/recruiter/rules', icon: ShieldCheck },
+      { label: 'Reports', path: '/recruiter/reports', icon: BarChart3 },
+    ],
+  },
+];
 
 const Sidebar = ({ isOpen = false, onClose }) => {
-  const { role, user, logout } = useContext(AuthContext);
+  const { role, user, activeCollege } = useContext(AuthContext);
+  const drawerRef = useRef(null);
 
   useEffect(() => {
+    if (!isOpen) return undefined;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const getFocusable = () => Array.from(drawerRef.current?.querySelectorAll('a[href], button:not([disabled]), select, [tabindex="0"]') || []);
+    getFocusable()[0]?.focus();
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && isOpen && onClose) {
-        onClose();
+      if (event.key === 'Escape' && isOpen && onClose) onClose();
+      if (event.key === 'Tab') {
+        const elements = getFocusable();
+        const first = elements[0];
+        const last = elements[elements.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }
     };
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
   }, [isOpen, onClose]);
 
-  const studentSections = [
-    {
-      title: 'UP SKILL',
-      items: [
-        { label: 'Dashboard', path: '/student/dashboard', icon: <LayoutDashboard size={17} /> },
-        { label: 'Problem Solving', path: '/student/problem-solving', icon: <Brain size={17} /> },
-        { label: 'Results', path: '/student/results', icon: <FileCheck size={17} /> },
-        { label: 'Practice', path: '/student/practice', icon: <Cpu size={17} /> },
-        { label: 'AI Interview Prep', path: '/student/ai-interview', icon: <Bot size={17} /> },
-      ],
-    },
-    {
-      title: 'ASSESSMENTS',
-      items: [
-        { label: 'Assessments', path: '/student/exams', icon: <CheckSquare size={17} /> },
-        { label: 'Assigned Exams', path: '/student/assigned-exams', icon: <ClipboardList size={17} /> },
-      ],
-    },
-    {
-      title: 'VERSANT',
-      items: [{ label: 'Versant', path: '/student/versant', icon: <Sparkles size={17} /> }],
-    },
-    {
-      title: 'PLACEMENT',
-      items: [{ label: 'Prep & Leaderboard', path: '/student/leaderboard', icon: <Trophy size={17} /> }],
-    },
-  ];
+  if (!isOpen && onClose) return null;
 
-  const facultyNav = [
-    { label: 'Dashboard', path: '/faculty/dashboard', icon: <LayoutDashboard size={18} />, end: true },
-    { label: 'Create Exam', path: '/faculty/exams/create', icon: <PlusCircle size={18} />, end: true },
-    { label: 'Manage Exams', path: '/faculty/exams', icon: <BookOpen size={18} />, end: true },
-    { label: 'Assign Exam', path: '/faculty/exam-assignments', icon: <ClipboardList size={18} />, end: true },
-    { label: 'Assessment Results', path: '/faculty/results', icon: <FileCheck size={18} />, end: true },
-    { label: 'AI Question Gen', path: '/faculty/ai-generator', icon: <Sparkles size={18} />, end: true },
-    { label: 'Plagiarism Detector', path: '/faculty/plagiarism', icon: <ShieldAlert size={18} />, end: true },
-    { label: 'Live Monitoring Room', path: '/faculty/live-monitor', icon: <Camera size={18} />, end: true },
-    { label: 'Group Management', path: '/admin/groups', icon: <Layers size={18} />, end: false },
-    { label: 'Question Bank', path: '/faculty/questions', icon: <FileQuestion size={18} />, end: true },
-    { label: 'Live Proctor Center', path: '/faculty/proctor', icon: <ShieldAlert size={18} />, end: false },
-    { label: 'Analytics', path: '/faculty/analytics', icon: <BarChart3 size={18} />, end: true },
-  ];
+  const currentRole = (role || user?.role || 'student').toLowerCase();
+  const roleRoutePrefix = currentRole === 'college_admin' ? 'college-admin' : currentRole;
+  const sections = currentRole === 'student'
+    ? studentSections
+    : currentRole === 'admin'
+      ? adminSections
+      : currentRole === 'college_admin'
+        ? collegeAdminSections
+        : currentRole === 'recruiter'
+          ? recruiterSections
+          : facultySections;
 
-  const adminNav = [
-    { label: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={18} /> },
-    { label: 'User Directory & Forms', path: '/admin/users', icon: <Users size={18} /> },
-    { label: 'Live Proctor Center', path: '/faculty/proctor', icon: <ShieldAlert size={18} /> },
-    { label: 'Group Management', path: '/admin/groups', icon: <Layers size={18} /> },
-    { label: 'Courses & Categories', path: '/admin/categories', icon: <Settings size={18} /> },
-    { label: 'Audit Logs', path: '/admin/audit-logs', icon: <ShieldCheck size={18} /> },
-    { label: 'System Analytics', path: '/admin/analytics', icon: <BarChart3 size={18} /> },
-  ];
+  const navLinkClass = ({ isActive }) =>
+    `nav-link sidebar-nav-link d-flex align-items-center gap-2 px-3 py-2 fw-semibold ${isActive ? 'active' : ''}`;
 
-  const handleNavClick = () => {
-    if (onClose) onClose();
-  };
+  const content = (
+    <aside className="app-sidebar d-flex flex-column w-100">
+      <div className="sidebar-brand-row">
+        <Link to={`/${roleRoutePrefix}/dashboard`} onClick={onClose} className="text-decoration-none" aria-label="ExamiQ dashboard"><Brand /></Link>
+        {isOpen && <button type="button" className="theme-toggle" onClick={onClose} aria-label="Close navigation"><X size={19} /></button>}
+      </div>
+      <div className="sidebar-workspace d-flex align-items-center justify-content-between gap-2">
+        <div className="min-width-0 w-100">
+          <div className="d-flex align-items-center gap-2">
+            <span className="icon-box flex-shrink-0" style={{ width: 38, height: 38 }}>
+              <Building2 size={18} />
+            </span>
+            <div className="min-width-0">
+              <div className="sidebar-label">{currentRole.replace('_', ' ')} workspace</div>
+              <div className="fw-bold text-truncate">{activeCollege?.name || 'ExamIQ Workspace'}</div>
+            </div>
+          </div>
+        </div>
 
-  const navLinkClass = ({ isActive }) => {
-    if (isActive) {
-      return 'nav-link active d-flex align-items-center gap-2 px-3 py-2 rounded-3 bg-primary text-white fw-semibold shadow-sm';
-    }
-    return 'nav-link d-flex align-items-center gap-2 px-3 py-2 rounded-3 text-body-secondary';
-  };
+      </div>
+
+      <nav className="sidebar-nav flex-grow-1 overflow-y-auto" aria-label="Main navigation">
+        {sections.map((section) => (
+          <div key={section.title} className="sidebar-section">
+            <div className="sidebar-label px-3 mb-2">{section.title}</div>
+            <div className="nav nav-pills flex-column gap-1">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    end={item.end ?? true}
+                    onClick={onClose}
+                    className={navLinkClass}
+                  >
+                    <Icon size={19} strokeWidth={1.75} />
+                    <span className="text-truncate">{item.label}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+      <div className="sidebar-bottom">
+        <span className="profile-avatar" aria-hidden="true">{(user?.name || 'U').split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span>
+        <div className="min-width-0">
+          <strong className="d-block text-truncate">{user?.name || 'Your workspace'}</strong>
+          <small>{currentRole.replace('_', ' ')} account</small>
+        </div>
+      </div>
+    </aside>
+  );
+
+  if (!isOpen) return content;
 
   return (
-    <>
-      {isOpen && (
-        <div
-          className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-md-none"
-          style={{ zIndex: 1040 }}
-          onClick={onClose}
-        />
-      )}
-
-      <aside
-        className={`
-          bg-body border rounded-4 shadow-sm
-          d-flex flex-column h-100
-          ${isOpen ? 'position-fixed top-0 start-0 vh-100 shadow-lg' : 'w-100'}
-        `}
-        style={{
-          width: isOpen ? '260px' : '100%',
-          maxWidth: '260px',
-          zIndex: isOpen ? 1050 : 1,
-        }}
+    <div className="d-lg-none">
+      <div
+        className="mobile-sidebar-backdrop position-fixed top-0 start-0 w-100 h-100"
+        onMouseDown={onClose}
+      />
+      <div
+        id="mobile-navigation"
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Workspace navigation"
+        className="mobile-sidebar-drawer"
       >
-        {/* Header (Fixed at top inside sidebar) */}
-        <div className="p-3 border-bottom flex-shrink-0">
-          <div className="d-flex align-items-center justify-content-between">
-            <div className="min-width-0">
-              <div
-                className="text-uppercase text-body-secondary fw-bold"
-                style={{ fontSize: '0.68rem', letterSpacing: '1px' }}
-              >
-                {role || 'User'} Workspace
-              </div>
-            </div>
-
-            <div className="d-flex align-items-center gap-2">
-              <span className="badge bg-primary text-uppercase">
-                {role || 'User'}
-              </span>
-
-              {isOpen && (
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-secondary d-md-none p-1"
-                  onClick={onClose}
-                  title="Close Menu"
-                  aria-label="Close Menu"
-                >
-                  <X size={18} />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Items (Scrollable Body) */}
-        <div className="flex-grow-1 overflow-y-auto p-3">
-          {role === 'student' ? (
-            <div className="d-flex flex-column gap-4">
-              {studentSections.map((section) => (
-                <div key={section.title}>
-                  <div
-                    className="text-uppercase text-body-secondary fw-bold px-3 mb-2"
-                    style={{ fontSize: '0.68rem', letterSpacing: '1px' }}
-                  >
-                    {section.title}
-                  </div>
-
-                  <div className="nav nav-pills flex-column gap-1">
-                    {section.items.map((item) => (
-                      <NavLink
-                        key={item.path}
-                        to={item.path}
-                        onClick={handleNavClick}
-                        className={navLinkClass}
-                      >
-                        <span className="d-flex align-items-center flex-shrink-0">
-                          {item.icon}
-                        </span>
-                        <span className="text-truncate" style={{ fontSize: '0.85rem' }}>
-                          {item.label}
-                        </span>
-                      </NavLink>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="nav nav-pills flex-column gap-1">
-              {(role === 'admin' ? adminNav : facultyNav).map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  end={item.end !== undefined ? item.end : true}
-                  onClick={handleNavClick}
-                  className={navLinkClass}
-                >
-                  <span className="d-flex align-items-center flex-shrink-0">
-                    {item.icon}
-                  </span>
-                  <span className="text-truncate" style={{ fontSize: '0.85rem' }}>
-                    {item.label}
-                  </span>
-                </NavLink>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* User Footer (Fixed at bottom inside sidebar) */}
-        <div className="p-3 border-top flex-shrink-0">
-          <div className="bg-body-tertiary border rounded-3 p-2">
-            <div className="d-flex align-items-center justify-content-between gap-2">
-              <div className="min-width-0 flex-grow-1">
-                <div className="fw-semibold small text-truncate">
-                  {user?.name || 'Portal User'}
-                </div>
-                <div className="text-body-secondary small text-truncate">
-                  {user?.email || 'No email available'}
-                </div>
-              </div>
-
-
-            </div>
-          </div>
-        </div>
-      </aside>
-    </>
+        {content}
+      </div>
+    </div>
   );
 };
 

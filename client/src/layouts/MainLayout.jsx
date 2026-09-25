@@ -1,49 +1,29 @@
-import React, { useState } from 'react';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from '../layouts/Navbar';
 import Sidebar from '../layouts/Sidebar';
-import { Outlet } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 
 const MainLayout = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const { pathname } = useLocation();
+  const { role, user } = useContext(AuthContext);
+  const closeSidebar = useCallback(() => setMobileSidebarOpen(false), []);
+
+  useEffect(() => { setMobileSidebarOpen(false); }, [pathname]);
 
   return (
-    <div className="vh-100 d-flex flex-column bg-body text-body overflow-hidden">
-      {/* Navbar (Fixed Top) */}
-      <Navbar
-        onToggleMobileSidebar={() =>
-          setMobileSidebarOpen((prev) => !prev)
-        }
-      />
-
-      {/* Main Container Area */}
-      <div className="container-fluid flex-grow-1 overflow-hidden px-3 px-md-4 py-3">
-        <div className="row g-3 h-100">
-
-          {/* Desktop Sidebar Column (Independent Scroll) */}
-          <div className="col-md-3 col-lg-2 d-none d-md-block h-100">
-            <div className="h-100 overflow-y-auto pe-1">
-              <Sidebar />
-            </div>
-          </div>
-
-          {/* Mobile Sidebar Drawer */}
-          <div className="d-md-none">
-            <Sidebar
-              isOpen={mobileSidebarOpen}
-              onClose={() => setMobileSidebarOpen(false)}
-            />
-          </div>
-
-          {/* Main Content Area (Independent Scroll) */}
-          <div className="col-12 col-md-9 col-lg-10 h-100 overflow-y-auto">
-            <div className="card border-0 shadow-sm rounded-4 bg-card mb-4">
-              <div className="card-body p-3 p-md-4">
-                <Outlet />
-              </div>
-            </div>
-          </div>
-
-        </div>
+    <div className="app-shell app-shell-auth" data-workspace={role || user?.role || 'student'}>
+      <a href="#main-content" className="skip-link">Skip to content</a>
+      <div className="app-sidebar-slot"><Sidebar /></div>
+      <Sidebar isOpen={mobileSidebarOpen} onClose={closeSidebar} />
+      <div className="app-workspace">
+        <Navbar mobileSidebarOpen={mobileSidebarOpen}
+          onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)} />
+        <main id="main-content" className="app-main app-content" tabIndex={-1}>
+          <div className="page-shell"><Outlet /></div>
+          <footer className="workspace-footer"><span>ExamiQ <span aria-hidden="true">/</span> Assessment workspace</span><span>Learn. Practice. Progress.</span></footer>
+        </main>
       </div>
     </div>
   );

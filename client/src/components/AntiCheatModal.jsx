@@ -23,7 +23,7 @@ const AntiCheatModal = ({ examId, onMaxViolations }) => {
 
     try {
       const canvas = await html2canvas(document.body, {
-        scale: 0.35,        // Low scale = small file (~30-60 KB)
+        scale: 0.35, // Low scale = small file (~30-60 KB)
         useCORS: true,
         logging: false,
         allowTaint: true,
@@ -126,7 +126,7 @@ const AntiCheatModal = ({ examId, onMaxViolations }) => {
     >
       <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: 520 }}>
         <div
-          className="modal-content text-light border border-danger shadow-lg"
+          className="modal-content text-body border-danger shadow-lg"
           style={{ background: 'linear-gradient(135deg, #1a0000 0%, #0d0d0d 100%)', boxShadow: '0 0 40px rgba(220,53,69,0.4)' }}
         >
           {/* Blinking red top bar */}
@@ -145,15 +145,15 @@ const AntiCheatModal = ({ examId, onMaxViolations }) => {
             <p className="fw-semibold text-warning fs-6 mb-2">{warningMessage}</p>
 
             {violationCount >= 3 ? (
-              <div className="alert alert-danger font-monospace border border-danger shadow-sm mb-3">
+              <div className="alert alert-danger font-monospace border-danger shadow-sm mb-3">
                 🚨 <strong>MAXIMUM VIOLATIONS (3/3) EXCEEDED!</strong>
-                <div className="extra-small mt-1 text-light">
+                <div className="extra-small mt-1 text-body">
                   Your exam has reached the maximum allowed security violation limit (3 tab switches / focus losses). The exam is being <strong>automatically finalized & submitted</strong> to faculty immediately.
                 </div>
               </div>
             ) : (
               <p className="small text-secondary mb-3">
-                Your exam is being <strong className="text-light">live-monitored</strong>. Every violation is recorded with a{' '}
+                Your exam is being <strong className="text-body">live-monitored</strong>. Every violation is recorded with a{' '}
                 <strong className="text-danger">timestamped snapshot</strong> and sent to your faculty for review. Total violations flagged:{' '}
                 <strong className="text-danger" style={{ fontSize: '1.1em' }}>{violationCount} / 3</strong>
               </p>
@@ -162,7 +162,7 @@ const AntiCheatModal = ({ examId, onMaxViolations }) => {
             {/* Snapshot Preview */}
             {lastSnapshot && (
               <div
-                className="p-2 rounded border border-secondary mb-3"
+                className="p-2 rounded border mb-3"
                 style={{ backgroundColor: 'var(--bg-primary)' }}
               >
                 <div className="d-flex align-items-center gap-2 mb-2">
@@ -173,7 +173,7 @@ const AntiCheatModal = ({ examId, onMaxViolations }) => {
                 <img
                   src={lastSnapshot}
                   alt="Violation snapshot"
-                  className="img-fluid rounded border border-danger"
+                  className="img-fluid rounded border-danger"
                   style={{ maxHeight: 140, width: '100%', objectFit: 'cover', opacity: 0.85 }}
                 />
                 <p className="text-muted small mb-0 mt-1 text-center">
@@ -183,14 +183,14 @@ const AntiCheatModal = ({ examId, onMaxViolations }) => {
             )}
 
             <div
-              className="p-2 rounded border border-secondary small text-muted"
+              className="p-2 rounded border small text-muted"
               style={{ backgroundColor: 'var(--bg-secondary)' }}
             >
               🔒 Tab switching, alt+tabbing, copy/pasting, and right-clicking are all logged. Reaching <span className="text-danger fw-bold">3 violations</span> triggers automatic exam submission.
             </div>
           </div>
 
-          <div className="modal-footer border-top border-secondary px-4 py-3 d-flex justify-content-between align-items-center">
+          <div className="modal-footer border-top border px-4 py-3 d-flex justify-content-between align-items-center">
             <span className="small text-muted">Violation #{violationCount} recorded at {new Date().toLocaleTimeString()}</span>
             <button
               type="button"

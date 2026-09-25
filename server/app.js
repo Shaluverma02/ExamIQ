@@ -17,6 +17,9 @@ const antiCheatRoutes = require('./routes/antiCheatRoutes');
 const groupRoutes = require('./routes/groupRoutes');
 const proctorRoutes = require('./routes/proctorRoutes');
 const examAssignmentRoutes = require('./routes/examAssignmentRoutes');
+const publicRoutes = require('./routes/publicRoutes');
+const collegeRoutes = require('./routes/collegeRoutes');
+const recruiterRoutes = require('./routes/recruiterRoutes');
 
 const app = express();
 
@@ -42,6 +45,8 @@ const limiter = rateLimit({
 app.use('/api', limiter);
 
 // Mount API Routes
+app.use('/api/public', publicRoutes);
+app.use('/api/colleges', collegeRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/coding', codingRoutes);
@@ -55,6 +60,7 @@ app.use('/api/anti-cheat', antiCheatRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/proctor', proctorRoutes);
 app.use('/api/exam-assignments', examAssignmentRoutes);
+app.use('/api/recruiter', recruiterRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

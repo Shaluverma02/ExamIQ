@@ -102,7 +102,7 @@ const AICodeReviewModal = ({ isOpen, onClose, codeData }) => {
                 {/* Strengths & Weaknesses Grid */}
                 <div className="row g-3">
                   <div className="col-md-6">
-                    <div className="h-100 p-3 rounded border border-success">
+                    <div className="h-100 p-3 rounded border-success">
                       <h6 className="text-success fw-bold d-flex align-items-center gap-2 mb-3">
                         <CheckCircle2 size={18} /> Strengths
                       </h6>
@@ -116,7 +116,7 @@ const AICodeReviewModal = ({ isOpen, onClose, codeData }) => {
                     </div>
                   </div>
                   <div className="col-md-6">
-                    <div className="h-100 p-3 rounded border border-warning">
+                    <div className="h-100 p-3 rounded border-warning">
                       <h6 className="text-warning fw-bold d-flex align-items-center gap-2 mb-3">
                         <AlertTriangle size={18} /> Edge Cases & Areas to Improve
                       </h6>

@@ -2,12 +2,16 @@ const ExamAssignment = require('../models/ExamAssignment');
 const Exam = require('../models/Exam');
 const Group = require('../models/Group');
 const ExamAttempt = require('../models/ExamAttempt');
+const Student = require('../models/Student');
 
-const resolveEligibleStudentIds = async (groupIds = [], studentIds = []) => {
-  const uniqueIds = new Set(studentIds.map((id) => id.toString()));
+const collegeFilter = (req, query = {}) => (req?.collegeId ? { ...query, collegeId: req.collegeId } : query);
+
+const resolveEligibleStudentIds = async (groupIds = [], studentIds = [], req = null) => {
+  const validStudents = await Student.find(collegeFilter(req, { userId: { $in: studentIds } })).select('userId');
+  const uniqueIds = new Set(validStudents.map((student) => student.userId.toString()));
 
   if (groupIds.length > 0) {
-    const groups = await Group.find({ _id: { $in: groupIds } }).select('students');
+    const groups = await Group.find(collegeFilter(req, { _id: { $in: groupIds } })).select('students');
     groups.forEach((group) => {
       group.students.forEach((studentId) => uniqueIds.add(studentId.toString()));
     });
@@ -16,11 +20,12 @@ const resolveEligibleStudentIds = async (groupIds = [], studentIds = []) => {
   return [...uniqueIds];
 };
 
-const findDuplicateAssignment = async (examId, facultyId, groupIds = [], studentIds = [], excludeId = null) => {
+const findDuplicateAssignment = async (examId, facultyId, groupIds = [], studentIds = [], excludeId = null, req = null) => {
   const query = {
     examId,
     facultyId,
     status: { $ne: 'archived' },
+    ...(req?.collegeId ? { collegeId: req.collegeId } : {}),
   };
 
   if (excludeId) {
@@ -46,22 +51,38 @@ const findDuplicateAssignment = async (examId, facultyId, groupIds = [], student
   return null;
 };
 
-exports.isStudentAuthorizedForExam = async (studentId, examId) => {
+exports.isStudentAuthorizedForExam = async (studentId, examId, collegeId = null) => {
   const now = new Date();
   const Student = require('../models/Student');
 
-  const studentRec = await Student.findOne({ userId: studentId });
+  const scoped = collegeId ? { collegeId } : {};
+  const studentRec = await Student.findOne({ userId: studentId, ...scoped });
 
   const groupQuery = [{ students: studentId }];
   if (studentRec && studentRec.groupId) {
     groupQuery.push({ _id: studentRec.groupId });
   }
 
-  const studentGroups = await Group.find({ $or: groupQuery }).select('_id');
+  const studentGroups = await Group.find({ ...scoped, $or: groupQuery }).select('_id');
   const studentGroupIds = studentGroups.map((g) => g._id);
+
+  const anyAssignment = await ExamAssignment.findOne({
+    examId,
+    ...scoped,
+    status: 'published',
+    $or: [
+      { studentIds: studentId },
+      { groupIds: { $in: studentGroupIds } },
+    ],
+  });
+
+  if (anyAssignment && anyAssignment.endDate && new Date(anyAssignment.endDate) < now) {
+    return { authorized: false, assignment: anyAssignment, reason: 'This assessment has expired and is no longer accepting attempts.' };
+  }
 
   let assignment = await ExamAssignment.findOne({
     examId,
+    ...scoped,
     status: 'published',
     startDate: { $lte: now },
     endDate: { $gte: now },
@@ -75,6 +96,7 @@ exports.isStudentAuthorizedForExam = async (studentId, examId) => {
     // Check if the Exam model has direct targetGroups matching studentGroupIds
     const examObj = await Exam.findOne({
       _id: examId,
+      ...scoped,
       status: 'published',
       startDate: { $lte: now },
       endDate: { $gte: now },
@@ -91,6 +113,7 @@ exports.isStudentAuthorizedForExam = async (studentId, examId) => {
   const attemptCount = await ExamAttempt.countDocuments({
     studentId,
     examId,
+    ...scoped,
     status: { $in: ['submitted', 'auto-submitted', 'evaluated'] },
   });
 
@@ -134,7 +157,11 @@ exports.createAssignment = async (req, res, next) => {
       });
     }
 
-    const exam = await Exam.findById(examId);
+    if (new Date(startDate) >= new Date(endDate)) {
+      return res.status(400).json({ success: false, message: 'End date must be after start date' });
+    }
+
+    const exam = await Exam.findOne({ _id: examId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     if (!exam) {
       return res.status(404).json({ success: false, message: 'Exam not found' });
     }
@@ -143,7 +170,12 @@ exports.createAssignment = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized to assign this exam' });
     }
 
-    const duplicate = await findDuplicateAssignment(examId, req.user._id, groupIds, studentIds);
+    const eligibleStudentIds = await resolveEligibleStudentIds(groupIds, studentIds, req);
+    if (eligibleStudentIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid students or groups were selected' });
+    }
+
+    const duplicate = await findDuplicateAssignment(examId, req.user._id, groupIds, eligibleStudentIds, null, req);
     if (duplicate) {
       return res.status(409).json({
         success: false,
@@ -161,9 +193,10 @@ exports.createAssignment = async (req, res, next) => {
 
     const assignment = await ExamAssignment.create({
       examId,
+      collegeId: req.collegeId || exam.collegeId || undefined,
       facultyId: req.user._id,
       groupIds,
-      studentIds,
+      studentIds: eligibleStudentIds,
       assignmentType: resolvedType,
       startDate,
       endDate,
@@ -180,7 +213,7 @@ exports.createAssignment = async (req, res, next) => {
       .populate('studentIds', 'name email');
 
     // Asynchronous background email notification to assigned students
-    resolveEligibleStudentIds(groupIds, studentIds).then(async (eligibleIds) => {
+    resolveEligibleStudentIds(groupIds, studentIds, req).then(async (eligibleIds) => {
       if (eligibleIds.length > 0) {
         const User = require('../models/User');
         const sendEmail = require('../utils/sendEmail');
@@ -216,7 +249,7 @@ exports.createAssignment = async (req, res, next) => {
 
 exports.getMyAssignments = async (req, res, next) => {
   try {
-    const query = { facultyId: req.user._id };
+    const query = { facultyId: req.user._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) };
     if (req.query.status) query.status = req.query.status;
 
     const assignments = await ExamAssignment.find(query)
@@ -237,7 +270,7 @@ exports.getMyAssignments = async (req, res, next) => {
 
 exports.getAssignmentById = async (req, res, next) => {
   try {
-    const assignment = await ExamAssignment.findById(req.params.id)
+    const assignment = await ExamAssignment.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
       .populate('examId', 'title duration status category totalMarks startDate endDate')
       .populate('groupIds', 'name code students')
       .populate('studentIds', 'name email');
@@ -261,7 +294,7 @@ exports.getAssignmentById = async (req, res, next) => {
 
 exports.updateAssignment = async (req, res, next) => {
   try {
-    let assignment = await ExamAssignment.findById(req.params.id);
+    let assignment = await ExamAssignment.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
 
     if (!assignment) {
       return res.status(404).json({ success: false, message: 'Assignment not found' });
@@ -302,7 +335,8 @@ exports.updateAssignment = async (req, res, next) => {
       assignment.facultyId,
       nextGroupIds,
       nextStudentIds,
-      assignment._id
+      assignment._id,
+      req
     );
 
     if (duplicate) {
@@ -324,7 +358,7 @@ exports.updateAssignment = async (req, res, next) => {
 
     await assignment.save();
 
-    assignment = await ExamAssignment.findById(assignment._id)
+    assignment = await ExamAssignment.findOne({ _id: assignment._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
       .populate('examId', 'title duration status category')
       .populate('groupIds', 'name code')
       .populate('studentIds', 'name email');
@@ -341,7 +375,7 @@ exports.updateAssignment = async (req, res, next) => {
 
 exports.deleteAssignment = async (req, res, next) => {
   try {
-    const assignment = await ExamAssignment.findById(req.params.id);
+    const assignment = await ExamAssignment.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
 
     if (!assignment) {
       return res.status(404).json({ success: false, message: 'Assignment not found' });
@@ -361,7 +395,7 @@ exports.deleteAssignment = async (req, res, next) => {
 
 exports.publishAssignment = async (req, res, next) => {
   try {
-    const assignment = await ExamAssignment.findById(req.params.id);
+    const assignment = await ExamAssignment.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
 
     if (!assignment) {
       return res.status(404).json({ success: false, message: 'Assignment not found' });
@@ -371,7 +405,7 @@ exports.publishAssignment = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    const exam = await Exam.findById(assignment.examId);
+    const exam = await Exam.findOne({ _id: assignment.examId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     if (!exam) {
       return res.status(404).json({ success: false, message: 'Linked exam not found' });
     }
@@ -386,7 +420,7 @@ exports.publishAssignment = async (req, res, next) => {
     assignment.status = 'published';
     await assignment.save();
 
-    const populated = await ExamAssignment.findById(assignment._id)
+    const populated = await ExamAssignment.findOne({ _id: assignment._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
       .populate('examId', 'title duration status category')
       .populate('groupIds', 'name code')
       .populate('studentIds', 'name email');
@@ -407,20 +441,19 @@ exports.getStudentAssignedExams = async (req, res, next) => {
     const studentId = req.user._id;
 
     const Student = require('../models/Student');
-    const studentRec = await Student.findOne({ userId: studentId });
+    const studentRec = await Student.findOne({ userId: studentId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
 
     const groupQuery = [{ students: studentId }];
     if (studentRec && studentRec.groupId) {
       groupQuery.push({ _id: studentRec.groupId });
     }
 
-    const studentGroups = await Group.find({ $or: groupQuery }).select('_id');
+    const studentGroups = await Group.find({ ...(req.collegeId ? { collegeId: req.collegeId } : {}), $or: groupQuery }).select('_id');
     const studentGroupIds = studentGroups.map((g) => g._id);
 
     const assignments = await ExamAssignment.find({
       status: 'published',
-      startDate: { $lte: now },
-      endDate: { $gte: now },
+      ...(req.collegeId ? { collegeId: req.collegeId } : {}),
       $or: [
         { studentIds: studentId },
         { groupIds: { $in: studentGroupIds } },
@@ -436,29 +469,54 @@ exports.getStudentAssignedExams = async (req, res, next) => {
       })
       .populate('groupIds', 'name code')
       .populate('facultyId', 'name email')
-      .sort({ startDate: 1 });
+      .sort({ createdAt: -1 });
 
-    const assignmentsWithAttempts = await Promise.all(
+    const assignmentsWithAttempts = (await Promise.all(
       assignments.map(async (assignment) => {
+        if (!assignment.examId) return null;
+
         const attempt = await ExamAttempt.findOne({
           studentId,
           examId: assignment.examId._id,
+          ...(req.collegeId ? { collegeId: req.collegeId } : {}),
         }).select('status startedAt submittedAt remainingTime');
 
         const completedAttempts = await ExamAttempt.countDocuments({
           studentId,
           examId: assignment.examId._id,
+          ...(req.collegeId ? { collegeId: req.collegeId } : {}),
           status: { $in: ['submitted', 'auto-submitted', 'evaluated'] },
         });
+
+        const isExpired = assignment.endDate ? new Date(assignment.endDate) < now : false;
+        const attemptsUsed = completedAttempts;
+        const attemptsAllowed = assignment.attemptsAllowed || 1;
+        const attemptsRemaining = Math.max(0, attemptsAllowed - completedAttempts);
+        const isCompleted = attemptsRemaining <= 0 || ['submitted', 'auto-submitted', 'evaluated'].includes(attempt?.status);
+        const isInProgress = attempt?.status === 'started' && !isExpired;
+
+        let computedStatus = 'available';
+        if (isCompleted) {
+          computedStatus = 'completed';
+        } else if (isExpired) {
+          computedStatus = 'expired';
+        } else if (isInProgress) {
+          computedStatus = 'in_progress';
+        }
 
         return {
           ...assignment.toObject(),
           attempt,
-          attemptsUsed: completedAttempts,
-          attemptsRemaining: Math.max(0, assignment.attemptsAllowed - completedAttempts),
+          attemptsUsed,
+          attemptsAllowed,
+          attemptsRemaining,
+          isExpired,
+          isCompleted,
+          isInProgress,
+          computedStatus,
         };
       })
-    );
+    )).filter(Boolean);
 
     res.status(200).json({
       success: true,
@@ -478,7 +536,7 @@ exports.getEligibleStudentCount = async (req, res, next) => {
     if (typeof groupIds === 'string') groupIds = groupIds ? groupIds.split(',') : [];
     if (typeof studentIds === 'string') studentIds = studentIds ? studentIds.split(',') : [];
 
-    const eligibleIds = await resolveEligibleStudentIds(groupIds, studentIds);
+    const eligibleIds = await resolveEligibleStudentIds(groupIds, studentIds, req);
 
     res.status(200).json({
       success: true,

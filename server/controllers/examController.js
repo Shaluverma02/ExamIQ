@@ -14,7 +14,7 @@ const crypto = require('crypto');
 exports.getExams = async (req, res, next) => {
   try {
     const { status, category, search } = req.query;
-    const query = {};
+    const query = req.collegeId ? { collegeId: req.collegeId } : {};
 
     if (status) query.status = status;
     if (category) query.category = category;
@@ -31,18 +31,19 @@ exports.getExams = async (req, res, next) => {
       const ExamAssignment = require('../models/ExamAssignment');
 
       // 1. Get student's group IDs
-      const studentRec = await Student.findOne({ userId: req.user._id });
+      const studentRec = await Student.findOne({ userId: req.user._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
       const groupQuery = [{ students: req.user._id }];
       if (studentRec && studentRec.groupId) {
         groupQuery.push({ _id: studentRec.groupId });
       }
 
-      const studentGroups = await Group.find({ $or: groupQuery }).select('_id');
+      const studentGroups = await Group.find({ ...(req.collegeId ? { collegeId: req.collegeId } : {}), $or: groupQuery }).select('_id');
       const studentGroupIds = studentGroups.map((g) => g._id);
 
       // 2. Find published assignments for this student or their groups
       const assignments = await ExamAssignment.find({
         status: 'published',
+        ...(req.collegeId ? { collegeId: req.collegeId } : {}),
         $or: [
           { studentIds: req.user._id },
           { groupIds: { $in: studentGroupIds } },
@@ -64,15 +65,10 @@ exports.getExams = async (req, res, next) => {
           studentGroupIds.some((sgId) => sgId.toString() === gId.toString())
         );
 
-        const hasAnyAssignmentRecord = await ExamAssignment.exists({ examId: exam._id, status: 'published' });
+        const hasAnyAssignmentRecord = await ExamAssignment.exists({ examId: exam._id, status: 'published', ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
         const hasTargetGroups = exam.targetGroups && exam.targetGroups.length > 0;
 
-        if (hasAnyAssignmentRecord || hasTargetGroups) {
-          if (isViaAssignment || isViaTargetGroup) {
-            filteredExams.push(exam);
-          }
-        } else {
-          // General unassigned/public exam
+        if (isViaAssignment || isViaTargetGroup) {
           filteredExams.push(exam);
         }
       }
@@ -95,7 +91,7 @@ exports.getExams = async (req, res, next) => {
 // @access  Private
 exports.getExamById = async (req, res, next) => {
   try {
-    const exam = await Exam.findById(req.params.id)
+    const exam = await Exam.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
       .populate('questions')
       .populate('codingProblems')
       .populate('facultyId', 'name email');
@@ -111,22 +107,23 @@ exports.getExamById = async (req, res, next) => {
       const Student = require('../models/Student');
       const ExamAssignment = require('../models/ExamAssignment');
 
-      const studentRec = await Student.findOne({ userId: req.user._id });
+      const studentRec = await Student.findOne({ userId: req.user._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
       const groupQuery = [{ students: req.user._id }];
       if (studentRec && studentRec.groupId) {
         groupQuery.push({ _id: studentRec.groupId });
       }
 
-      const studentGroups = await Group.find({ $or: groupQuery }).select('_id');
+      const studentGroups = await Group.find({ ...(req.collegeId ? { collegeId: req.collegeId } : {}), $or: groupQuery }).select('_id');
       const studentGroupIds = studentGroups.map((g) => g._id);
 
-      const hasAssignmentRecord = await ExamAssignment.exists({ examId: exam._id, status: 'published' });
+      const hasAssignmentRecord = await ExamAssignment.exists({ examId: exam._id, status: 'published', ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
       const hasTargetGroups = exam.targetGroups && exam.targetGroups.length > 0;
 
       if (hasAssignmentRecord || hasTargetGroups) {
         const isAssigned = await ExamAssignment.exists({
           examId: exam._id,
           status: 'published',
+          ...(req.collegeId ? { collegeId: req.collegeId } : {}),
           $or: [
             { studentIds: req.user._id },
             { groupIds: { $in: studentGroupIds } },
@@ -164,6 +161,7 @@ exports.getExamById = async (req, res, next) => {
 exports.createExam = async (req, res, next) => {
   try {
     req.body.facultyId = req.user._id;
+    if (req.collegeId) req.body.collegeId = req.collegeId;
     const exam = await Exam.create(req.body);
     res.status(201).json({
       success: true,
@@ -180,7 +178,7 @@ exports.createExam = async (req, res, next) => {
 // @access  Private (Faculty, Admin)
 exports.updateExam = async (req, res, next) => {
   try {
-    let exam = await Exam.findById(req.params.id);
+    let exam = await Exam.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     if (!exam) {
       return res.status(404).json({ success: false, message: 'Exam not found' });
     }
@@ -189,7 +187,8 @@ exports.updateExam = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    exam = await Exam.findByIdAndUpdate(req.params.id, req.body, {
+    if (req.collegeId) req.body.collegeId = req.collegeId;
+    exam = await Exam.findOneAndUpdate({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }, req.body, {
       new: true,
       runValidators: true,
     });
@@ -205,7 +204,7 @@ exports.updateExam = async (req, res, next) => {
 // @access  Private (Faculty, Admin)
 exports.deleteExam = async (req, res, next) => {
   try {
-    const exam = await Exam.findById(req.params.id);
+    const exam = await Exam.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     if (!exam) {
       return res.status(404).json({ success: false, message: 'Exam not found' });
     }
@@ -222,7 +221,7 @@ exports.deleteExam = async (req, res, next) => {
 // @access  Private (Student)
 exports.startExamAttempt = async (req, res, next) => {
   try {
-    const exam = await Exam.findById(req.params.id)
+    const exam = await Exam.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
       .populate('questions')
       .populate('codingProblems');
 
@@ -234,7 +233,7 @@ exports.startExamAttempt = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Exam is not published yet' });
     }
 
-    const authCheck = await isStudentAuthorizedForExam(req.user._id, exam._id);
+    const authCheck = await isStudentAuthorizedForExam(req.user._id, exam._id, req.collegeId);
     if (!authCheck.authorized) {
       return res.status(403).json({
         success: false,
@@ -245,6 +244,7 @@ exports.startExamAttempt = async (req, res, next) => {
     let attempt = await ExamAttempt.findOne({
       studentId: req.user._id,
       examId: exam._id,
+      ...(req.collegeId ? { collegeId: req.collegeId } : {}),
       status: 'started',
     }).sort({ attemptNumber: -1 });
 
@@ -254,6 +254,7 @@ exports.startExamAttempt = async (req, res, next) => {
       const existingAttempts = await ExamAttempt.find({
         studentId: req.user._id,
         examId: exam._id,
+        ...(req.collegeId ? { collegeId: req.collegeId } : {}),
       });
 
       const attemptCount = existingAttempts.length;
@@ -275,6 +276,7 @@ exports.startExamAttempt = async (req, res, next) => {
       attempt = await ExamAttempt.create({
         studentId: req.user._id,
         examId: exam._id,
+        collegeId: req.collegeId || exam.collegeId || undefined,
         attemptNumber: attemptCount + 1,
         startedAt: new Date(),
         remainingTime: totalSeconds,
@@ -351,6 +353,7 @@ exports.saveAnswer = async (req, res, next) => {
     const attempt = await ExamAttempt.findOne({
       studentId: req.user._id,
       examId: req.params.id,
+      ...(req.collegeId ? { collegeId: req.collegeId } : {}),
       status: 'started',
     });
 
@@ -392,6 +395,7 @@ exports.logAntiCheatEvent = async (req, res, next) => {
     const attempt = await ExamAttempt.findOne({
       studentId: req.user._id,
       examId: req.params.id,
+      ...(req.collegeId ? { collegeId: req.collegeId } : {}),
       status: 'started',
     });
 
@@ -416,7 +420,7 @@ exports.logAntiCheatEvent = async (req, res, next) => {
 // @access  Private (Student)
 exports.submitExam = async (req, res, next) => {
   try {
-    const exam = await Exam.findById(req.params.id)
+    const exam = await Exam.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
       .populate('questions')
       .populate('codingProblems');
 
@@ -425,15 +429,17 @@ exports.submitExam = async (req, res, next) => {
     }
 
     let attempt = await ExamAttempt.findOne({
-      studentId: req.user._id,
-      examId: exam._id,
-      status: 'started',
+        studentId: req.user._id,
+        examId: exam._id,
+        ...(req.collegeId ? { collegeId: req.collegeId } : {}),
+        status: 'started',
     }).sort({ attemptNumber: -1 });
 
     if (!attempt) {
       attempt = await ExamAttempt.findOne({
         studentId: req.user._id,
         examId: exam._id,
+        ...(req.collegeId ? { collegeId: req.collegeId } : {}),
       }).sort({ attemptNumber: -1 });
     }
 
@@ -442,7 +448,7 @@ exports.submitExam = async (req, res, next) => {
     }
 
     if (attempt.status === 'submitted' || attempt.status === 'evaluated') {
-      const existingResult = await Result.findOne({ attemptId: attempt._id });
+      const existingResult = await Result.findOne({ attemptId: attempt._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
       return res.status(200).json({
         success: true,
         message: 'Exam already submitted',
@@ -508,6 +514,7 @@ exports.submitExam = async (req, res, next) => {
       const bestSubmission = await CodingSubmission.findOne({
         studentId: req.user._id,
         examId: exam._id,
+        ...(req.collegeId ? { collegeId: req.collegeId } : {}),
         problemId: cp._id,
       }).sort({ score: -1 });
 
@@ -526,6 +533,7 @@ exports.submitExam = async (req, res, next) => {
     const result = await Result.create({
       studentId: req.user._id,
       examId: exam._id,
+      collegeId: req.collegeId || exam.collegeId || undefined,
       attemptId: attempt._id,
       attemptNumber: attempt.attemptNumber || 1,
       objectiveScore,
@@ -545,6 +553,7 @@ exports.submitExam = async (req, res, next) => {
       const certId = `CERT-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
       await Certificate.create({
         certificateId: certId,
+        collegeId: req.collegeId || exam.collegeId || undefined,
         studentId: req.user._id,
         examId: exam._id,
         resultId: result._id,
@@ -570,7 +579,7 @@ exports.submitExam = async (req, res, next) => {
 exports.retakeAssessment = async (req, res, next) => {
   try {
     const examId = req.params.assessmentId || req.params.id;
-    const exam = await Exam.findById(examId)
+    const exam = await Exam.findOne({ _id: examId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
       .populate('questions')
       .populate('codingProblems');
 
@@ -582,7 +591,7 @@ exports.retakeAssessment = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Assessment is not published yet' });
     }
 
-    const authCheck = await isStudentAuthorizedForExam(req.user._id, exam._id);
+    const authCheck = await isStudentAuthorizedForExam(req.user._id, exam._id, req.collegeId);
     if (!authCheck.authorized) {
       return res.status(403).json({
         success: false,
@@ -594,6 +603,7 @@ exports.retakeAssessment = async (req, res, next) => {
     const previousAttempts = await ExamAttempt.find({
       studentId: req.user._id,
       examId: exam._id,
+      ...(req.collegeId ? { collegeId: req.collegeId } : {}),
     }).sort({ attemptNumber: 1 });
 
     const totalPrevious = previousAttempts.length;
@@ -628,8 +638,9 @@ exports.retakeAssessment = async (req, res, next) => {
     const totalSeconds = (exam.duration || 60) * 60;
 
     const newAttempt = await ExamAttempt.create({
-      studentId: req.user._id,
-      examId: exam._id,
+        studentId: req.user._id,
+        examId: exam._id,
+        collegeId: req.collegeId || exam.collegeId || undefined,
       attemptNumber: newAttemptNumber,
       startedAt: new Date(),
       remainingTime: totalSeconds,
@@ -655,3 +666,4 @@ exports.retakeAssessment = async (req, res, next) => {
     next(err);
   }
 };
+

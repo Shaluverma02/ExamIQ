@@ -1,4 +1,4 @@
-# Online Objective + Coding Examination Platform (ExamiQ)
+codee# Online Objective + Coding Examination Platform (ExamiQ)
 
 A full-stack, production-ready assessment and examination system built with Node.js, Express, MongoDB, React, Bootstrap 5, and Monaco Editor. Featuring automated code judging across 5 programming languages, proctored anti-cheating monitoring, real-time leaderboards, performance analytics, and downloadable QR-verified certificates.
 
@@ -64,7 +64,14 @@ CLIENT_URL=http://localhost:5173
 MONGO_URI=mongodb://127.0.0.1:27017/online_exam_db
 JWT_SECRET=super_secret_jwt_key_exam_platform_2026_secure
 JWT_EXPIRES_IN=7d
+REQUIRE_EMAIL_VERIFICATION=false
+REQUIRE_PHONE_VERIFICATION=true
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_PHONE_NUMBER=+10000000000
 ```
+
+When phone verification is enabled, new accounts receive a six-digit SMS code. Configure the Twilio values with production secrets before enabling it.
 
 ### 3. Database Seeding (Demo Credentials)
 ```bash

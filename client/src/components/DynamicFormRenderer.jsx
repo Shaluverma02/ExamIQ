@@ -27,7 +27,7 @@ const DynamicFormRenderer = ({ formType, values = {}, onChange }) => {
   if (loading || fields.length === 0) return null;
 
   return (
-    <div className="dynamic-form-fields-wrapper mt-3 pt-3 border-top border-secondary">
+    <div className="dynamic-form-fields-wrapper mt-3 pt-3 border-top border">
       <div className="text-uppercase text-muted fw-bold mb-3 small" style={{ letterSpacing: '0.8px' }}>
         Additional Custom Fields
       </div>
@@ -44,7 +44,7 @@ const DynamicFormRenderer = ({ formType, values = {}, onChange }) => {
 
               {f.fieldType === 'select' ? (
                 <select
-                  className="form-select bg-secondary text-light border-0"
+                  className="form-select bg-secondary text-body border-0"
                   value={val}
                   required={f.required}
                   onChange={(e) => onChange(f.fieldId, e.target.value)}
@@ -58,7 +58,7 @@ const DynamicFormRenderer = ({ formType, values = {}, onChange }) => {
                 </select>
               ) : f.fieldType === 'textarea' ? (
                 <textarea
-                  className="form-control bg-secondary text-light border-0"
+                  className="form-control bg-secondary text-body border-0"
                   rows={2}
                   value={val}
                   placeholder={f.placeholder}
@@ -74,14 +74,14 @@ const DynamicFormRenderer = ({ formType, values = {}, onChange }) => {
                     checked={!!val}
                     onChange={(e) => onChange(f.fieldId, e.target.checked)}
                   />
-                  <label className="form-check-label text-light small ms-1" htmlFor={f.fieldId}>
+                  <label className="form-check-label text-body small ms-1" htmlFor={f.fieldId}>
                     {f.label}
                   </label>
                 </div>
               ) : (
                 <input
                   type={f.fieldType || 'text'}
-                  className="form-control bg-secondary text-light border-0"
+                  className="form-control bg-secondary text-body border-0"
                   value={val}
                   placeholder={f.placeholder}
                   required={f.required}

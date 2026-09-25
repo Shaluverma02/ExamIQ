@@ -32,6 +32,9 @@ import {
   AlertTriangle,
   Play,
   XCircle,
+  Monitor,
+  ArrowRight,
+  Award,
 } from 'lucide-react';
 
 const LiveExam = () => {
@@ -42,12 +45,19 @@ const LiveExam = () => {
   const [exam, setExam] = useState(null);
   const [attempt, setAttempt] = useState(null);
 
-  // Pre-Exam Instruction & Camera Verification State
+  // Pre-Exam Instruction, Camera & Screen Sharing State
   const [isExamStarted, setIsExamStarted] = useState(false);
   const [cameraStatus, setCameraStatus] = useState('idle'); // 'idle', 'granted', 'denied', 'checking'
+  const [screenShareStatus, setScreenShareStatus] = useState('idle'); // 'idle', 'granted', 'denied', 'checking', 'invalid'
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const screenVideoRef = useRef(null);
+  const screenStreamRef = useRef(null);
+
+  // Pre-Exam 40s Countdown State
+  const [isCountingDown, setIsCountingDown] = useState(false);
+  const [countdown, setCountdown] = useState(40);
 
   const [activeTab, setActiveTab] = useState('mcq'); // 'mcq' or 'coding'
   const [currentMcqIdx, setCurrentMcqIdx] = useState(0);
@@ -74,6 +84,7 @@ const LiveExam = () => {
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       stopCameraStream();
+      stopScreenStream();
     };
   }, [examId]);
 
@@ -81,6 +92,13 @@ const LiveExam = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
+    }
+  };
+
+  const stopScreenStream = () => {
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach((track) => track.stop());
+      screenStreamRef.current = null;
     }
   };
 
@@ -111,6 +129,52 @@ const LiveExam = () => {
     }
   };
 
+  const verifyScreenShare = async () => {
+    setScreenShareStatus('checking');
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        setScreenShareStatus('denied');
+        toast.error('Screen sharing is not supported by your browser. Please use Chrome, Edge, or Firefox.');
+        return;
+      }
+
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          displaySurface: 'monitor',
+        },
+        audio: false,
+      });
+
+      const videoTrack = displayStream.getVideoTracks()[0];
+      const settings = videoTrack.getSettings ? videoTrack.getSettings() : {};
+
+      // Enforce Entire Screen sharing
+      if (settings.displaySurface && settings.displaySurface !== 'monitor') {
+        videoTrack.stop();
+        setScreenShareStatus('invalid');
+        toast.error('Entire screen must be shared! You selected a window or tab. Please select "Entire Screen" to proceed.');
+        return;
+      }
+
+      screenStreamRef.current = displayStream;
+      if (screenVideoRef.current) {
+        screenVideoRef.current.srcObject = displayStream;
+      }
+
+      videoTrack.onended = () => {
+        setScreenShareStatus('idle');
+        toast.warning('Screen sharing has stopped. You must keep your screen shared.');
+      };
+
+      setScreenShareStatus('granted');
+      toast.success('Entire screen shared successfully!');
+    } catch (err) {
+      console.error('Screen share verification failed:', err);
+      setScreenShareStatus('denied');
+      toast.error('Screen share was cancelled or denied. Entire screen sharing is mandatory.');
+    }
+  };
+
   const fetchExamMetadata = async () => {
     try {
       setLoading(true);
@@ -129,7 +193,7 @@ const LiveExam = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load exam information');
-      navigate('/student/assigned-exams');
+      navigate('/student/exams');
     } finally {
       setLoading(false);
     }
@@ -162,9 +226,26 @@ const LiveExam = () => {
     } catch (e) {}
   };
 
-  const handleStartExamClick = async () => {
+  // 40-second countdown effect before exam starts
+  useEffect(() => {
+    let timer;
+    if (isCountingDown && countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+    } else if (isCountingDown && countdown === 0) {
+      handleStartExamNow();
+    }
+    return () => clearInterval(timer);
+  }, [isCountingDown, countdown]);
+
+  const handleContinueClick = () => {
     if (cameraStatus !== 'granted') {
-      toast.error('Camera verification is required before starting the exam.');
+      toast.error('Webcam verification is required before continuing.');
+      return;
+    }
+    if (screenShareStatus !== 'granted') {
+      toast.error('Please share your entire screen before continuing.');
       return;
     }
     if (!agreedToTerms) {
@@ -172,6 +253,15 @@ const LiveExam = () => {
       return;
     }
 
+    // Enter Fullscreen immediately upon user gesture click
+    requestFullScreen();
+
+    // Begin 40s countdown
+    setCountdown(40);
+    setIsCountingDown(true);
+  };
+
+  const handleStartExamNow = async () => {
     try {
       setLoading(true);
       requestFullScreen();
@@ -179,12 +269,14 @@ const LiveExam = () => {
       const res = await API.post(`/exams/${examId}/start`);
       setExam(res.data.exam);
       setAttempt(res.data.attempt);
+      setIsCountingDown(false);
       setIsExamStarted(true);
       initExamWorkspace(res.data.exam, res.data.attempt);
       toast.success('Exam started! Good luck!');
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to start exam attempt';
       toast.error(msg);
+      setIsCountingDown(false);
     } finally {
       setLoading(false);
     }
@@ -294,7 +386,7 @@ const LiveExam = () => {
 
   if (loading || !exam) {
     return (
-      <div className="min-vh-100 bg-dark text-light d-flex flex-column align-items-center justify-content-center">
+      <div className="min-vh-100 bg-dark text-body d-flex flex-column align-items-center justify-content-center">
         <div className="spinner-border text-primary mb-3" style={{ width: 48, height: 48 }} />
         <h5 className="fw-bold">Initializing Distraction-Free Proctored Workspace...</h5>
         <p className="text-secondary small">Checking credentials and loading exam data...</p>
@@ -305,64 +397,206 @@ const LiveExam = () => {
   // ============================================================
   // PRE-EXAM SCREEN: INSTRUCTIONS & CAMERA VERIFICATION CHECKLIST
   // ============================================================
+  // ============================================================
+  // PRE-EXAM COUNTDOWN SCREEN (40 SECONDS BEFORE EXAM STARTS)
+  // ============================================================
+  if (isCountingDown && !isExamStarted) {
+    const radius = 58;
+    const circumference = 2 * Math.PI * radius;
+    const strokeDashoffset = circumference - ((40 - countdown) / 40) * circumference;
+
+    return (
+      <div
+        className="min-vh-100 d-flex flex-column align-items-center justify-content-center p-4 text-white position-relative"
+        style={{ background: 'radial-gradient(circle at center, #1e293b 0%, #090d16 100%)' }}
+      >
+        <div
+          className="card p-4 p-md-5 border border-secondary border-opacity-25 rounded-4 shadow-lg text-center bg-dark bg-opacity-80 backdrop-blur"
+          style={{ maxWidth: 660, width: '100%' }}
+        >
+          <div className="badge bg-primary bg-opacity-20 text-primary border border-primary border-opacity-30 px-3 py-1.5 rounded-pill mb-3 align-self-center font-monospace small">
+            VERIFICATION COMPLETE · FULLSCREEN ACTIVE
+          </div>
+
+          <h2 className="h4 fw-bold text-white mb-1">Assessment Starting In...</h2>
+          <p className="text-secondary small mb-4">
+            Locking secure proctoring environment. Please sit comfortably facing your screen.
+          </p>
+
+          {/* Animated 40-Second Circular Countdown */}
+          <div className="position-relative d-inline-flex align-items-center justify-content-center mx-auto mb-4" style={{ width: 150, height: 150 }}>
+            <svg style={{ width: 150, height: 150, transform: 'rotate(-90deg)' }}>
+              <circle
+                cx="75"
+                cy="75"
+                r={radius}
+                stroke="rgba(255,255,255,0.1)"
+                strokeWidth="8"
+                fill="transparent"
+              />
+              <circle
+                cx="75"
+                cy="75"
+                r={radius}
+                stroke="#3b82f6"
+                strokeWidth="8"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                fill="transparent"
+                style={{ transition: 'stroke-dashoffset 1s linear' }}
+              />
+            </svg>
+            <div className="position-absolute text-center">
+              <span className="display-4 fw-bold text-white font-monospace">{countdown}</span>
+              <span className="d-block text-secondary extra-small text-uppercase">seconds</span>
+            </div>
+          </div>
+
+          {/* Verification Status Badges */}
+          <div className="row g-2 mb-4 text-start">
+            <div className="col-12 col-sm-6">
+              <div className="p-2.5 rounded-3 bg-secondary bg-opacity-10 border border-secondary border-opacity-20 d-flex align-items-center gap-2">
+                <CheckCircle2 size={16} className="text-success flex-shrink-0" />
+                <span className="small text-light">Webcam Stream Active</span>
+              </div>
+            </div>
+            <div className="col-12 col-sm-6">
+              <div className="p-2.5 rounded-3 bg-secondary bg-opacity-10 border border-secondary border-opacity-20 d-flex align-items-center gap-2">
+                <CheckCircle2 size={16} className="text-success flex-shrink-0" />
+                <span className="small text-light">Entire Screen Shared</span>
+              </div>
+            </div>
+            <div className="col-12 col-sm-6">
+              <div className="p-2.5 rounded-3 bg-secondary bg-opacity-10 border border-secondary border-opacity-20 d-flex align-items-center gap-2">
+                <CheckCircle2 size={16} className="text-success flex-shrink-0" />
+                <span className="small text-light">Fullscreen Mode Locked</span>
+              </div>
+            </div>
+            <div className="col-12 col-sm-6">
+              <div className="p-2.5 rounded-3 bg-secondary bg-opacity-10 border border-secondary border-opacity-20 d-flex align-items-center gap-2">
+                <CheckCircle2 size={16} className="text-success flex-shrink-0" />
+                <span className="small text-light">Test Sandbox Ready</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="alert alert-warning bg-warning bg-opacity-10 border-warning border-opacity-25 text-warning small py-2.5 px-3 mb-4 text-start d-flex align-items-center gap-2">
+            <AlertTriangle size={18} className="flex-shrink-0" />
+            <span>Do not exit fullscreen or switch tabs. The assessment will begin automatically in <strong>{countdown}</strong> seconds.</span>
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-primary fw-bold py-2.5 px-4 rounded-pill d-inline-flex align-items-center justify-content-center gap-2 shadow"
+            onClick={handleStartExamNow}
+          >
+            <Play size={16} /> Begin Exam Immediately ({countdown}s)
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // PRE-EXAM SCREEN: INSTRUCTIONS & VERIFICATION (WEBCAM & SCREEN)
+  // ============================================================
   if (!isExamStarted) {
     const totalMCQs = exam.questions?.length || 0;
     const totalCoding = exam.codingProblems?.length || 0;
+    const allChecksCompleted = cameraStatus === 'granted' && screenShareStatus === 'granted' && agreedToTerms;
 
     return (
-      <div className="min-vh-100 bg-dark text-light p-4 d-flex align-items-center justify-content-center" style={{ background: 'radial-gradient(circle at top, #1e293b 0%, #0f172a 100%)' }}>
-        <div className="glass-card p-4 p-md-5 border border-secondary rounded-4 shadow-lg w-100" style={{ maxWidth: 900 }}>
+      <div
+        className="min-vh-100 bg-dark text-body p-3 p-md-4 d-flex align-items-center justify-content-center"
+        style={{ background: 'radial-gradient(circle at top, #1e293b 0%, #0f172a 100%)' }}
+      >
+        <div className="card p-4 p-md-5 border border-secondary border-opacity-25 rounded-4 shadow-lg w-100" style={{ maxWidth: 1060 }}>
           {/* Header */}
-          <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 border-bottom border-secondary pb-3 mb-4">
+          <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 border-bottom border-secondary border-opacity-25 pb-4 mb-4">
             <div>
-              <div className="badge bg-primary px-3 py-1 font-monospace mb-2">OFFICIAL ASSESSMENT</div>
-              <h3 className="fw-extrabold text-light m-0">{exam.title}</h3>
+              <div className="d-flex align-items-center gap-2 mb-2">
+                <span className="badge bg-primary px-3 py-1 font-monospace">OFFICIAL ASSESSMENT</span>
+                {exam.category && (
+                  <span className="badge bg-secondary bg-opacity-20 text-light border border-secondary border-opacity-30">
+                    {exam.category}
+                  </span>
+                )}
+              </div>
+              <h2 className="h4 fw-bold text-white m-0">{exam.title}</h2>
             </div>
 
             <div className="d-flex align-items-center gap-2 flex-wrap font-monospace">
-              <span className="badge bg-secondary p-2.5 d-flex align-items-center gap-1.5">
-                <Clock size={16} /> {exam.duration} Mins
+              <span className="badge bg-secondary bg-opacity-25 border border-secondary border-opacity-30 p-2.5 d-flex align-items-center gap-1.5 text-light">
+                <Clock size={15} /> {exam.duration} Mins
               </span>
-              <span className="badge bg-success p-2.5 d-flex align-items-center gap-1.5">
-                <CheckCircle2 size={16} /> {exam.totalMarks} Total Marks
+              <span className="badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 p-2.5 d-flex align-items-center gap-1.5">
+                <Award size={15} /> {exam.totalMarks ?? '—'} Total Marks
+              </span>
+              <span className="badge bg-info bg-opacity-20 text-info border border-info border-opacity-30 p-2.5 d-flex align-items-center gap-1.5">
+                <FileCode size={15} /> {totalMCQs} MCQ · {totalCoding} Coding
               </span>
             </div>
           </div>
 
           <div className="row g-4">
             {/* Left Box: Exam Rules & Anti-Cheat Guidelines */}
-            <div className="col-12 col-md-7">
-              <h6 className="fw-bold text-info mb-3 font-monospace d-flex align-items-center gap-2">
+            <div className="col-12 col-lg-7">
+              <h6 className="fw-bold text-info mb-3 d-flex align-items-center gap-2">
                 <FileText size={18} /> Important Pre-Exam Instructions
               </h6>
 
-              <div className="bg-dark bg-opacity-80 border border-secondary rounded-3 p-3.5 mb-4 small text-light shadow-sm">
-                <ul className="mb-0 ps-3 space-y-2 leading-relaxed">
-                  <li className="mb-2.5">
-                    <strong className="text-info">Sections Included:</strong> {totalMCQs} Objective MCQs & {totalCoding} Sandboxed Coding Problems.
-                  </li>
-                  <li className="mb-2.5">
-                    <strong className="text-light">Fullscreen Enforcement:</strong> The exam must be taken in Fullscreen Mode. Exiting fullscreen will flag a violation.
-                  </li>
-                  <li className="mb-2.5 p-2 rounded bg-warning bg-opacity-10 border border-warning border-opacity-30 text-warning">
-                    <strong>🚨 3-Warning Violation Policy:</strong> A maximum of <strong>3 security violations</strong> (tab-switching, alt-tabbing, focus loss, copy/paste) are permitted. Reaching <span className="text-danger fw-bold">3 violations triggers automatic exam submission</span> immediately!
-                  </li>
-                  <li className="mb-2.5">
-                    <strong className="text-light">Webcam Monitoring:</strong> Live WebRTC video stream and random snapshot captures are active throughout the test.
-                  </li>
-                  <li>
-                    <strong className="text-light">Auto-Save Progress:</strong> Objective answers and code editor progress are auto-saved in real-time.
-                  </li>
-                </ul>
+              <div className="bg-dark bg-opacity-80 border border-secondary border-opacity-25 rounded-3 p-3.5 mb-4 text-light small shadow-sm">
+                <div className="d-flex flex-column gap-3">
+                  <div className="d-flex align-items-start gap-2.5">
+                    <Maximize2 size={18} className="text-primary flex-shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-white d-block mb-0.5">Fullscreen Enforcement</strong>
+                      <span className="text-secondary">
+                        The assessment must be taken in Fullscreen Mode. Clicking Continue activates full screen. Exiting fullscreen or pressing Esc is recorded as a security violation.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 d-flex align-items-start gap-2.5">
+                    <AlertOctagon size={18} className="text-danger flex-shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-danger d-block mb-0.5">3-Warning Violation Policy</strong>
+                      <span className="text-light">
+                        A maximum of <strong>3 security violations</strong> (tab-switching, alt-tabbing, focus loss, copy/paste) are permitted. Reaching <strong>3 violations triggers automatic submission</strong> immediately!
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="d-flex align-items-start gap-2.5">
+                    <Shield size={18} className="text-warning flex-shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-white d-block mb-0.5">Dual Proctoring (Webcam + Entire Screen)</strong>
+                      <span className="text-secondary">
+                        Real-time webcam monitoring and desktop screen sharing are active throughout the test. Ensure good room lighting and face visibility.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="d-flex align-items-start gap-2.5">
+                    <CheckCircle2 size={18} className="text-success flex-shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-white d-block mb-0.5">Real-Time Auto-Save</strong>
+                      <span className="text-secondary">
+                        Objective answers and code editor solutions are continuously saved in the cloud. You can revisit marked questions anytime before final submission.
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* High-Contrast Interactive Agreement Check Card */}
+              {/* Interactive Agreement Check Card */}
               <div
                 onClick={() => setAgreedToTerms(!agreedToTerms)}
-                className={`p-3 rounded-3 border transition-all d-flex align-items-center gap-3 style-cursor-pointer mb-3 ${
+                className={`p-3 rounded-3 border transition-all d-flex align-items-center gap-3 mb-3 ${
                   agreedToTerms
-                    ? 'border-success bg-success bg-opacity-15 text-light shadow-sm'
-                    : 'border-warning bg-dark bg-opacity-90 text-light'
+                    ? 'border-success bg-success bg-opacity-15 text-white shadow-sm'
+                    : 'border-secondary border-opacity-30 bg-dark bg-opacity-90 text-light'
                 }`}
                 style={{ cursor: 'pointer' }}
               >
@@ -370,98 +604,187 @@ const LiveExam = () => {
                   className={`rounded-2 border p-1 d-flex align-items-center justify-content-center flex-shrink-0 transition-all ${
                     agreedToTerms
                       ? 'border-success bg-success text-white'
-                      : 'border-warning bg-dark text-warning'
+                      : 'border-secondary border-opacity-50 bg-dark text-warning'
                   }`}
                   style={{ width: 24, height: 24 }}
                 >
-                  {agreedToTerms ? <Check size={16} strokeWidth={3} /> : <div style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#fbbf24' }} />}
+                  {agreedToTerms ? <Check size={16} strokeWidth={3} /> : <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#64748b' }} />}
                 </div>
-                <span className="small fw-bold leading-snug text-light select-none">
-                  I declare that I have read all instructions, verified my camera feed, and agree to the 3-warning anti-cheat policy.
+                <span className="small fw-semibold leading-snug select-none">
+                  I declare that I have read all instructions, verified my camera, shared my entire screen, and agree to the 3-warning anti-cheat policy.
                 </span>
               </div>
             </div>
 
-            {/* Right Box: Webcam Verification Feed */}
-            <div className="col-12 col-md-5 d-flex flex-column justify-content-between">
+            {/* Right Box: Hardware & Proctoring Verification (Webcam + Screen Sharing) */}
+            <div className="col-12 col-lg-5 d-flex flex-column justify-content-between">
               <div>
-                <h6 className="fw-bold text-warning mb-3 font-monospace d-flex align-items-center gap-2">
-                  <Camera size={18} /> Mandatory Webcam Verification
+                <h6 className="fw-bold text-warning mb-3 d-flex align-items-center gap-2">
+                  <Shield size={18} /> System & Proctoring Verification
                 </h6>
 
-                {/* Video Stream Preview Box */}
-                <div className="position-relative bg-black rounded-3 overflow-hidden border border-secondary mb-3 text-center d-flex align-items-center justify-content-center" style={{ height: 210 }}>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-100 h-100"
-                    style={{ objectFit: 'cover', transform: 'scaleX(-1)' }}
-                  />
+                {/* 1. Webcam Verification Sub-Card */}
+                <div className="p-3 rounded-3 border border-secondary border-opacity-25 bg-dark bg-opacity-60 mb-3">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <span className="small fw-bold text-white d-flex align-items-center gap-1.5">
+                      <Camera size={15} className="text-warning" /> 1. Webcam Feed
+                    </span>
+                    {cameraStatus === 'granted' && (
+                      <span className="badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 extra-small d-flex align-items-center gap-1">
+                        <Check size={12} /> Active
+                      </span>
+                    )}
+                  </div>
 
-                  {cameraStatus !== 'granted' && (
-                    <div className="position-absolute p-3 text-center">
-                      <Camera size={36} className="text-secondary mb-2 opacity-75" />
-                      <p className="extra-small text-muted mb-0">Webcam Feed Inactive</p>
+                  <div className="position-relative bg-black rounded-3 overflow-hidden border border-secondary border-opacity-30 mb-2.5 text-center d-flex align-items-center justify-content-center" style={{ height: 140 }}>
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-100 h-100"
+                      style={{ objectFit: 'cover', transform: 'scaleX(-1)' }}
+                    />
+                    {cameraStatus !== 'granted' && (
+                      <div className="position-absolute p-2 text-center">
+                        <Camera size={30} className="text-secondary mb-1 opacity-75" />
+                        <p className="extra-small text-secondary mb-0">Webcam Not Enabled</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {cameraStatus === 'idle' && (
+                    <button
+                      type="button"
+                      className="btn btn-outline-warning btn-sm w-100 fw-bold d-flex align-items-center justify-content-center gap-1.5"
+                      onClick={verifyCameraAccess}
+                    >
+                      <Camera size={14} /> Enable & Verify Webcam
+                    </button>
+                  )}
+
+                  {cameraStatus === 'checking' && (
+                    <div className="text-center text-info small py-1">
+                      <span className="spinner-border spinner-border-sm me-2" /> Requesting Camera Access...
                     </div>
                   )}
 
                   {cameraStatus === 'granted' && (
-                    <div className="position-absolute top-0 start-0 m-2 badge bg-success bg-opacity-90 d-flex align-items-center gap-1 font-monospace">
-                      <Check size={14} /> Camera Active
+                    <div className="p-2 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-2 text-success extra-small text-center d-flex align-items-center justify-content-center gap-1.5">
+                      <CheckCircle2 size={14} /> Webcam Verified & Active
                     </div>
+                  )}
+
+                  {cameraStatus === 'denied' && (
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm w-100 fw-bold d-flex align-items-center justify-content-center gap-1.5"
+                      onClick={verifyCameraAccess}
+                    >
+                      <Camera size={14} /> Retry Camera Permission
+                    </button>
                   )}
                 </div>
 
-                {/* Camera Status Notification */}
-                {cameraStatus === 'idle' && (
-                  <button
-                    type="button"
-                    className="btn btn-outline-warning btn-sm w-100 fw-bold rounded-pill mb-3 d-flex align-items-center justify-content-center gap-2"
-                    onClick={verifyCameraAccess}
-                  >
-                    <Camera size={16} /> Enable & Verify Webcam
-                  </button>
-                )}
-
-                {cameraStatus === 'checking' && (
-                  <div className="text-center text-info small font-monospace mb-3">
-                    <span className="spinner-border spinner-border-sm me-2" /> Requesting Camera Permission...
+                {/* 2. Entire Screen Share Verification Sub-Card */}
+                <div className="p-3 rounded-3 border border-secondary border-opacity-25 bg-dark bg-opacity-60 mb-3">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <span className="small fw-bold text-white d-flex align-items-center gap-1.5">
+                      <Monitor size={15} className="text-info" /> 2. Entire Screen Share
+                    </span>
+                    {screenShareStatus === 'granted' && (
+                      <span className="badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 extra-small d-flex align-items-center gap-1">
+                        <Check size={12} /> Active
+                      </span>
+                    )}
                   </div>
-                )}
 
-                {cameraStatus === 'granted' && (
-                  <div className="p-2.5 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-3 text-success small font-monospace text-center mb-3 d-flex align-items-center justify-content-center gap-2">
-                    <CheckCircle2 size={16} /> Webcam Successfully Verified & Active
+                  <p className="extra-small text-secondary mb-2">
+                    <strong>Instruction:</strong> You must choose <strong>"Entire Screen"</strong> in the browser prompt. Sharing only an app window or tab is not permitted.
+                  </p>
+
+                  {/* Screen Share Mini Preview or Placeholder */}
+                  <div className="position-relative bg-black rounded-3 overflow-hidden border border-secondary border-opacity-30 mb-2.5 text-center d-flex align-items-center justify-content-center" style={{ height: 120 }}>
+                    <video
+                      ref={screenVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-100 h-100"
+                      style={{ objectFit: 'contain' }}
+                    />
+                    {screenShareStatus !== 'granted' && (
+                      <div className="position-absolute p-2 text-center">
+                        <Monitor size={28} className="text-secondary mb-1 opacity-75" />
+                        <p className="extra-small text-secondary mb-0">Entire Screen Not Shared</p>
+                      </div>
+                    )}
                   </div>
-                )}
 
-                {cameraStatus === 'denied' && (
-                  <div className="mb-3 text-center">
-                    <div className="p-2.5 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-3 text-danger small font-monospace mb-2 d-flex align-items-center justify-content-center gap-2">
-                      <XCircle size={16} /> Camera Permission Required!
-                    </div>
+                  {screenShareStatus === 'idle' && (
                     <button
                       type="button"
-                      className="btn btn-danger btn-sm w-100 fw-bold rounded-pill d-flex align-items-center justify-content-center gap-2"
-                      onClick={verifyCameraAccess}
+                      className="btn btn-outline-info btn-sm w-100 fw-bold d-flex align-items-center justify-content-center gap-1.5"
+                      onClick={verifyScreenShare}
                     >
-                      <Camera size={16} /> Re-Try Camera Access
+                      <Monitor size={14} /> Share Entire Screen
                     </button>
-                  </div>
-                )}
+                  )}
+
+                  {screenShareStatus === 'checking' && (
+                    <div className="text-center text-info small py-1">
+                      <span className="spinner-border spinner-border-sm me-2" /> Select "Entire Screen" in prompt...
+                    </div>
+                  )}
+
+                  {screenShareStatus === 'granted' && (
+                    <div className="p-2 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-2 text-success extra-small text-center d-flex align-items-center justify-content-center gap-1.5">
+                      <CheckCircle2 size={14} /> Entire Screen Verified & Streaming
+                    </div>
+                  )}
+
+                  {screenShareStatus === 'invalid' && (
+                    <div className="mb-2">
+                      <div className="p-2 bg-warning bg-opacity-15 border border-warning border-opacity-30 rounded-2 text-warning extra-small mb-2 text-start">
+                        <AlertTriangle size={13} className="me-1" />
+                        You shared a window or tab. You must select <strong>"Entire Screen"</strong> to proceed.
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-warning btn-sm w-100 fw-bold d-flex align-items-center justify-content-center gap-1.5"
+                        onClick={verifyScreenShare}
+                      >
+                        <Monitor size={14} /> Re-Select Entire Screen
+                      </button>
+                    </div>
+                  )}
+
+                  {screenShareStatus === 'denied' && (
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm w-100 fw-bold d-flex align-items-center justify-content-center gap-1.5"
+                      onClick={verifyScreenShare}
+                    >
+                      <Monitor size={14} /> Retry Screen Sharing
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {/* Start Assessment Button */}
-              <button
-                type="button"
-                className="btn btn-primary btn-lg w-100 fw-extrabold rounded-pill py-3 d-flex align-items-center justify-content-center gap-2 shadow-lg"
-                disabled={cameraStatus !== 'granted' || !agreedToTerms}
-                onClick={handleStartExamClick}
-              >
-                <Play size={20} /> Begin Proctored Exam Now
-              </button>
+              {/* Continue to Fullscreen & Countdown Button */}
+              <div className="mt-2">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-lg w-100 fw-bold rounded-pill py-3 d-flex align-items-center justify-content-center gap-2 shadow-lg"
+                  disabled={!allChecksCompleted}
+                  onClick={handleContinueClick}
+                >
+                  <Maximize2 size={19} /> Continue to Fullscreen (40s Countdown) <ArrowRight size={18} />
+                </button>
+                <div className="text-center mt-2 extra-small text-secondary">
+                  Requires Webcam, Entire Screen Share & Terms agreement. Fullscreen will activate on Continue.
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -486,7 +809,7 @@ const LiveExam = () => {
   const unansweredCount = totalMcqs - answeredCount;
 
   return (
-    <div className="exam-workspace min-vh-100 position-relative d-flex flex-column bg-dark text-light">
+    <div className="exam-workspace min-vh-100 position-relative d-flex flex-column bg-dark text-body">
       <AntiCheatModal examId={examId} onMaxViolations={handleFinalSubmit} />
       <WebcamProctor />
       <AudioProctor />
@@ -507,12 +830,12 @@ const LiveExam = () => {
       {/* Fullscreen Lockout Overlay */}
       {!isFullscreen && (
         <div
-          className="position-fixed top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center text-center p-4 text-light"
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center text-center p-4 text-body"
           style={{ backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 2100, backdropFilter: 'blur(10px)' }}
         >
-          <div className="glass-card p-5 border border-danger text-center rounded-4 shadow-lg" style={{ maxWidth: 500 }}>
+          <div className="card p-5 border-danger text-center rounded-3 shadow-lg" style={{ maxWidth: 500 }}>
             <Shield size={48} className="text-warning mb-3" />
-            <h4 className="fw-extrabold text-light mb-2">Fullscreen Mode Required</h4>
+            <h4 className="fw-bold text-body mb-2">Fullscreen Mode Required</h4>
             <p className="small text-secondary mb-4">
               To ensure assessment integrity, this exam must be taken in Fullscreen Mode. Please click below to re-enter fullscreen.
             </p>
@@ -524,12 +847,12 @@ const LiveExam = () => {
       )}
 
       {/* Exam Top Header Bar */}
-      <div className="px-4 py-2 bg-dark border-bottom border-secondary d-flex align-items-center justify-content-between shadow-sm sticky-top">
+      <div className="px-4 py-2 bg-dark border-bottom border d-flex align-items-center justify-content-between shadow-sm sticky-top">
         <div className="d-flex align-items-center gap-3">
           <span className="badge bg-primary fs-6 px-3 py-2 rounded-pill font-monospace shadow-sm">
             {exam.title}
           </span>
-          <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1.5 rounded-pill d-none d-md-inline-flex align-items-center gap-1.5 small">
+          <span className="badge bg-success bg-opacity-10 text-success border-success border-opacity-25 px-3 py-1.5 rounded-pill d-none d-md-inline-flex align-items-center gap-1.5 small">
             <Shield size={14} /> AI Anti-Cheat Active
           </span>
         </div>
@@ -545,13 +868,13 @@ const LiveExam = () => {
       {/* Main Examination Workspace */}
       <div className="flex-grow-1 p-3 d-flex flex-column flex-lg-row gap-3 overflow-hidden" style={{ height: 'calc(100vh - 60px)', minHeight: '650px' }}>
         {/* Left / Center Section Panel */}
-        <div className="flex-grow-1 d-flex flex-column glass-card p-3 rounded-4 border border-secondary shadow-lg overflow-hidden h-100">
+        <div className="flex-grow-1 d-flex flex-column card p-3 rounded-3 border shadow-lg overflow-hidden h-100">
           {/* Section Switcher Tabs */}
-          <div className="nav nav-pills gap-2 border-bottom border-secondary pb-3 mb-3 flex-shrink-0">
+          <div className="nav nav-pills gap-2 border-bottom border pb-3 mb-3 flex-shrink-0">
             {hasQuestions && (
               <button
                 className={`nav-link d-flex align-items-center gap-2 fw-bold px-4 py-2 rounded-pill transition-all ${
-                  activeTab === 'mcq' ? 'active bg-primary shadow-sm' : 'text-light bg-dark border border-secondary'
+                  activeTab === 'mcq' ? 'active bg-primary shadow-sm' : 'text-body bg-dark border'
                 }`}
                 onClick={() => setActiveTab('mcq')}
               >
@@ -561,7 +884,7 @@ const LiveExam = () => {
             {hasCoding && (
               <button
                 className={`nav-link d-flex align-items-center gap-2 fw-bold px-4 py-2 rounded-pill transition-all ${
-                  activeTab === 'coding' ? 'active bg-primary shadow-sm' : 'text-light bg-dark border border-secondary'
+                  activeTab === 'coding' ? 'active bg-primary shadow-sm' : 'text-body bg-dark border'
                 }`}
                 onClick={() => setActiveTab('coding')}
               >
@@ -583,7 +906,7 @@ const LiveExam = () => {
                   <span className="badge bg-secondary px-3 py-1 font-monospace">{currentQ.marks} Mark(s)</span>
                 </div>
 
-                <h5 className="fw-bold text-light mb-4 leading-relaxed">{currentQ.questionText}</h5>
+                <h5 className="fw-bold text-body mb-4 leading-relaxed">{currentQ.questionText}</h5>
 
                 {/* Options List */}
                 <div className="d-flex flex-column gap-2.5 mb-4">
@@ -596,13 +919,13 @@ const LiveExam = () => {
                         className={`p-3 rounded-3 border transition-all d-flex align-items-center gap-3 style-cursor-pointer ${
                           isSelected
                             ? 'border-primary bg-primary bg-opacity-20 text-white shadow-sm'
-                            : 'border-secondary bg-dark bg-opacity-50 text-light hover-bg-dark'
+                            : 'border bg-dark bg-opacity-50 text-body hover-bg-dark'
                         }`}
                         style={{ cursor: 'pointer' }}
                       >
                         <div
                           className={`rounded-circle border p-1 d-flex align-items-center justify-content-center flex-shrink-0 ${
-                            isSelected ? 'border-primary bg-primary text-white' : 'border-secondary text-muted'
+                            isSelected ? 'border-primary bg-primary text-white' : 'border text-muted'
                           }`}
                           style={{ width: 22, height: 22 }}
                         >
@@ -616,7 +939,7 @@ const LiveExam = () => {
               </div>
 
               {/* Navigation Controls Bar */}
-              <div className="d-flex justify-content-between border-top border-secondary pt-3 mt-auto">
+              <div className="d-flex justify-content-between border-top border pt-3 mt-auto">
                 <div className="d-flex gap-2">
                   <Button
                     variant="secondary"
@@ -650,7 +973,7 @@ const LiveExam = () => {
             <div className="d-flex flex-column flex-grow-1 overflow-hidden h-100">
               {/* Problem Selection Pills Bar */}
               {exam.codingProblems.length > 1 && (
-                <div className="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border-secondary overflow-x-auto flex-shrink-0 custom-ide-scrollbar">
+                <div className="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border overflow-x-auto flex-shrink-0 custom-ide-scrollbar">
                   <span className="text-muted small fw-semibold me-1 font-monospace">Problems:</span>
                   {exam.codingProblems.map((prob, pIdx) => (
                     <button
@@ -659,7 +982,7 @@ const LiveExam = () => {
                       className={`btn btn-sm rounded-pill px-3 fw-bold font-monospace d-inline-flex align-items-center gap-1.5 transition-all ${
                         currentCodingIdx === pIdx
                           ? 'btn-info text-dark shadow-sm'
-                          : 'btn-outline-secondary text-light'
+                          : 'btn-outline-secondary text-body'
                       }`}
                     >
                       <Code2 size={14} /> Problem {pIdx + 1}: {prob.title}
@@ -673,7 +996,7 @@ const LiveExam = () => {
                 {/* Left Column: Problem Statement & Examples */}
                 <div className="col-12 col-xl-5 d-flex flex-column h-100 overflow-auto pe-2 custom-ide-scrollbar">
                   {/* Problem Metadata Header */}
-                  <div className="p-3 bg-dark border border-secondary rounded-3 mb-3">
+                  <div className="p-3 bg-dark border rounded-3 mb-3">
                     <div className="d-flex align-items-center justify-content-between mb-2">
                       <div className="d-flex align-items-center gap-2">
                         <span className={`badge ${
@@ -690,15 +1013,15 @@ const LiveExam = () => {
                       </span>
                     </div>
 
-                    <h4 className="fw-extrabold text-light m-0">{currentProblem.title}</h4>
+                    <h4 className="fw-bold text-body m-0">{currentProblem.title}</h4>
                   </div>
 
                   {/* Problem Description */}
-                  <div className="p-3 bg-dark bg-opacity-50 border border-secondary rounded-3 mb-3">
+                  <div className="p-3 bg-dark bg-opacity-50 border rounded-3 mb-3">
                     <h6 className="fw-bold text-info mb-2 d-flex align-items-center gap-1.5 small text-uppercase font-monospace">
                       <Sparkles size={14} /> Problem Statement
                     </h6>
-                    <div className="text-light leading-relaxed small whitespace-pre-wrap">
+                    <div className="text-body leading-relaxed small whitespace-pre-wrap">
                       {currentProblem.description}
                     </div>
                   </div>
@@ -706,13 +1029,13 @@ const LiveExam = () => {
                   {/* Input / Output Format */}
                   <div className="row g-2 mb-3">
                     <div className="col-6">
-                      <div className="p-2.5 bg-dark border border-secondary rounded-3 h-100">
+                      <div className="p-2.5 bg-dark border rounded-3 h-100">
                         <div className="fw-bold text-warning small font-monospace mb-1">Input Format</div>
                         <div className="text-muted small">{currentProblem.inputFormat || 'Standard Input (stdin)'}</div>
                       </div>
                     </div>
                     <div className="col-6">
-                      <div className="p-2.5 bg-dark border border-secondary rounded-3 h-100">
+                      <div className="p-2.5 bg-dark border rounded-3 h-100">
                         <div className="fw-bold text-success small font-monospace mb-1">Output Format</div>
                         <div className="text-muted small">{currentProblem.outputFormat || 'Standard Output (stdout)'}</div>
                       </div>
@@ -720,7 +1043,7 @@ const LiveExam = () => {
                   </div>
 
                   {/* Constraints & Limits */}
-                  <div className="p-2.5 bg-dark border border-secondary rounded-3 mb-3 d-flex align-items-center justify-content-between small text-muted font-monospace">
+                  <div className="p-2.5 bg-dark border rounded-3 mb-3 d-flex align-items-center justify-content-between small text-muted font-monospace">
                     <div className="d-flex align-items-center gap-1">
                       <Clock size={14} className="text-info" /> Time Limit: {currentProblem.timeLimit || 2}s
                     </div>
@@ -729,15 +1052,15 @@ const LiveExam = () => {
                     </div>
                   </div>
 
-                  {/* Sample Test Case Examples */}
+                  {/* Public Test Case Examples */}
                   {currentProblem.examples && currentProblem.examples.length > 0 && (
                     <div className="mb-3">
-                      <h6 className="fw-bold text-light mb-2 small text-uppercase font-monospace">
-                        Sample Examples ({currentProblem.examples.length})
+                      <h6 className="fw-bold text-body mb-2 small text-uppercase font-monospace">
+                        Public Examples ({currentProblem.examples.length})
                       </h6>
 
                       {currentProblem.examples.map((ex, exIdx) => (
-                        <div key={exIdx} className="p-3 bg-dark border border-secondary rounded-3 mb-2">
+                        <div key={exIdx} className="p-3 bg-dark border rounded-3 mb-2">
                           <div className="d-flex justify-content-between align-items-center mb-1">
                             <span className="fw-bold text-info small font-monospace">Example {exIdx + 1}</span>
                             <button
@@ -750,14 +1073,14 @@ const LiveExam = () => {
 
                           <div className="mb-2">
                             <div className="text-muted extra-small font-monospace mb-0.5">Input:</div>
-                            <pre className="bg-secondary bg-opacity-20 text-success p-2 rounded small m-0 font-monospace border border-secondary">
+                            <pre className="bg-secondary bg-opacity-20 text-success p-2 rounded small m-0 font-monospace border">
                               {ex.input}
                             </pre>
                           </div>
 
                           <div className="mb-2">
                             <div className="text-muted extra-small font-monospace mb-0.5">Expected Output:</div>
-                            <pre className="bg-secondary bg-opacity-20 text-info p-2 rounded small m-0 font-monospace border border-secondary">
+                            <pre className="bg-secondary bg-opacity-20 text-info p-2 rounded small m-0 font-monospace border">
                               {ex.output}
                             </pre>
                           </div>
@@ -804,8 +1127,8 @@ const LiveExam = () => {
 
           {/* Coding Problems Side Palette */}
           {hasCoding && (
-            <div className="glass-card p-3 rounded-4 border border-secondary shadow-lg mt-3">
-              <div className="fw-bold text-light mb-2 small text-uppercase font-monospace d-flex align-items-center justify-content-between">
+            <div className="card p-3 rounded-3 border shadow-lg mt-3">
+              <div className="fw-bold text-body mb-2 small text-uppercase font-monospace d-flex align-items-center justify-content-between">
                 <span>Coding Problems</span>
                 <span className="badge bg-primary font-monospace">{exam.codingProblems.length}</span>
               </div>
@@ -820,7 +1143,7 @@ const LiveExam = () => {
                     className={`btn btn-sm text-start rounded-3 px-3 py-2 d-flex align-items-center justify-content-between transition-all ${
                       activeTab === 'coding' && currentCodingIdx === pIdx
                         ? 'btn-info text-dark fw-bold shadow-sm'
-                        : 'btn-dark text-light border border-secondary'
+                        : 'btn-dark text-body border'
                     }`}
                   >
                     <span className="text-truncate font-monospace" style={{ maxWidth: 180 }}>
@@ -839,3 +1162,4 @@ const LiveExam = () => {
 };
 
 export default LiveExam;
+

@@ -25,7 +25,7 @@ const DeleteAttemptModal = ({
     >
       <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: 480 }}>
         <div
-          className="modal-content text-light border border-danger shadow-lg rounded-4"
+          className="modal-content text-body border-danger shadow-lg rounded-3"
           style={{ background: 'linear-gradient(135deg, #1a0000 0%, #0d0d0d 100%)', boxShadow: '0 0 35px rgba(220,53,69,0.35)' }}
         >
           <div className="modal-header border-bottom border-danger px-4 pt-4 pb-3">
@@ -37,15 +37,15 @@ const DeleteAttemptModal = ({
           </div>
 
           <div className="modal-body px-4 py-3">
-            <p className="fw-semibold text-light mb-3 fs-6">
+            <p className="fw-semibold text-body mb-3 fs-6">
               Are you sure you want to delete this test attempt record?
             </p>
 
             {/* Target Record Specifications Box */}
-            <div className="p-3 rounded-3 bg-dark border border-secondary mb-3 font-monospace small">
+            <div className="p-3 rounded-3 bg-body-tertiary border mb-3 font-monospace small">
               <div className="d-flex justify-content-between mb-1.5">
                 <span className="text-muted">Assessment:</span>
-                <span className="text-light fw-bold">{assessmentTitle}</span>
+                <span className="text-body fw-bold">{assessmentTitle}</span>
               </div>
               <div className="d-flex justify-content-between mb-1.5">
                 <span className="text-muted">Student Name:</span>
@@ -68,15 +68,15 @@ const DeleteAttemptModal = ({
             </div>
 
             {/* Critical Warning Box */}
-            <div className="alert alert-danger border border-danger shadow-sm mb-0 p-3 small">
+            <div className="alert alert-danger border-danger shadow-sm mb-0 p-3 small">
               🚨 <strong>Warning:</strong> "This attempt result will be permanently deleted."
-              <div className="extra-small text-light mt-1">
+              <div className="extra-small text-body mt-1">
                 This action cannot be undone. Other attempts and the student account will remain intact.
               </div>
             </div>
           </div>
 
-          <div className="modal-footer border-top border-secondary px-4 py-3 d-flex justify-content-end gap-2">
+          <div className="modal-footer border-top border px-4 py-3 d-flex justify-content-end gap-2">
             <button
               type="button"
               className="btn btn-outline-secondary btn-sm px-4 rounded-pill font-monospace"

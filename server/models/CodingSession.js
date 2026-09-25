@@ -17,6 +17,12 @@ const codingSessionSchema = new mongoose.Schema(
       ref: 'Exam',
       default: null,
     },
+    collegeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'College',
+      default: null,
+      index: true,
+    },
     status: {
       type: String,
       enum: ['active', 'submitted', 'terminated'],

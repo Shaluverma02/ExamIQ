@@ -8,6 +8,7 @@ const logAudit = (action, resource) => {
       if (req.user) {
         AuditLog.create({
           userId: req.user._id,
+          collegeId: req.collegeId || null,
           role: req.user.role,
           action,
           resource,

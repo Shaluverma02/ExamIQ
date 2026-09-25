@@ -105,7 +105,7 @@ const AIQuestionGeneratorModal = ({ isOpen, onClose, onSuccess }) => {
                 <label className="form-label text-secondary small fw-bold">Optionally Paste Course Notes / Syllabus Text:</label>
                 <textarea
                   rows={3}
-                  className="form-control text-light bg-dark border-secondary"
+                  className="form-control text-body bg-body-tertiary border"
                   placeholder="Paste lecture notes, syllabus text, or topic summary here to auto-extract questions..."
                   value={topicNotes}
                   onChange={(e) => setTopicNotes(e.target.value)}
@@ -203,7 +203,7 @@ const AIQuestionGeneratorModal = ({ isOpen, onClose, onSuccess }) => {
                         <span className="badge bg-primary text-uppercase">{item.questionType || type}</span>
                         <span className="badge bg-info text-capitalize">{item.difficulty}</span>
                       </div>
-                      <p className="fw-semibold mb-2 text-light">{item.questionText || item.title}</p>
+                      <p className="fw-semibold mb-2 text-body">{item.questionText || item.title}</p>
                       {item.options && (
                         <ul className="list-unstyled mb-0 ms-2 small">
                           {item.options.map((opt, oIdx) => (

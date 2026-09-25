@@ -123,10 +123,10 @@ const DynamicFormBuilder = () => {
   };
 
   return (
-    <div className="glass-card p-4 rounded-4 shadow-sm" style={{ backgroundColor: 'var(--bg-card)' }}>
+    <div className="card p-4 rounded-3 shadow-sm" style={{ backgroundColor: 'var(--bg-card)' }}>
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-          <h4 className="fw-extrabold text-light m-0 d-flex align-items-center gap-2">
+          <h4 className="fw-bold text-body m-0 d-flex align-items-center gap-2">
             <FormInput size={24} className="text-primary" /> Dynamic Form Generator
           </h4>
           <p className="text-muted small m-0">
@@ -136,7 +136,7 @@ const DynamicFormBuilder = () => {
 
         <div className="d-flex align-items-center gap-2">
           <select
-            className="form-select bg-dark text-light border-secondary fw-semibold"
+            className="form-select bg-body-tertiary text-body border fw-semibold"
             value={selectedFormType}
             onChange={(e) => setSelectedFormType(e.target.value)}
           >
@@ -161,12 +161,12 @@ const DynamicFormBuilder = () => {
       ) : (
         <div>
           {/* Metadata Controls */}
-          <div className="row g-3 mb-4 p-3 rounded-3 bg-dark border border-secondary">
+          <div className="row g-3 mb-4 p-3 rounded-3 bg-body-tertiary border">
             <div className="col-12 col-md-6">
               <label className="form-label small text-muted fw-bold">Form Title *</label>
               <input
                 type="text"
-                className="form-control bg-secondary text-light border-0"
+                className="form-control bg-secondary text-body border-0"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
@@ -175,7 +175,7 @@ const DynamicFormBuilder = () => {
               <label className="form-label small text-muted fw-bold">Form Description</label>
               <input
                 type="text"
-                className="form-control bg-secondary text-light border-0"
+                className="form-control bg-secondary text-body border-0"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -184,7 +184,7 @@ const DynamicFormBuilder = () => {
 
           {/* Fields List */}
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <h6 className="fw-bold text-light m-0 d-flex align-items-center gap-2">
+            <h6 className="fw-bold text-body m-0 d-flex align-items-center gap-2">
               <Settings2 size={18} className="text-info" /> Custom Dynamic Fields ({fields.length})
             </h6>
             <button
@@ -196,19 +196,19 @@ const DynamicFormBuilder = () => {
           </div>
 
           {fields.length === 0 ? (
-            <div className="text-center py-4 bg-dark text-muted rounded-3 border border-secondary">
+            <div className="text-center py-4 bg-body-tertiary text-muted rounded-3 border">
               No custom fields added yet. Click "+ Add Custom Field" to construct dynamic form elements.
             </div>
           ) : (
             <div className="d-flex flex-column gap-3">
               {fields.map((field, idx) => (
-                <div key={field.fieldId || idx} className="p-3 rounded-3 bg-dark border border-secondary">
+                <div key={field.fieldId || idx} className="p-3 rounded-3 bg-body-tertiary border">
                   <div className="row g-2 align-items-center">
                     <div className="col-12 col-md-3">
                       <label className="form-label small text-muted mb-1">Field Label *</label>
                       <input
                         type="text"
-                        className="form-control form-control-sm bg-secondary text-light border-0"
+                        className="form-control form-control-sm bg-secondary text-body border-0"
                         value={field.label}
                         onChange={(e) => handleFieldChange(idx, 'label', e.target.value)}
                         placeholder="e.g. Guardian Phone"
@@ -218,7 +218,7 @@ const DynamicFormBuilder = () => {
                     <div className="col-12 col-md-2">
                       <label className="form-label small text-muted mb-1">Input Type</label>
                       <select
-                        className="form-select form-select-sm bg-secondary text-light border-0"
+                        className="form-select form-select-sm bg-secondary text-body border-0"
                         value={field.fieldType}
                         onChange={(e) => handleFieldChange(idx, 'fieldType', e.target.value)}
                       >
@@ -234,7 +234,7 @@ const DynamicFormBuilder = () => {
                       <label className="form-label small text-muted mb-1">Placeholder</label>
                       <input
                         type="text"
-                        className="form-control form-control-sm bg-secondary text-light border-0"
+                        className="form-control form-control-sm bg-secondary text-body border-0"
                         value={field.placeholder || ''}
                         onChange={(e) => handleFieldChange(idx, 'placeholder', e.target.value)}
                         placeholder="e.g. Enter details..."
@@ -246,7 +246,7 @@ const DynamicFormBuilder = () => {
                         <label className="form-label small text-muted mb-1">Options (comma-sep)</label>
                         <input
                           type="text"
-                          className="form-control form-control-sm bg-secondary text-light border-0"
+                          className="form-control form-control-sm bg-secondary text-body border-0"
                           value={(field.options || []).join(', ')}
                           onChange={(e) => handleOptionChange(idx, e.target.value)}
                           placeholder="Opt1, Opt2, Opt3"
@@ -266,7 +266,7 @@ const DynamicFormBuilder = () => {
 
                     <div className="col-6 col-md-1 d-flex gap-1 justify-content-end align-items-center pt-3 pt-md-0">
                       <button
-                        className="btn btn-outline-secondary btn-sm p-1 text-light border-0"
+                        className="btn btn-outline-secondary btn-sm p-1 text-body border-0"
                         onClick={() => handleMoveField(idx, 'up')}
                         disabled={idx === 0}
                         title="Move Up"
@@ -274,7 +274,7 @@ const DynamicFormBuilder = () => {
                         <ArrowUp size={14} />
                       </button>
                       <button
-                        className="btn btn-outline-secondary btn-sm p-1 text-light border-0"
+                        className="btn btn-outline-secondary btn-sm p-1 text-body border-0"
                         onClick={() => handleMoveField(idx, 'down')}
                         disabled={idx === fields.length - 1}
                         title="Move Down"

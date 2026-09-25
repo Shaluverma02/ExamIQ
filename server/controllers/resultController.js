@@ -16,7 +16,7 @@ const { generateResultsExcel } = require('../utils/exportResultsExcel');
 exports.getResults = async (req, res, next) => {
   try {
     const { studentId, examId, groupId, course, department, semester } = req.query;
-    const query = {};
+    const query = req.collegeId ? { collegeId: req.collegeId } : {};
 
     if (req.user.role === 'student') {
       query.studentId = req.user._id;
@@ -33,19 +33,20 @@ exports.getResults = async (req, res, next) => {
     let targetGroup = null;
 
     if (groupId) {
-      targetGroup = await Group.findById(groupId).populate('students', '_id');
+      targetGroup = await Group.findOne({ _id: groupId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).populate('students', '_id');
       if (targetGroup) {
         // Find students assigned to this group in Group model OR Student model
-        const studentDocs = await Student.find({ groupId: targetGroup._id }).select('userId');
+        const studentDocs = await Student.find({ groupId: targetGroup._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).select('userId');
         const idsFromStudentDoc = studentDocs.map((s) => s.userId.toString());
         const idsFromGroupDoc = targetGroup.students.map((s) => s._id.toString());
         studentUserIds = Array.from(new Set([...idsFromStudentDoc, ...idsFromGroupDoc]));
         query.studentId = { $in: studentUserIds };
       }
     } else if (course || department || semester) {
-      const filter = {};
-      if (course) filter.course = { $regex: course, $options: 'i' };
-      if (department) filter.branch = { $regex: department, $options: 'i' };
+      const filter = req.collegeId ? { collegeId: req.collegeId } : {};
+      const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (course) filter.course = { $regex: escapeRegex(course), $options: 'i' };
+      if (department) filter.branch = { $regex: escapeRegex(department), $options: 'i' };
       if (semester) filter.semester = semester;
 
       const matchedStudents = await Student.find(filter).select('userId');
@@ -60,7 +61,7 @@ exports.getResults = async (req, res, next) => {
 
     // Populate student profiles with Group for result list
     const resultUserIds = results.map((r) => r.studentId?._id).filter(Boolean);
-    const studentProfiles = await Student.find({ userId: { $in: resultUserIds } }).populate('groupId', 'name code');
+    const studentProfiles = await Student.find({ userId: { $in: resultUserIds }, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).populate('groupId', 'name code');
     const profileMap = {};
     studentProfiles.forEach((sp) => {
       profileMap[sp.userId.toString()] = sp;
@@ -171,19 +172,30 @@ exports.getResults = async (req, res, next) => {
 // @access  Private
 exports.getResultById = async (req, res, next) => {
   try {
-    const result = await Result.findById(req.params.id)
+    const result = await Result.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
       .populate('studentId', 'name email')
       .populate('examId')
       .populate({
         path: 'attemptId',
-        populate: { path: 'answers.questionId' },
+        populate: [
+          { path: 'answers.questionId' },
+          { path: 'codingSubmissions.problemId', select: 'title description' },
+          { path: 'codingSubmissions.submissionId', select: 'language sourceCode status score testResults createdAt' },
+        ],
       });
 
     if (!result) {
       return res.status(404).json({ success: false, message: 'Result not found' });
     }
 
-    const certificate = await Certificate.findOne({ resultId: result._id });
+    if (req.user.role === 'student' && result.studentId?._id?.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to view this result' });
+    }
+    if (req.user.role === 'faculty' && result.examId?.facultyId?.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to view this result' });
+    }
+
+    const certificate = await Certificate.findOne({ resultId: result._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
 
     res.status(200).json({ success: true, result, certificate });
   } catch (err) {
@@ -197,11 +209,11 @@ exports.getResultById = async (req, res, next) => {
 exports.getLeaderboard = async (req, res, next) => {
   try {
     const { examId, groupId } = req.query;
-    const query = {};
+    const query = req.collegeId ? { collegeId: req.collegeId } : {};
     if (examId) query.examId = examId;
 
     if (groupId) {
-      const studentDocs = await Student.find({ groupId }).select('userId');
+      const studentDocs = await Student.find({ groupId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).select('userId');
       const groupUserIds = studentDocs.map((s) => s.userId);
       query.studentId = { $in: groupUserIds };
     }
@@ -234,7 +246,7 @@ exports.getLeaderboard = async (req, res, next) => {
 // @access  Private
 exports.getCertificates = async (req, res, next) => {
   try {
-    const query = {};
+    const query = req.collegeId ? { collegeId: req.collegeId } : {};
     if (req.user.role === 'student') {
       query.studentId = req.user._id;
     }
@@ -279,7 +291,7 @@ exports.verifyCertificate = async (req, res, next) => {
 exports.exportResultsExcel = async (req, res, next) => {
   try {
     const { examId, groupId, courseId, course, department, studentId } = req.query;
-    const query = {};
+    const query = req.collegeId ? { collegeId: req.collegeId } : {};
 
     const Exam = require('../models/Exam');
     const ExamAssignment = require('../models/ExamAssignment');
@@ -294,10 +306,10 @@ exports.exportResultsExcel = async (req, res, next) => {
 
     if (req.user.role === 'faculty') {
       // Find all exams created by or assigned by this faculty
-      const ownExams = await Exam.find({ facultyId: req.user._id }).select('_id');
+      const ownExams = await Exam.find({ facultyId: req.user._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).select('_id');
       const ownExamIds = ownExams.map((e) => e._id.toString());
 
-      const assignedDocs = await ExamAssignment.find({ facultyId: req.user._id }).select('examId');
+      const assignedDocs = await ExamAssignment.find({ facultyId: req.user._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).select('examId');
       const assignedExamIds = assignedDocs.map((a) => a.examId.toString());
 
       const authorizedExamIds = Array.from(new Set([...ownExamIds, ...assignedExamIds]));
@@ -322,9 +334,9 @@ exports.exportResultsExcel = async (req, res, next) => {
     let targetGroup = null;
 
     if (groupId) {
-      targetGroup = await Group.findById(groupId).populate('students', '_id');
+      targetGroup = await Group.findOne({ _id: groupId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).populate('students', '_id');
       if (targetGroup) {
-        const studentDocs = await Student.find({ groupId: targetGroup._id }).select('userId');
+        const studentDocs = await Student.find({ groupId: targetGroup._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).select('userId');
         const idsFromStudentDoc = studentDocs.map((s) => s.userId.toString());
         const idsFromGroupDoc = targetGroup.students.map((s) => s._id.toString());
         studentUserIds = Array.from(new Set([...idsFromStudentDoc, ...idsFromGroupDoc]));
@@ -341,9 +353,10 @@ exports.exportResultsExcel = async (req, res, next) => {
 
     const selectedCourse = courseId || course;
     if (selectedCourse || department) {
-      const filter = {};
-      if (selectedCourse) filter.course = { $regex: selectedCourse, $options: 'i' };
-      if (department) filter.branch = { $regex: department, $options: 'i' };
+      const filter = req.collegeId ? { collegeId: req.collegeId } : {};
+      const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (selectedCourse) filter.course = { $regex: escapeRegex(selectedCourse), $options: 'i' };
+      if (department) filter.branch = { $regex: escapeRegex(department), $options: 'i' };
 
       const matchedStudents = await Student.find(filter).select('userId');
       const filterUserIds = matchedStudents.map((s) => s.userId.toString());
@@ -374,7 +387,7 @@ exports.exportResultsExcel = async (req, res, next) => {
 
     // 4. Fetch Student profiles with Group info
     const resultUserIds = Array.from(new Set(results.map((r) => r.studentId?._id?.toString()).filter(Boolean)));
-    const studentProfiles = await Student.find({ userId: { $in: resultUserIds } }).populate('groupId', 'name code course department');
+    const studentProfiles = await Student.find({ userId: { $in: resultUserIds }, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).populate('groupId', 'name code course department');
     const profileMap = {};
     studentProfiles.forEach((sp) => {
       if (sp.userId) profileMap[sp.userId.toString()] = sp;
@@ -411,7 +424,7 @@ exports.exportResultsExcel = async (req, res, next) => {
 exports.reEvaluateResult = async (req, res, next) => {
   try {
     const { bonusMarks = 0 } = req.body;
-    const result = await Result.findById(req.params.id);
+    const result = await Result.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
 
     if (!result) {
       return res.status(404).json({ success: false, message: 'Result not found' });
@@ -447,15 +460,15 @@ exports.deleteAttemptResult = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Invalid attempt ID' });
     }
 
-    let attemptDoc = await ExamAttempt.findById(attemptId).populate('examId');
+    let attemptDoc = await ExamAttempt.findOne({ _id: attemptId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).populate('examId');
     let resultDoc = null;
 
     if (attemptDoc) {
-      resultDoc = await Result.findOne({ attemptId: attemptDoc._id });
+      resultDoc = await Result.findOne({ attemptId: attemptDoc._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     } else {
-      resultDoc = await Result.findById(attemptId).populate('examId');
+      resultDoc = await Result.findOne({ _id: attemptId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).populate('examId');
       if (resultDoc) {
-        attemptDoc = await ExamAttempt.findById(resultDoc.attemptId);
+        attemptDoc = await ExamAttempt.findOne({ _id: resultDoc.attemptId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
       }
     }
 
@@ -475,7 +488,7 @@ exports.deleteAttemptResult = async (req, res, next) => {
 
     // Delete ONLY target ExamAttempt and Result (and associated Certificate if any)
     if (resultDoc) {
-      await Certificate.deleteMany({ resultId: resultDoc._id });
+      await Certificate.deleteMany({ resultId: resultDoc._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
       await resultDoc.deleteOne();
     }
 
@@ -507,11 +520,13 @@ exports.getAssessmentStudentAttempts = async (req, res, next) => {
     const attempts = await ExamAttempt.find({
       examId: assessmentId,
       studentId: studentId,
+      ...(req.collegeId ? { collegeId: req.collegeId } : {}),
     }).sort({ attemptNumber: 1, createdAt: 1 });
 
     const results = await Result.find({
       examId: assessmentId,
       studentId: studentId,
+      ...(req.collegeId ? { collegeId: req.collegeId } : {}),
     });
 
     const resultMap = {};
@@ -554,7 +569,7 @@ exports.getAssessmentStudentAttempts = async (req, res, next) => {
 exports.getAssessmentResultStatistics = async (req, res, next) => {
   try {
     const { assessmentId } = req.params;
-    const exam = await Exam.findById(assessmentId).populate('targetGroups');
+    const exam = await Exam.findOne({ _id: assessmentId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).populate('targetGroups');
 
     if (!exam) {
       return res.status(404).json({ success: false, message: 'Assessment not found' });
@@ -569,11 +584,11 @@ exports.getAssessmentResultStatistics = async (req, res, next) => {
     let assignedStudentIds = [];
     if (exam.targetGroups && exam.targetGroups.length > 0) {
       const groupIds = exam.targetGroups.map((g) => g._id);
-      const studentDocs = await Student.find({ groupId: { $in: groupIds } }).select('userId');
+      const studentDocs = await Student.find({ groupId: { $in: groupIds }, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).select('userId');
       assignedStudentIds = studentDocs.map((s) => s.userId.toString());
     }
 
-    const allResults = await Result.find({ examId: assessmentId }).populate('studentId', 'name email');
+    const allResults = await Result.find({ examId: assessmentId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).populate('studentId', 'name email');
     const totalAttempts = allResults.length;
 
     const studentMap = {};

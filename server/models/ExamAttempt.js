@@ -10,9 +10,9 @@ const answerSchema = new mongoose.Schema({
 });
 
 const antiCheatEventSchema = new mongoose.Schema({
-  eventType: {
-    type: String,
-    enum: ['tab_switch', 'fullscreen_exit', 'copy_paste', 'focus_lost'],
+    eventType: {
+      type: String,
+      enum: ['tab_switch', 'fullscreen_exit', 'copy_paste', 'focus_lost', 'faculty_terminate'],
     required: true,
   },
   timestamp: { type: Date, default: Date.now },
@@ -24,6 +24,7 @@ const examAttemptSchema = new mongoose.Schema(
   {
     studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     examId: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam', required: true },
+    collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'College', default: null, index: true },
     attemptNumber: { type: Number, default: 1 },
     startedAt: { type: Date, default: Date.now },
     submittedAt: { type: Date },

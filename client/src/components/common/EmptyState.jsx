@@ -4,18 +4,18 @@ import Button from './Button';
 
 const EmptyState = ({
   icon: Icon = FolderOpen,
-  title = 'No Data Found',
-  description = 'There are no items to display at this moment.',
+  title = 'Nothing here yet',
+  description = 'Items will appear here when they are available.',
   actionLabel = '',
   onAction = null,
   className = '',
 }) => {
   return (
-    <div className={`card text-center py-5 px-4 d-flex flex-column align-items-center justify-content-center border-0 shadow-sm ${className}`}>
-      <div className="rounded-circle p-3 mb-3 bg-secondary text-muted border">
-        <Icon size={36} />
+    <div className={`card app-empty-state text-center py-5 px-4 d-flex flex-column align-items-center justify-content-center ${className}`}>
+      <div className="icon-box mb-3">
+        <Icon size={26} aria-hidden="true" />
       </div>
-      <h5 className="fw-bold mb-1">{title}</h5>
+      <h2 className="h5 fw-bold mb-2">{title}</h2>
       <p className="text-muted small mb-4 lh-base" style={{ maxWidth: 400 }}>
         {description}
       </p>

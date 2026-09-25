@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import '../../styles/faculty.css';
+﻿import React, { useEffect, useState } from 'react';
 import API from '../../services/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { BarChart3, TrendingUp, Users, CheckCircle, ShieldAlert, ShieldCheck, Download } from 'lucide-react';
+import { BarChart3, Download, ShieldAlert, ShieldCheck } from 'lucide-react';
 import PlagiarismCheckerModal from '../../components/PlagiarismCheckerModal';
 import ProctoringAuditModal from '../../components/ProctoringAuditModal';
 import { downloadCSV } from '../../utils/exportCSV';
@@ -10,10 +11,9 @@ import { toast } from 'react-toastify';
 
 const FacultyAnalytics = () => {
   const [analytics, setAnalytics] = useState(null);
+  const [groupPerformance, setGroupPerformance] = useState([]);
   const [loading, setLoading] = useState(true);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
-
-  // Modals state
   const [showPlagiarismModal, setShowPlagiarismModal] = useState(false);
   const [showAuditModal, setShowAuditModal] = useState(false);
 
@@ -24,10 +24,37 @@ const FacultyAnalytics = () => {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const res = await API.get('/admin/analytics');
-      setAnalytics(res.data.analytics);
+      const [analyticsRes, groupsRes, resultsRes] = await Promise.all([
+        API.get('/admin/analytics'),
+        API.get('/groups').catch(() => ({ data: { groups: [] } })),
+        API.get('/results').catch(() => ({ data: { results: [] } })),
+      ]);
+
+      setAnalytics(analyticsRes.data.analytics);
+      const results = resultsRes.data.results || [];
+      const rows = (groupsRes.data.groups || []).map((group) => {
+        const studentIds = new Set((group.students || []).map((student) => (typeof student === 'object' ? student._id : student)).filter(Boolean));
+        const groupResults = results.filter((item) => studentIds.has(item.studentId?._id || item.studentId));
+        const attempted = groupResults.length;
+        const enrolled = studentIds.size;
+        const passCount = groupResults.filter((item) => item.status === 'Pass').length;
+        const average = attempted ? groupResults.reduce((sum, item) => sum + Number(item.percentage || 0), 0) / attempted : 0;
+        const passRate = attempted ? (passCount / attempted) * 100 : 0;
+        return {
+          id: group._id,
+          name: group.name,
+          department: group.department || '-',
+          course: group.course || '-',
+          enrolled,
+          attempted,
+          passRate: Math.round(passRate),
+          average: Number(average.toFixed(1)),
+        };
+      });
+      setGroupPerformance(rows);
     } catch (e) {
       console.error(e);
+      toast.error('Failed to load analytics');
     } finally {
       setLoading(false);
     }
@@ -43,7 +70,7 @@ const FacultyAnalytics = () => {
     try {
       const res = await API.get('/results');
       const results = res.data.results || [];
-      
+
       if (!results.length) {
         toast.info('No results available to export');
         return;
@@ -53,7 +80,7 @@ const FacultyAnalytics = () => {
         'Student Name': r.studentId ? r.studentId.name : 'N/A',
         'Student Email': r.studentId ? r.studentId.email : 'N/A',
         'Exam Title': r.examId ? r.examId.title : 'Assessment',
-        'Category': r.examId ? r.examId.category : 'General',
+        Category: r.examId ? r.examId.category : 'General',
         'Total Score': r.totalScore,
         'Total Marks': r.totalMarks,
         'Percentage (%)': `${r.percentage}%`,
@@ -64,14 +91,14 @@ const FacultyAnalytics = () => {
       }));
 
       downloadCSV(formatted, `ExamiQ_Class_Marksheet_${Date.now()}.csv`);
-      toast.success('📥 Downloaded Marksheet CSV spreadsheet!');
+      toast.success('Downloaded marksheet CSV spreadsheet');
     } catch (err) {
       toast.error('Failed to export CSV marksheet');
     }
   };
 
   if (loading || !analytics) {
-    return <div className="text-center py-5 text-light">Loading performance analytics...</div>;
+    return <div className="text-center py-5 text-body">Loading performance analytics...</div>;
   }
 
   const pieData = [
@@ -89,28 +116,15 @@ const FacultyAnalytics = () => {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-          <h3 className="fw-extrabold text-light m-0 d-flex align-items-center gap-2">
+          <h3 className="fw-bold text-body m-0 d-flex align-items-center gap-2">
             <BarChart3 className="text-primary" size={28} /> Faculty Assessment Analytics
           </h3>
-          <p className="text-muted small m-0">Performance analytics across objective MCQs & programming challenges</p>
+          <p className="text-muted small m-0">Performance analytics across objective MCQs and programming challenges</p>
         </div>
 
         <div className="d-flex gap-2 flex-wrap">
-          <button
-            className="btn btn-success fw-bold btn-sm rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm"
-            onClick={handleDownloadExcel}
-            disabled={downloadingExcel}
-          >
-            {downloadingExcel ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" />
-                Downloading...
-              </>
-            ) : (
-              <>
-                <Download size={16} /> Download Excel
-              </>
-            )}
+          <button className="btn btn-success fw-bold btn-sm rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm" onClick={handleDownloadExcel} disabled={downloadingExcel}>
+            {downloadingExcel ? <><span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" /> Downloading...</> : <><Download size={16} /> Download Excel</>}
           </button>
           <button className="btn btn-outline-success fw-bold btn-sm rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm" onClick={handleExportCSV}>
             <Download size={16} /> Export CSV
@@ -125,44 +139,21 @@ const FacultyAnalytics = () => {
       </div>
 
       <div className="row g-4 mb-4">
-        <div className="col-12 col-md-6 col-lg-3">
-          <div className="glass-card p-4 text-center">
-            <h2 className="fw-extrabold text-success m-0">{analytics.passPercentage}%</h2>
-            <span className="text-muted small">Overall Pass Percentage</span>
-          </div>
-        </div>
-        <div className="col-12 col-md-6 col-lg-3">
-          <div className="glass-card p-4 text-center">
-            <h2 className="fw-extrabold text-warning m-0">{analytics.averagePercentage}%</h2>
-            <span className="text-muted small">Average Student Score</span>
-          </div>
-        </div>
-        <div className="col-12 col-md-6 col-lg-3">
-          <div className="glass-card p-4 text-center">
-            <h2 className="fw-extrabold text-info m-0">{analytics.totalAttempts}</h2>
-            <span className="text-muted small">Total Exams Evaluated</span>
-          </div>
-        </div>
-        <div className="col-12 col-md-6 col-lg-3">
-          <div className="glass-card p-4 text-center">
-            <h2 className="fw-extrabold text-light m-0">{analytics.totalStudents}</h2>
-            <span className="text-muted small">Enrolled Candidates</span>
-          </div>
-        </div>
+        <div className="col-12 col-md-6 col-lg-3"><div className="card p-4 text-center"><h2 className="fw-bold text-success m-0">{analytics.passPercentage}%</h2><span className="text-muted small">Overall Pass Percentage</span></div></div>
+        <div className="col-12 col-md-6 col-lg-3"><div className="card p-4 text-center"><h2 className="fw-bold text-warning m-0">{analytics.averagePercentage}%</h2><span className="text-muted small">Average Student Score</span></div></div>
+        <div className="col-12 col-md-6 col-lg-3"><div className="card p-4 text-center"><h2 className="fw-bold text-info m-0">{analytics.totalAttempts}</h2><span className="text-muted small">Total Exams Evaluated</span></div></div>
+        <div className="col-12 col-md-6 col-lg-3"><div className="card p-4 text-center"><h2 className="fw-bold text-body m-0">{analytics.totalStudents}</h2><span className="text-muted small">Enrolled Candidates</span></div></div>
       </div>
 
-      {/* Visual Charts */}
       <div className="row g-4 mb-4">
         <div className="col-12 col-lg-6">
-          <div className="glass-card p-4">
-            <h6 className="fw-bold text-light mb-3">Pass / Fail Ratio Distribution</h6>
+          <div className="card p-4">
+            <h6 className="fw-bold text-body mb-3">Pass / Fail Ratio Distribution</h6>
             <div style={{ height: 260 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
+                    {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>
@@ -172,15 +163,15 @@ const FacultyAnalytics = () => {
         </div>
 
         <div className="col-12 col-lg-6">
-          <div className="glass-card p-4">
-            <h6 className="fw-bold text-light mb-3">Participation & Success Counts</h6>
+          <div className="card p-4">
+            <h6 className="fw-bold text-body mb-3">Participation & Success Counts</h6>
             <div style={{ height: 260 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={barData}>
                   <XAxis dataKey="name" stroke="#94a3b8" />
                   <YAxis stroke="#94a3b8" />
                   <Tooltip />
-                  <Bar dataKey="count" fill="#4f46e5" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="count" fill="#2563eb" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -188,66 +179,8 @@ const FacultyAnalytics = () => {
         </div>
       </div>
 
-      {/* Item Difficulty & Discrimination Index Analysis Table */}
-      <div className="glass-card p-4 mb-4 border border-secondary">
-        <h6 className="fw-bold text-light mb-3 d-flex align-items-center gap-2">
-          <TrendingUp size={18} className="text-warning" /> Item Difficulty & Discrimination Index Analysis
-        </h6>
-        <div className="table-responsive">
-          <table className="table table-hover align-middle m-0" style={{ fontSize: '0.85rem' }}>
-            <thead>
-              <tr>
-                <th>Question Item</th>
-                <th>Topic</th>
-                <th>Target Difficulty</th>
-                <th>Class Accuracy %</th>
-                <th>Discrimination Index</th>
-                <th>Quality Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="fw-semibold text-light">What is the worst-case time complexity of QuickSort?</td>
-                <td><span className="badge bg-secondary">Algorithms</span></td>
-                <td><span className="badge bg-warning text-dark">Medium</span></td>
-                <td><strong className="text-success">84%</strong></td>
-                <td className="font-monospace text-info">+0.42</td>
-                <td><span className="badge bg-success">High Discrimination</span></td>
-              </tr>
-              <tr>
-                <td className="fw-semibold text-light">Explain the difference between process and thread in OS.</td>
-                <td><span className="badge bg-secondary">Operating Systems</span></td>
-                <td><span className="badge bg-danger">Hard</span></td>
-                <td><strong className="text-warning">48%</strong></td>
-                <td className="font-monospace text-info">+0.38</td>
-                <td><span className="badge bg-success">Optimal Quality</span></td>
-              </tr>
-              <tr>
-                <td className="fw-semibold text-light">Which data structure operates on LIFO principle?</td>
-                <td><span className="badge bg-secondary">Data Structures</span></td>
-                <td><span className="badge bg-success">Easy</span></td>
-                <td><strong className="text-success">96%</strong></td>
-                <td className="font-monospace text-muted">+0.15</td>
-                <td><span className="badge bg-info">Easy Baseline</span></td>
-              </tr>
-              <tr>
-                <td className="fw-semibold text-light">Implement a function to detect cycle in a Directed Graph.</td>
-                <td><span className="badge bg-secondary">Graphs</span></td>
-                <td><span className="badge bg-danger">Hard</span></td>
-                <td><strong className="text-danger">22%</strong></td>
-                <td className="font-monospace text-danger">+0.08</td>
-                <td><span className="badge bg-warning text-dark">Requires Review</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Batch-wise Gradebook & Department Performance Comparison Matrix */}
-      <div className="glass-card p-4 border border-secondary">
-        <h6 className="fw-bold text-light mb-3 d-flex align-items-center gap-2">
-          <Users size={18} className="text-info" /> Batch & Department Gradebook Comparison Matrix
-        </h6>
+      <div className="card p-4 mb-4">
+        <h5 className="fw-bold text-body mb-3">Group Performance Matrix</h5>
         <div className="table-responsive">
           <table className="table table-hover align-middle m-0" style={{ fontSize: '0.85rem' }}>
             <thead>
@@ -262,48 +195,30 @@ const FacultyAnalytics = () => {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td className="fw-bold text-light">BCA 2026 Batch A</td>
-                <td><span className="badge bg-primary">BCA / Computer Science</span></td>
-                <td>48 Students</td>
-                <td>44 Attempted</td>
-                <td><strong className="text-success">92%</strong></td>
-                <td><strong className="text-warning">78.5%</strong></td>
-                <td><span className="badge bg-success">High Performing</span></td>
-              </tr>
-              <tr>
-                <td className="fw-bold text-light">B.Tech CSE Section B</td>
-                <td><span className="badge bg-info text-dark">B.Tech / CSE</span></td>
-                <td>60 Students</td>
-                <td>58 Attempted</td>
-                <td><strong className="text-success">86%</strong></td>
-                <td><strong className="text-warning">74.2%</strong></td>
-                <td><span className="badge bg-success">Optimal</span></td>
-              </tr>
-              <tr>
-                <td className="fw-bold text-light">MCA Semester 2</td>
-                <td><span className="badge bg-secondary">MCA / IT</span></td>
-                <td>35 Students</td>
-                <td>30 Attempted</td>
-                <td><strong className="text-warning">68%</strong></td>
-                <td><strong className="text-info">62.0%</strong></td>
-                <td><span className="badge bg-warning text-dark">Needs Intervention</span></td>
-              </tr>
+              {groupPerformance.length === 0 ? (
+                <tr><td colSpan="7" className="text-center text-secondary py-4">No group performance data available yet.</td></tr>
+              ) : groupPerformance.map((group) => {
+                const status = group.average >= 75 ? 'High Performing' : group.average >= 50 ? 'On Track' : 'Needs Attention';
+                const badge = group.average >= 75 ? 'bg-success' : group.average >= 50 ? 'bg-info text-dark' : 'bg-warning text-dark';
+                return (
+                  <tr key={group.id}>
+                    <td className="fw-bold text-body">{group.name}</td>
+                    <td><span className="badge bg-primary">{group.course} / {group.department}</span></td>
+                    <td>{group.enrolled} Students</td>
+                    <td>{group.attempted} Attempted</td>
+                    <td><strong className="text-success">{group.passRate}%</strong></td>
+                    <td><strong className="text-warning">{group.average}%</strong></td>
+                    <td><span className={`badge ${badge}`}>{status}</span></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Modals */}
-      <PlagiarismCheckerModal
-        isOpen={showPlagiarismModal}
-        onClose={() => setShowPlagiarismModal(false)}
-      />
-
-      <ProctoringAuditModal
-        isOpen={showAuditModal}
-        onClose={() => setShowAuditModal(false)}
-      />
+      <PlagiarismCheckerModal isOpen={showPlagiarismModal} onClose={() => setShowPlagiarismModal(false)} />
+      <ProctoringAuditModal isOpen={showAuditModal} onClose={() => setShowAuditModal(false)} />
     </div>
   );
 };

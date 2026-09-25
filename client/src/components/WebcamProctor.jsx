@@ -120,12 +120,12 @@ const WebcamProctor = ({ examId, onViolation }) => {
 
   return (
     <div
-      className="webcam-proctor-box position-fixed bottom-0 end-0 m-3 rounded-4 overflow-hidden shadow-lg border border-primary bg-dark"
+      className="webcam-proctor-box position-fixed bottom-0 end-0 m-3 rounded-3 overflow-hidden shadow-lg border-primary bg-dark"
       style={{ zIndex: 1500, width: 230, boxShadow: '0 8px 32px rgba(0,0,0,0.8)' }}
     >
       {/* Header Bar */}
       <div className="bg-primary bg-opacity-20 px-3 py-1.5 border-bottom border-primary d-flex align-items-center justify-content-between">
-        <span className="small fw-bold text-light d-flex align-items-center gap-1" style={{ fontSize: '0.75rem' }}>
+        <span className="small fw-bold text-body d-flex align-items-center gap-1" style={{ fontSize: '0.75rem' }}>
           <ShieldCheck size={14} className="text-success" /> AI Proctor Stream
         </span>
         <span className="badge bg-danger rounded-circle p-1" style={{ width: 8, height: 8, animation: 'pulse 1s infinite' }} />

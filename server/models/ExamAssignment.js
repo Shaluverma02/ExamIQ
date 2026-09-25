@@ -7,6 +7,12 @@ const examAssignmentSchema = new mongoose.Schema(
       ref: 'Exam',
       required: true,
     },
+    collegeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'College',
+      default: null,
+      index: true,
+    },
     facultyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

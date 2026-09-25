@@ -1,0 +1,133 @@
+
+> online-exam-client@1.0.0 build
+> vite build
+
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32m✓[39m 2822 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mindex.html                                      [39m[1m[2m  1.12 kB[22m[1m[22m[2m │ gzip:   0.54 kB[22m
+[2mdist/[22m[35massets/index-D5P0aC9p.css                       [39m[1m[2m282.76 kB[22m[1m[22m[2m │ gzip:  41.23 kB[22m
+[2mdist/[22m[36massets/chevron-down-CeR8Pl2o.js                 [39m[1m[2m  0.31 kB[22m[1m[22m[2m │ gzip:   0.25 kB[22m
+[2mdist/[22m[36massets/chevron-right-D5ctOjJp.js                [39m[1m[2m  0.31 kB[22m[1m[22m[2m │ gzip:   0.25 kB[22m
+[2mdist/[22m[36massets/play-CfwoMp43.js                         [39m[1m[2m  0.31 kB[22m[1m[22m[2m │ gzip:   0.25 kB[22m
+[2mdist/[22m[36massets/loader-circle-oywKOFfO.js                [39m[1m[2m  0.32 kB[22m[1m[22m[2m │ gzip:   0.26 kB[22m
+[2mdist/[22m[36massets/plus-Cd_tEWj9.js                         [39m[1m[2m  0.33 kB[22m[1m[22m[2m │ gzip:   0.26 kB[22m
+[2mdist/[22m[36massets/x-DNibE684.js                            [39m[1m[2m  0.33 kB[22m[1m[22m[2m │ gzip:   0.26 kB[22m
+[2mdist/[22m[36massets/arrow-right-DWilTfoQ.js                  [39m[1m[2m  0.34 kB[22m[1m[22m[2m │ gzip:   0.27 kB[22m
+[2mdist/[22m[36massets/arrow-left-VESZrfTB.js                   [39m[1m[2m  0.34 kB[22m[1m[22m[2m │ gzip:   0.27 kB[22m
+[2mdist/[22m[36massets/send-BTyG-rMV.js                         [39m[1m[2m  0.35 kB[22m[1m[22m[2m │ gzip:   0.27 kB[22m
+[2mdist/[22m[36massets/search-CgOmwITQ.js                       [39m[1m[2m  0.35 kB[22m[1m[22m[2m │ gzip:   0.28 kB[22m
+[2mdist/[22m[36massets/circle-check-CmL7HT2L.js                 [39m[1m[2m  0.35 kB[22m[1m[22m[2m │ gzip:   0.28 kB[22m
+[2mdist/[22m[36massets/clock-BWYIAez-.js                        [39m[1m[2m  0.36 kB[22m[1m[22m[2m │ gzip:   0.28 kB[22m
+[2mdist/[22m[36massets/terminal-BOWDVfHn.js                     [39m[1m[2m  0.37 kB[22m[1m[22m[2m │ gzip:   0.29 kB[22m
+[2mdist/[22m[36massets/eye-BNtu_5WZ.js                          [39m[1m[2m  0.37 kB[22m[1m[22m[2m │ gzip:   0.29 kB[22m
+[2mdist/[22m[36massets/user-rfntc1PC.js                         [39m[1m[2m  0.38 kB[22m[1m[22m[2m │ gzip:   0.29 kB[22m
+[2mdist/[22m[36massets/circle-plus-D-DQLwTa.js                  [39m[1m[2m  0.38 kB[22m[1m[22m[2m │ gzip:   0.28 kB[22m
+[2mdist/[22m[36massets/circle-x-CXs4Rmsw.js                     [39m[1m[2m  0.38 kB[22m[1m[22m[2m │ gzip:   0.28 kB[22m
+[2mdist/[22m[36massets/lock-DIvyBh8E.js                         [39m[1m[2m  0.39 kB[22m[1m[22m[2m │ gzip:   0.30 kB[22m
+[2mdist/[22m[36massets/code-xml-D4o5mLMp.js                     [39m[1m[2m  0.39 kB[22m[1m[22m[2m │ gzip:   0.28 kB[22m
+[2mdist/[22m[36massets/mail-DXkkv7yH.js                         [39m[1m[2m  0.40 kB[22m[1m[22m[2m │ gzip:   0.31 kB[22m
+[2mdist/[22m[36massets/square-check-big-Bvhk-2JA.js             [39m[1m[2m  0.40 kB[22m[1m[22m[2m │ gzip:   0.29 kB[22m
+[2mdist/[22m[36massets/book-open-CTgKyCK1.js                    [39m[1m[2m  0.40 kB[22m[1m[22m[2m │ gzip:   0.29 kB[22m
+[2mdist/[22m[36massets/circle-help-_ABONgEP.js                  [39m[1m[2m  0.41 kB[22m[1m[22m[2m │ gzip:   0.31 kB[22m
+[2mdist/[22m[36massets/bar-chart-3-CWfHg1Sz.js                  [39m[1m[2m  0.41 kB[22m[1m[22m[2m │ gzip:   0.29 kB[22m
+[2mdist/[22m[36massets/activity-D_buxA9H.js                     [39m[1m[2m  0.41 kB[22m[1m[22m[2m │ gzip:   0.31 kB[22m
+[2mdist/[22m[36massets/pen-Duk4PwCx.js                          [39m[1m[2m  0.42 kB[22m[1m[22m[2m │ gzip:   0.31 kB[22m
+[2mdist/[22m[36massets/camera-DwegKP6i.js                       [39m[1m[2m  0.43 kB[22m[1m[22m[2m │ gzip:   0.32 kB[22m
+[2mdist/[22m[36massets/circle-alert-x7MrAH8r.js                 [39m[1m[2m  0.43 kB[22m[1m[22m[2m │ gzip:   0.30 kB[22m
+[2mdist/[22m[36massets/calendar-DweUW3dj.js                     [39m[1m[2m  0.44 kB[22m[1m[22m[2m │ gzip:   0.31 kB[22m
+[2mdist/[22m[36massets/download-B8hdAEIY.js                     [39m[1m[2m  0.44 kB[22m[1m[22m[2m │ gzip:   0.33 kB[22m
+[2mdist/[22m[36massets/triangle-alert-B04i-RKr.js               [39m[1m[2m  0.44 kB[22m[1m[22m[2m │ gzip:   0.32 kB[22m
+[2mdist/[22m[36massets/file-check-DScH6kT7.js                   [39m[1m[2m  0.45 kB[22m[1m[22m[2m │ gzip:   0.31 kB[22m
+[2mdist/[22m[36massets/volume-2-D563nHBt.js                     [39m[1m[2m  0.45 kB[22m[1m[22m[2m │ gzip:   0.33 kB[22m
+[2mdist/[22m[36massets/mic-BUrTSy8f.js                          [39m[1m[2m  0.45 kB[22m[1m[22m[2m │ gzip:   0.32 kB[22m
+[2mdist/[22m[36massets/shield-4Pz9oZ2m.js                       [39m[1m[2m  0.45 kB[22m[1m[22m[2m │ gzip:   0.33 kB[22m
+[2mdist/[22m[36massets/award-CR3pGRTQ.js                        [39m[1m[2m  0.45 kB[22m[1m[22m[2m │ gzip:   0.33 kB[22m
+[2mdist/[22m[36massets/file-question-BnJTIM2J.js                [39m[1m[2m  0.46 kB[22m[1m[22m[2m │ gzip:   0.32 kB[22m
+[2mdist/[22m[36massets/pen-line-_I3_bGBe.js                     [39m[1m[2m  0.46 kB[22m[1m[22m[2m │ gzip:   0.33 kB[22m
+[2mdist/[22m[36massets/maximize-2-BBSaJXyO.js                   [39m[1m[2m  0.48 kB[22m[1m[22m[2m │ gzip:   0.32 kB[22m
+[2mdist/[22m[36massets/users-BA7gN1yv.js                        [39m[1m[2m  0.48 kB[22m[1m[22m[2m │ gzip:   0.33 kB[22m
+[2mdist/[22m[36massets/user-plus-mCyjf1EW.js                    [39m[1m[2m  0.49 kB[22m[1m[22m[2m │ gzip:   0.34 kB[22m
+[2mdist/[22m[36massets/shield-check-D1mh-AVS.js                 [39m[1m[2m  0.50 kB[22m[1m[22m[2m │ gzip:   0.36 kB[22m
+[2mdist/[22m[36massets/refresh-cw-4DZ-CTiG.js                   [39m[1m[2m  0.50 kB[22m[1m[22m[2m │ gzip:   0.33 kB[22m
+[2mdist/[22m[36massets/save-B8YWc3Lk.js                         [39m[1m[2m  0.51 kB[22m[1m[22m[2m │ gzip:   0.33 kB[22m
+[2mdist/[22m[36massets/bot-DVC2gDQi.js                          [39m[1m[2m  0.51 kB[22m[1m[22m[2m │ gzip:   0.34 kB[22m
+[2mdist/[22m[36massets/graduation-cap-BCUnk9uC.js               [39m[1m[2m  0.51 kB[22m[1m[22m[2m │ gzip:   0.36 kB[22m
+[2mdist/[22m[36massets/file-text-B3IHYlzk.js                    [39m[1m[2m  0.51 kB[22m[1m[22m[2m │ gzip:   0.32 kB[22m
+[2mdist/[22m[36massets/shield-alert-hG3vIiTG.js                 [39m[1m[2m  0.53 kB[22m[1m[22m[2m │ gzip:   0.37 kB[22m
+[2mdist/[22m[36massets/trash-2-Ccx01k9u.js                      [39m[1m[2m  0.54 kB[22m[1m[22m[2m │ gzip:   0.36 kB[22m
+[2mdist/[22m[36massets/PageHeader-B-0Gtr6j.js                   [39m[1m[2m  0.54 kB[22m[1m[22m[2m │ gzip:   0.30 kB[22m
+[2mdist/[22m[36massets/layers-CTJL5ago.js                       [39m[1m[2m  0.54 kB[22m[1m[22m[2m │ gzip:   0.35 kB[22m
+[2mdist/[22m[36massets/phone-BItXAPG3.js                        [39m[1m[2m  0.57 kB[22m[1m[22m[2m │ gzip:   0.37 kB[22m
+[2mdist/[22m[36massets/clipboard-list-BcvdTLp1.js               [39m[1m[2m  0.59 kB[22m[1m[22m[2m │ gzip:   0.37 kB[22m
+[2mdist/[22m[36massets/building-2-DFvkzOV0.js                   [39m[1m[2m  0.62 kB[22m[1m[22m[2m │ gzip:   0.36 kB[22m
+[2mdist/[22m[36massets/trophy-rv8JUOuU.js                       [39m[1m[2m  0.65 kB[22m[1m[22m[2m │ gzip:   0.40 kB[22m
+[2mdist/[22m[36massets/cpu-BUsK19sf.js                          [39m[1m[2m  0.68 kB[22m[1m[22m[2m │ gzip:   0.37 kB[22m
+[2mdist/[22m[36massets/sparkles-kobJhNnx.js                     [39m[1m[2m  0.69 kB[22m[1m[22m[2m │ gzip:   0.41 kB[22m
+[2mdist/[22m[36massets/building-DKe-a9C4.js                     [39m[1m[2m  0.72 kB[22m[1m[22m[2m │ gzip:   0.38 kB[22m
+[2mdist/[22m[36massets/StatCard-CDtooLwj.js                     [39m[1m[2m  0.73 kB[22m[1m[22m[2m │ gzip:   0.40 kB[22m
+[2mdist/[22m[36massets/book-open-check-B8AAiKwf.js              [39m[1m[2m  0.75 kB[22m[1m[22m[2m │ gzip:   0.40 kB[22m
+[2mdist/[22m[36massets/zap-CY-3IWSZ.js                          [39m[1m[2m  0.78 kB[22m[1m[22m[2m │ gzip:   0.38 kB[22m
+[2mdist/[22m[36massets/file-code-BvUaSaBK.js                    [39m[1m[2m  0.86 kB[22m[1m[22m[2m │ gzip:   0.43 kB[22m
+[2mdist/[22m[36massets/settings-BTq6DS5q.js                     [39m[1m[2m  0.91 kB[22m[1m[22m[2m │ gzip:   0.45 kB[22m
+[2mdist/[22m[36massets/brain-DJUZU9AK.js                        [39m[1m[2m  0.91 kB[22m[1m[22m[2m │ gzip:   0.47 kB[22m
+[2mdist/[22m[36massets/Button-ClDlBBXi.js                       [39m[1m[2m  1.12 kB[22m[1m[22m[2m │ gzip:   0.55 kB[22m
+[2mdist/[22m[36massets/EmptyState-6YUY5WOa.js                   [39m[1m[2m  1.14 kB[22m[1m[22m[2m │ gzip:   0.70 kB[22m
+[2mdist/[22m[36massets/downloadExcel-Bi2Fxfx1.js                [39m[1m[2m  1.29 kB[22m[1m[22m[2m │ gzip:   0.68 kB[22m
+[2mdist/[22m[36massets/CollegeAdminDashboard-Ba_BfoSv.js        [39m[1m[2m  1.45 kB[22m[1m[22m[2m │ gzip:   0.73 kB[22m
+[2mdist/[22m[36massets/createLucideIcon-BkFpLO6r.js             [39m[1m[2m  1.55 kB[22m[1m[22m[2m │ gzip:   0.65 kB[22m
+[2mdist/[22m[36massets/ThemeToggle-CrZV1-Oz.js                  [39m[1m[2m  1.76 kB[22m[1m[22m[2m │ gzip:   0.81 kB[22m
+[2mdist/[22m[36massets/ForgotPassword-B8EkitLG.js               [39m[1m[2m  2.01 kB[22m[1m[22m[2m │ gzip:   1.08 kB[22m
+[2mdist/[22m[36massets/Input-CGAiPBFq.js                        [39m[1m[2m  2.02 kB[22m[1m[22m[2m │ gzip:   1.06 kB[22m
+[2mdist/[22m[36massets/MagicLogin-BcFT7v7B.js                   [39m[1m[2m  2.21 kB[22m[1m[22m[2m │ gzip:   1.13 kB[22m
+[2mdist/[22m[36massets/ResetPassword-C5FRQO6M.js                [39m[1m[2m  2.22 kB[22m[1m[22m[2m │ gzip:   1.16 kB[22m
+[2mdist/[22m[36massets/AuthLayout-CGC6uT3z.js                   [39m[1m[2m  2.52 kB[22m[1m[22m[2m │ gzip:   0.98 kB[22m
+[2mdist/[22m[36massets/VerifyPhone-BR3vmB2c.js                  [39m[1m[2m  2.65 kB[22m[1m[22m[2m │ gzip:   1.31 kB[22m
+[2mdist/[22m[36massets/Login-CTznyCo1.js                        [39m[1m[2m  2.69 kB[22m[1m[22m[2m │ gzip:   1.31 kB[22m
+[2mdist/[22m[36massets/AuditLogViewer-CCoRXMak.js               [39m[1m[2m  3.00 kB[22m[1m[22m[2m │ gzip:   1.27 kB[22m
+[2mdist/[22m[36massets/ExamList-BwFxtAy-.js                     [39m[1m[2m  3.06 kB[22m[1m[22m[2m │ gzip:   1.26 kB[22m
+[2mdist/[22m[36massets/VerifyCertificate-CpfryqWv.js            [39m[1m[2m  3.37 kB[22m[1m[22m[2m │ gzip:   1.20 kB[22m
+[2mdist/[22m[36massets/PlagiarismDetector-B-VF3fab.js           [39m[1m[2m  4.95 kB[22m[1m[22m[2m │ gzip:   1.63 kB[22m
+[2mdist/[22m[36massets/StudentAssignedExams-BmDU3lal.js         [39m[1m[2m  5.17 kB[22m[1m[22m[2m │ gzip:   2.03 kB[22m
+[2mdist/[22m[36massets/CollegeAdminManagement-C1VVtDm4.js       [39m[1m[2m  5.18 kB[22m[1m[22m[2m │ gzip:   1.99 kB[22m
+[2mdist/[22m[36massets/CategoryCourseManager-C9aeXy24.js        [39m[1m[2m  5.50 kB[22m[1m[22m[2m │ gzip:   1.94 kB[22m
+[2mdist/[22m[36massets/StudentResultsList-BQE7QGmq.js           [39m[1m[2m  5.63 kB[22m[1m[22m[2m │ gzip:   1.92 kB[22m
+[2mdist/[22m[36massets/LiveExamMonitorRoom-C07j9ZGZ.js          [39m[1m[2m  5.65 kB[22m[1m[22m[2m │ gzip:   2.09 kB[22m
+[2mdist/[22m[36massets/AdminDashboard-2mMu8UUv.js               [39m[1m[2m  5.67 kB[22m[1m[22m[2m │ gzip:   2.02 kB[22m
+[2mdist/[22m[36massets/AiQuestionGenerator-yW3azoyi.js          [39m[1m[2m  5.93 kB[22m[1m[22m[2m │ gzip:   1.93 kB[22m
+[2mdist/[22m[36massets/LiveProctorDashboard-BUoT6sUN.js         [39m[1m[2m  6.05 kB[22m[1m[22m[2m │ gzip:   2.26 kB[22m
+[2mdist/[22m[36massets/ExamBuilder-fpqsaoao.js                  [39m[1m[2m  6.38 kB[22m[1m[22m[2m │ gzip:   1.96 kB[22m
+[2mdist/[22m[36massets/VersantAssessment-Cb-wHmcN.js            [39m[1m[2m  6.83 kB[22m[1m[22m[2m │ gzip:   2.54 kB[22m
+[2mdist/[22m[36massets/FacultyExamList-CR2L2Ar5.js              [39m[1m[2m  7.60 kB[22m[1m[22m[2m │ gzip:   2.51 kB[22m
+[2mdist/[22m[36massets/Leaderboard-w7K1C77M.js                  [39m[1m[2m  7.75 kB[22m[1m[22m[2m │ gzip:   2.21 kB[22m
+[2mdist/[22m[36massets/FacultyAnalytics-17X_oDEt.js             [39m[1m[2m  8.12 kB[22m[1m[22m[2m │ gzip:   2.80 kB[22m
+[2mdist/[22m[36massets/AdminAnalytics-K_pNnpUS.js               [39m[1m[2m  8.45 kB[22m[1m[22m[2m │ gzip:   2.95 kB[22m
+[2mdist/[22m[36massets/AIInterviewPrep-COXYHzYY.js              [39m[1m[2m  8.68 kB[22m[1m[22m[2m │ gzip:   2.91 kB[22m
+[2mdist/[22m[36massets/PrintableQuestionPaperModal-M3j0xnb9.js  [39m[1m[2m 10.30 kB[22m[1m[22m[2m │ gzip:   3.61 kB[22m
+[2mdist/[22m[36massets/CollegeManagement-CPdQH5eh.js            [39m[1m[2m 11.66 kB[22m[1m[22m[2m │ gzip:   3.43 kB[22m
+[2mdist/[22m[36massets/FacultyDashboard-CcfcJ-1W.js             [39m[1m[2m 12.31 kB[22m[1m[22m[2m │ gzip:   3.68 kB[22m
+[2mdist/[22m[36massets/Register-D5JA0eOK.js                     [39m[1m[2m 12.82 kB[22m[1m[22m[2m │ gzip:   4.01 kB[22m
+[2mdist/[22m[36massets/LandingPage-PuijOI1h.js                  [39m[1m[2m 12.92 kB[22m[1m[22m[2m │ gzip:   4.08 kB[22m
+[2mdist/[22m[36massets/GroupDetails-CoICAu38.js                 [39m[1m[2m 13.24 kB[22m[1m[22m[2m │ gzip:   3.12 kB[22m
+[2mdist/[22m[36massets/MainLayout-B1pTq_uj.js                   [39m[1m[2m 13.74 kB[22m[1m[22m[2m │ gzip:   4.41 kB[22m
+[2mdist/[22m[36massets/GroupManagement-J67zveYe.js              [39m[1m[2m 14.75 kB[22m[1m[22m[2m │ gzip:   3.65 kB[22m
+[2mdist/[22m[36massets/index-C2sk-TjN.js                        [39m[1m[2m 14.90 kB[22m[1m[22m[2m │ gzip:   5.13 kB[22m
+[2mdist/[22m[36massets/ExamAssignment-DI8TuYTf.js               [39m[1m[2m 15.69 kB[22m[1m[22m[2m │ gzip:   4.30 kB[22m
+[2mdist/[22m[36massets/ProblemSolvingArena-B1wYEV8P.js          [39m[1m[2m 17.66 kB[22m[1m[22m[2m │ gzip:   5.08 kB[22m
+[2mdist/[22m[36massets/UserManagement-C9C4qd79.js               [39m[1m[2m 18.68 kB[22m[1m[22m[2m │ gzip:   4.93 kB[22m
+[2mdist/[22m[36massets/Certificates-3L3qczvs.js                 [39m[1m[2m 19.54 kB[22m[1m[22m[2m │ gzip:   7.50 kB[22m
+[2mdist/[22m[36massets/FacultyAssessmentResults-Dy7W5yyd.js     [39m[1m[2m 21.74 kB[22m[1m[22m[2m │ gzip:   5.40 kB[22m
+[2mdist/[22m[36massets/PracticePlayground-DMGKcYIu.js           [39m[1m[2m 21.74 kB[22m[1m[22m[2m │ gzip:   6.32 kB[22m
+[2mdist/[22m[36massets/purify.es-BwoZCkIS.js                    [39m[1m[2m 22.03 kB[22m[1m[22m[2m │ gzip:   8.77 kB[22m
+[2mdist/[22m[36massets/ResultDetail-Bwe7MRD7.js                 [39m[1m[2m 37.04 kB[22m[1m[22m[2m │ gzip:  11.28 kB[22m
+[2mdist/[22m[36massets/StudentDashboard-w6MjI-85.js             [39m[1m[2m 38.34 kB[22m[1m[22m[2m │ gzip:   9.71 kB[22m
+[2mdist/[22m[36massets/QuestionBank-Bc3koQYn.js                 [39m[1m[2m 50.09 kB[22m[1m[22m[2m │ gzip:  11.12 kB[22m
+[2mdist/[22m[36massets/LiveExam-IpaJUNOj.js                     [39m[1m[2m 53.64 kB[22m[1m[22m[2m │ gzip:  15.07 kB[22m
+[2mdist/[22m[36massets/index.es-CQPrXqnm.js                     [39m[1m[2m150.85 kB[22m[1m[22m[2m │ gzip:  51.62 kB[22m
+[2mdist/[22m[36massets/html2canvas.esm-CBrSDip1.js              [39m[1m[2m201.42 kB[22m[1m[22m[2m │ gzip:  48.03 kB[22m
+[2mdist/[22m[36massets/index-BbDilLxC.js                        [39m[1m[2m332.64 kB[22m[1m[22m[2m │ gzip: 110.32 kB[22m
+[2mdist/[22m[36massets/jspdf.es.min-CJTJoDya.js                 [39m[1m[2m357.29 kB[22m[1m[22m[2m │ gzip: 117.79 kB[22m
+[2mdist/[22m[36massets/exportCSV-ic-dQL6K.js                    [39m[1m[2m410.60 kB[22m[1m[22m[2m │ gzip: 110.97 kB[22m
+[32m✓ built in 22.53s[39m

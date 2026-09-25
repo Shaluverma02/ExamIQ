@@ -3,17 +3,20 @@ const Student = require('../models/Student');
 const User = require('../models/User');
 const ExamAssignment = require('../models/ExamAssignment');
 const Result = require('../models/Result');
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // @desc    Get public groups by college (for student registration dropdown)
 // @route   GET /api/groups/public
 // @access  Public
 exports.getPublicGroups = async (req, res, next) => {
   try {
-    const { college } = req.query;
+    const { college, collegeId } = req.query;
     const query = { isActive: true };
 
-    if (college) {
-      query.college = { $regex: `^${college.trim()}$`, $options: 'i' };
+    if (collegeId) {
+      query.collegeId = collegeId;
+    } else if (college) {
+      query.college = { $regex: `^${escapeRegex(college.trim())}$`, $options: 'i' };
     }
 
     const groups = await Group.find(query)
@@ -40,20 +43,20 @@ exports.getPublicGroups = async (req, res, next) => {
 exports.getGroups = async (req, res, next) => {
   try {
     const { college, course, department, semester, isActive, search } = req.query;
-    const query = {};
+    const query = req.collegeId ? { collegeId: req.collegeId } : {};
 
-    if (college) query.college = { $regex: college, $options: 'i' };
-    if (course) query.course = { $regex: course, $options: 'i' };
-    if (department) query.department = { $regex: department, $options: 'i' };
+    if (college) query.college = { $regex: escapeRegex(college), $options: 'i' };
+    if (course) query.course = { $regex: escapeRegex(course), $options: 'i' };
+    if (department) query.department = { $regex: escapeRegex(department), $options: 'i' };
     if (semester) query.semester = semester;
     if (isActive !== undefined && isActive !== '') query.isActive = isActive === 'true';
 
     if (search) {
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { code: { $regex: search, $options: 'i' } },
-        { college: { $regex: search, $options: 'i' } },
-        { course: { $regex: search, $options: 'i' } },
+        { name: { $regex: escapeRegex(search), $options: 'i' } },
+        { code: { $regex: escapeRegex(search), $options: 'i' } },
+        { college: { $regex: escapeRegex(search), $options: 'i' } },
+        { course: { $regex: escapeRegex(search), $options: 'i' } },
       ];
     }
 
@@ -73,7 +76,7 @@ exports.getGroups = async (req, res, next) => {
 // @access  Private (Admin, Faculty)
 exports.getGroupById = async (req, res, next) => {
   try {
-    const group = await Group.findById(req.params.id)
+    const group = await Group.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
       .populate('students', 'name email role phone createdAt')
       .populate('createdBy', 'name email');
 
@@ -95,12 +98,12 @@ exports.getGroupById = async (req, res, next) => {
     }));
 
     // Get exams assigned to this group
-    const assignedExams = await ExamAssignment.find({ groupIds: group._id })
+    const assignedExams = await ExamAssignment.find({ groupIds: group._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
       .populate('examId', 'title category duration totalMarks status')
       .populate('facultyId', 'name email');
 
     // Get exam results for students in this group
-    const groupResults = await Result.find({ studentId: { $in: studentUserIds } })
+    const groupResults = await Result.find({ studentId: { $in: studentUserIds }, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
       .populate('examId', 'title')
       .populate('studentId', 'name email');
 
@@ -154,23 +157,29 @@ exports.createGroup = async (req, res, next) => {
     const {
       name,
       code,
-      college = 'Engineering College',
-      course = 'General',
-      department = 'Computer Science',
-      semester = '1st',
-      section = 'A',
-      academicYear = '2025-2026',
+      course = '',
+      department = '',
+      semester = '',
+      section = '',
+      academicYear = '',
       description = '',
       isActive = true,
       students = [],
     } = req.body;
 
-    if (!name || !code) {
-      return res.status(400).json({ success: false, message: 'Group Name and Code are required' });
+    if (!req.collegeId || !req.college?.name) {
+      return res.status(400).json({ success: false, message: 'Select an active college workspace before creating a group' });
     }
+
+    if (!name || !code) {
+      return res.status(400).json({ success: false, message: 'Group name and code are required' });
+    }
+
+    const college = req.college.name;
 
     // Check duplicate code within the same college
     const existing = await Group.findOne({
+      ...(req.collegeId ? { collegeId: req.collegeId } : {}),
       college: { $regex: `^${college.trim()}$`, $options: 'i' },
       code: code.toUpperCase().trim(),
     });
@@ -185,6 +194,7 @@ exports.createGroup = async (req, res, next) => {
     const group = await Group.create({
       name: name.trim(),
       code: code.toUpperCase().trim(),
+      collegeId: req.collegeId || undefined,
       college: college.trim(),
       course: course.trim(),
       department: department.trim(),
@@ -226,7 +236,7 @@ exports.createGroup = async (req, res, next) => {
 // @access  Private (Admin, Faculty)
 exports.updateGroup = async (req, res, next) => {
   try {
-    const group = await Group.findById(req.params.id);
+    const group = await Group.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     if (!group) {
       return res.status(404).json({ success: false, message: 'Group not found' });
     }
@@ -249,6 +259,7 @@ exports.updateGroup = async (req, res, next) => {
       const targetCollege = college || group.college;
       const existing = await Group.findOne({
         _id: { $ne: group._id },
+        ...(req.collegeId ? { collegeId: req.collegeId } : {}),
         college: { $regex: `^${targetCollege.trim()}$`, $options: 'i' },
         code: code.toUpperCase().trim(),
       });
@@ -291,7 +302,7 @@ exports.updateGroup = async (req, res, next) => {
 // @access  Private (Admin, Faculty)
 exports.toggleGroupStatus = async (req, res, next) => {
   try {
-    const group = await Group.findById(req.params.id);
+    const group = await Group.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     if (!group) {
       return res.status(404).json({ success: false, message: 'Group not found' });
     }
@@ -315,7 +326,7 @@ exports.toggleGroupStatus = async (req, res, next) => {
 exports.assignStudentsToGroup = async (req, res, next) => {
   try {
     const { studentIds = [] } = req.body;
-    const group = await Group.findById(req.params.id);
+    const group = await Group.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
 
     if (!group) {
       return res.status(404).json({ success: false, message: 'Group not found' });
@@ -339,7 +350,7 @@ exports.assignStudentsToGroup = async (req, res, next) => {
 // @access  Private (Admin, Faculty)
 exports.deleteGroup = async (req, res, next) => {
   try {
-    const group = await Group.findById(req.params.id);
+    const group = await Group.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     if (!group) {
       return res.status(404).json({ success: false, message: 'Group not found' });
     }

@@ -25,6 +25,7 @@ const questionSchema = new mongoose.Schema(
     },
     explanation: { type: String, default: '' },
     tags: [{ type: String }],
+    collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'College', default: null, index: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }

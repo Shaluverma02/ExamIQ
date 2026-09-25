@@ -2,8 +2,8 @@ import React from 'react';
 
 const QuestionPalette = ({ questions = [], currentIndex = 0, answers = [], onSelectQuestion }) => {
   return (
-    <div className="glass-card p-3 rounded-3 border border-secondary shadow-sm" style={{ backgroundColor: 'var(--bg-card)' }}>
-      <h6 className="fw-bold mb-3 text-light d-flex align-items-center justify-content-between">
+    <div className="card p-3 rounded-3 border shadow-sm" style={{ backgroundColor: 'var(--bg-card)' }}>
+      <h6 className="fw-bold mb-3 text-body d-flex align-items-center justify-content-between">
         <span>Question Palette</span>
         <span className="badge bg-secondary small">{questions.length} Questions</span>
       </h6>
@@ -13,15 +13,15 @@ const QuestionPalette = ({ questions = [], currentIndex = 0, answers = [], onSel
         {questions.map((q, idx) => {
           const ans = answers.find((a) => a.questionId?.toString() === q._id?.toString());
 
-          let statusClass = 'bg-dark text-muted border border-secondary';
+          let statusClass = 'bg-body-tertiary text-muted border';
           if (idx === currentIndex) {
-            statusClass = 'palette-current bg-primary text-white border border-primary shadow';
+            statusClass = 'palette-current bg-primary text-white border-primary shadow';
           } else if (ans?.isMarkedForReview) {
-            statusClass = 'palette-review text-white border border-light';
+            statusClass = 'palette-review text-white border-light';
           } else if (ans?.selectedOptions && ans.selectedOptions.length > 0) {
-            statusClass = 'palette-answered bg-success text-white border border-success';
+            statusClass = 'palette-answered bg-success text-white border-success';
           } else if (ans?.isVisited) {
-            statusClass = 'palette-skipped bg-danger text-white border border-danger';
+            statusClass = 'palette-skipped bg-danger text-white border-danger';
           }
 
           return (
@@ -39,7 +39,7 @@ const QuestionPalette = ({ questions = [], currentIndex = 0, answers = [], onSel
       </div>
 
       {/* Legend / Status Indicators */}
-      <div className="small border-top border-secondary pt-3 d-flex flex-column gap-2">
+      <div className="small border-top border pt-3 d-flex flex-column gap-2">
         <div className="d-flex align-items-center gap-2">
           <span className="badge bg-success rounded-circle p-2" style={{ width: '10px', height: '10px' }}></span>
           <span className="text-muted">Answered</span>

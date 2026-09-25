@@ -1,3 +1,4 @@
+import '../../styles/faculty.css';
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../../services/api';
@@ -86,7 +87,7 @@ const LiveProctorDashboard = () => {
       {/* Top Header */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-          <h3 className="fw-extrabold text-light m-0 d-flex align-items-center gap-2">
+          <h3 className="fw-bold text-body m-0 d-flex align-items-center gap-2">
             <ShieldAlert className="text-danger" size={28} /> Live Multi-Candidate Proctor Command Center
           </h3>
           <p className="text-muted small m-0">Real-time video snapshots, audio meters, and security violation tracking</p>
@@ -94,7 +95,7 @@ const LiveProctorDashboard = () => {
 
         <div className="d-flex align-items-center gap-2">
           <select
-            className="form-select bg-secondary text-light border-0 fw-semibold"
+            className="form-select bg-secondary text-body border-0 fw-semibold"
             value={selectedExamId}
             onChange={(e) => setSelectedExamId(e.target.value)}
           >
@@ -120,26 +121,26 @@ const LiveProctorDashboard = () => {
       {loading ? (
         <div className="text-center py-5 text-muted">Connecting to active proctoring feeds...</div>
       ) : sessions.length === 0 ? (
-        <div className="glass-card text-center py-5 text-muted">
+        <div className="card text-center py-5 text-muted">
           No candidates currently taking this exam. Active candidate webcam stream cards will render here automatically.
         </div>
       ) : (
         <div className="row g-4">
           {sessions.map((sess) => (
             <div key={sess.attemptId} className="col-12 col-md-6 col-lg-4">
-              <div className={`glass-card p-3 rounded-4 border ${sess.violationCount > 0 ? 'border-danger' : 'border-secondary'}`}>
+              <div className={`card p-3 rounded-3 border ${sess.violationCount > 0 ? 'border-danger' : 'border'}`}>
                 {/* Status Bar */}
                 <div className="d-flex justify-content-between align-items-center mb-2">
                   <span className={`badge ${sess.isOnline ? 'bg-success' : 'bg-secondary'} font-monospace small`}>
                     ● {sess.status}
                   </span>
-                  <span className={`badge ${sess.violationCount > 0 ? 'bg-danger' : 'bg-dark text-muted'} fw-bold`}>
+                  <span className={`badge ${sess.violationCount > 0 ? 'bg-danger' : 'bg-body-tertiary text-muted'} fw-bold`}>
                     {sess.violationCount} Violations
                   </span>
                 </div>
 
                 {/* Candidate Video Feed Thumbnail */}
-                <div className="position-relative bg-black rounded-3 overflow-hidden mb-3" style={{ height: 160 }}>
+                <div className="position-relative bg-body-tertiary rounded-3 overflow-hidden mb-3" style={{ height: 160 }}>
                   {sess.snapshot ? (
                     <img
                       src={sess.snapshot}
@@ -154,8 +155,8 @@ const LiveProctorDashboard = () => {
                     </div>
                   )}
 
-                  <div className="position-absolute bottom-0 start-0 w-100 p-2 bg-black bg-opacity-75 d-flex align-items-center justify-content-between">
-                    <span className="text-light small font-monospace truncate" style={{ maxWidth: 150 }}>
+                  <div className="position-absolute bottom-0 start-0 w-100 p-2 bg-body-tertiary bg-opacity-75 d-flex align-items-center justify-content-between">
+                    <span className="text-body small font-monospace truncate" style={{ maxWidth: 150 }}>
                       {sess.studentName}
                     </span>
                     <span className="small text-warning d-flex align-items-center gap-1">
@@ -167,7 +168,7 @@ const LiveProctorDashboard = () => {
                 {/* Candidate Info & Actions */}
                 <div className="d-flex justify-content-between align-items-center pt-1">
                   <div>
-                    <div className="fw-bold text-light small">{sess.studentName}</div>
+                    <div className="fw-bold text-body small">{sess.studentName}</div>
                     <div className="text-muted small" style={{ fontSize: '0.75rem' }}>{sess.studentEmail}</div>
                   </div>
 
@@ -188,28 +189,28 @@ const LiveProctorDashboard = () => {
       {warningTarget && (
         <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
           <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: 420 }}>
-            <div className="modal-content glass-card text-light border border-warning">
-              <div className="modal-header border-secondary">
+            <div className="modal-content card text-body border-warning">
+              <div className="modal-header border">
                 <h5 className="modal-title fw-bold text-warning d-flex align-items-center gap-2">
                   <AlertTriangle size={18} /> Issue Proctor Warning
                 </h5>
-                <button type="button" className="btn-close btn-close-white" onClick={() => setWarningTarget(null)} />
+                <button type="button" className="btn-close" aria-label="Close dialog" onClick={() => setWarningTarget(null)} />
               </div>
               <div className="modal-body">
                 <p className="small text-muted mb-3">
-                  Candidate: <strong className="text-light">{warningTarget.studentName}</strong> ({warningTarget.studentEmail})
+                  Candidate: <strong className="text-body">{warningTarget.studentName}</strong> ({warningTarget.studentEmail})
                 </p>
 
                 <label className="form-label small text-muted fw-bold">Warning Message *</label>
                 <textarea
-                  className="form-control bg-secondary text-light border-0"
+                  className="form-control bg-secondary text-body border-0"
                   rows={3}
                   placeholder="e.g. Please ensure your face is fully visible in camera stream..."
                   value={warningMessage}
                   onChange={(e) => setWarningMessage(e.target.value)}
                 />
               </div>
-              <div className="modal-footer border-secondary">
+              <div className="modal-footer border">
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setWarningTarget(null)}>
                   Cancel
                 </button>

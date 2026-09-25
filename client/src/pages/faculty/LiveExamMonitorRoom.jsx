@@ -1,3 +1,4 @@
+import '../../styles/faculty.css';
 import React, { useEffect, useState } from 'react';
 import API from '../../services/api';
 import { toast } from 'react-toastify';
@@ -69,7 +70,7 @@ const LiveExamMonitorRoom = () => {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-          <h3 className="fw-extrabold text-light m-0 d-flex align-items-center gap-2">
+          <h3 className="fw-bold text-body m-0 d-flex align-items-center gap-2">
             <Camera className="text-warning animate-pulse" size={26} /> Faculty Live Monitoring Room
           </h3>
           <p className="text-secondary small m-0">Real-time classroom proctoring grid showing active student timers, violations, and live feeds.</p>
@@ -77,7 +78,7 @@ const LiveExamMonitorRoom = () => {
 
         <button
           type="button"
-          className="btn btn-outline-secondary btn-sm rounded-pill font-monospace d-flex align-items-center gap-1.5"
+          className="btn btn-outline-secondary btn-sm rounded-pill font-monospace d-flex align-items-center gap-2"
           onClick={fetchLiveMonitor}
           disabled={refreshing}
         >
@@ -86,12 +87,12 @@ const LiveExamMonitorRoom = () => {
       </div>
 
       {/* Control Card */}
-      <div className="glass-card p-4 rounded-4 border border-secondary mb-4 shadow-lg">
+      <div className="card p-4 rounded-3 border mb-4 ">
         <div className="row g-3 align-items-end">
           <div className="col-12 col-md-8">
-            <label className="form-label text-light fw-semibold small">Select Active Published Assessment</label>
+            <label className="form-label text-body fw-semibold small">Select Active Published Assessment</label>
             <select
-              className="form-select bg-dark text-light border-secondary"
+              className="form-select bg-body-tertiary text-body border"
               value={selectedExamId}
               onChange={(e) => setSelectedExamId(e.target.value)}
               disabled={loading}
@@ -111,20 +112,20 @@ const LiveExamMonitorRoom = () => {
         <div>
           <div className="row g-3 mb-4">
             <div className="col-6 col-md-4">
-              <div className="glass-card p-3 rounded-4 border border-secondary text-center">
-                <h3 className="fw-extrabold text-primary m-0">{monitorData.activeCount}</h3>
+              <div className="card p-3 rounded-3 border text-center">
+                <h3 className="fw-bold text-primary m-0">{monitorData.activeCount}</h3>
                 <div className="text-muted extra-small">Students Actively Taking Test</div>
               </div>
             </div>
             <div className="col-6 col-md-4">
-              <div className="glass-card p-3 rounded-4 border border-secondary text-center">
-                <h3 className="fw-extrabold text-success m-0">{monitorData.submittedCount}</h3>
+              <div className="card p-3 rounded-3 border text-center">
+                <h3 className="fw-bold text-success m-0">{monitorData.submittedCount}</h3>
                 <div className="text-muted extra-small">Completed Submissions</div>
               </div>
             </div>
             <div className="col-12 col-md-4">
-              <div className="glass-card p-3 rounded-4 border border-secondary text-center">
-                <h3 className="fw-extrabold text-warning m-0">5s</h3>
+              <div className="card p-3 rounded-3 border text-center">
+                <h3 className="fw-bold text-warning m-0">5s</h3>
                 <div className="text-muted extra-small">Auto Refresh Interval</div>
               </div>
             </div>
@@ -133,7 +134,7 @@ const LiveExamMonitorRoom = () => {
           <div className="row g-3">
             {monitorData.students?.map((std) => (
               <div key={std.attemptId} className="col-12 col-md-6 col-lg-4">
-                <div className={`glass-card p-3.5 rounded-4 border h-100 ${std.warningsCount >= 2 ? 'border-danger' : 'border-secondary'}`}>
+                <div className={`card p-4 rounded-3 border h-100 ${std.warningsCount >= 2 ? 'border-danger' : 'border'}`}>
                   <div className="d-flex justify-content-between align-items-center mb-2">
                     <div className="d-flex align-items-center gap-2">
                       <span className={`badge ${std.status === 'started' ? 'bg-success' : 'bg-secondary'} font-monospace extra-small`}>
@@ -146,7 +147,7 @@ const LiveExamMonitorRoom = () => {
 
                     {std.status === 'started' && (
                       <button
-                        className="btn btn-outline-danger btn-sm py-0.5 px-2 extra-small rounded-pill"
+                        className="btn btn-outline-danger btn-sm py-1 px-2 extra-small rounded-pill"
                         onClick={() => handleForceTerminate(std.attemptId, std.studentName)}
                       >
                         <XOctagon size={12} /> Force Submit
@@ -154,11 +155,11 @@ const LiveExamMonitorRoom = () => {
                     )}
                   </div>
 
-                  <h6 className="fw-bold text-light mb-1">{std.studentName}</h6>
+                  <h6 className="fw-bold text-body mb-1">{std.studentName}</h6>
                   <div className="text-muted extra-small font-monospace mb-3">{std.studentEmail} | Roll: {std.studentRoll}</div>
 
                   {/* Snapshot Feed */}
-                  <div className="position-relative bg-black rounded border border-secondary mb-2 overflow-hidden text-center d-flex align-items-center justify-content-center" style={{ height: 130 }}>
+                  <div className="position-relative bg-body-tertiary rounded border mb-2 overflow-hidden text-center d-flex align-items-center justify-content-center" style={{ height: 130 }}>
                     {std.latestSnapshot ? (
                       <img src={std.latestSnapshot} alt="Webcam Feed" className="w-100 h-100" style={{ objectFit: 'cover' }} />
                     ) : (

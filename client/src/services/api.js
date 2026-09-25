@@ -1,8 +1,22 @@
 import axios from 'axios';
-import { toast } from 'react-toastify';
+
+export const SESSION_EXPIRED_EVENT = 'examiq:session-expired';
+
+const publicAuthRequest = (url = '') => /^\/auth\/(login|register|forgot-password|reset-password|magic-login|verify-phone|resend)(\/|\?|$)/.test(url);
+
+export const getApiErrorMessage = (error, fallback = 'The request could not be completed. Please try again.') => {
+  const serverMessage = error?.response?.data?.message;
+  if (typeof serverMessage === 'string' && serverMessage.trim()) return serverMessage;
+  if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
+    return 'The request timed out. Check your connection and refresh before trying again.';
+  }
+  if (!error?.response && error?.request) return 'Unable to reach the server. Check your connection and try again.';
+  return fallback;
+};
 
 const API = axios.create({
   baseURL: '/api',
+  timeout: 120000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -12,8 +26,18 @@ const API = axios.create({
 API.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    if (token) {
+    if (token && !publicAuthRequest(config.url)) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    const activeCollege = localStorage.getItem('activeCollege');
+    if (activeCollege && !publicAuthRequest(config.url)) {
+      try {
+        const parsed = JSON.parse(activeCollege);
+        const collegeId = parsed?._id || parsed?.id;
+        if (collegeId) config.headers['X-College-Id'] = collegeId;
+      } catch (err) {
+        localStorage.removeItem('activeCollege');
+      }
     }
     return config;
   },
@@ -24,18 +48,15 @@ API.interceptors.request.use(
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message =
-      error.response && error.response.data && error.response.data.message
-        ? error.response.data.message
-        : 'An unexpected network error occurred';
-
-    if (error.response && error.response.status === 401) {
+    const token = localStorage.getItem('token');
+    // A late response from a previous session must not sign out a newly logged-in user.
+    if (error.response?.status === 401 && token &&
+        error.config?.headers?.Authorization === `Bearer ${token}` &&
+        !publicAuthRequest(error.config?.url)) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-        toast.error('Session expired. Please log in again.');
-        window.location.href = '/login';
-      }
+      localStorage.removeItem('activeCollege');
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
     }
 
     return Promise.reject(error);

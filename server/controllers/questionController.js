@@ -8,7 +8,7 @@ const TestCase = require('../models/TestCase');
 exports.getQuestions = async (req, res, next) => {
   try {
     const { category, difficulty, search, page = 1, limit = 20 } = req.query;
-    const query = {};
+    const query = req.collegeId ? { collegeId: req.collegeId } : {};
 
     if (category) query.category = category;
     if (difficulty) query.difficulty = difficulty;
@@ -46,6 +46,7 @@ exports.getQuestions = async (req, res, next) => {
 exports.createQuestion = async (req, res, next) => {
   try {
     req.body.createdBy = req.user._id;
+    if (req.collegeId) req.body.collegeId = req.collegeId;
     const question = await Question.create(req.body);
     res.status(201).json({
       success: true,
@@ -62,7 +63,7 @@ exports.createQuestion = async (req, res, next) => {
 // @access  Private
 exports.getQuestionById = async (req, res, next) => {
   try {
-    const question = await Question.findById(req.params.id);
+    const question = await Question.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     if (!question) {
       return res.status(404).json({ success: false, message: 'Question not found' });
     }
@@ -77,7 +78,7 @@ exports.getQuestionById = async (req, res, next) => {
 // @access  Private (Faculty, Admin)
 exports.updateQuestion = async (req, res, next) => {
   try {
-    let question = await Question.findById(req.params.id);
+    let question = await Question.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     if (!question) {
       return res.status(404).json({ success: false, message: 'Question not found' });
     }
@@ -86,7 +87,7 @@ exports.updateQuestion = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized to update this question' });
     }
 
-    question = await Question.findByIdAndUpdate(req.params.id, req.body, {
+    question = await Question.findOneAndUpdate({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }, req.body, {
       new: true,
       runValidators: true,
     });
@@ -102,7 +103,7 @@ exports.updateQuestion = async (req, res, next) => {
 // @access  Private (Faculty, Admin)
 exports.deleteQuestion = async (req, res, next) => {
   try {
-    const question = await Question.findById(req.params.id);
+    const question = await Question.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     if (!question) {
       return res.status(404).json({ success: false, message: 'Question not found' });
     }
@@ -338,7 +339,7 @@ exports.importQuestionsJson = async (req, res, next) => {
     const validateOnly = req.body.validateOnly === true || req.body.validateOnly === 'true';
 
     // Fetch existing questions for duplicate checking
-    const existingQuestions = await Question.find({ createdBy: req.user._id }).select('questionText category topic');
+    const existingQuestions = await Question.find({ createdBy: req.user._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).select('questionText category topic');
     const existingMap = new Set(
       existingQuestions.map((q) => `${q.questionText.trim().toLowerCase()}|${(q.category || '').trim().toLowerCase()}`)
     );
@@ -383,6 +384,7 @@ exports.importQuestionsJson = async (req, res, next) => {
             validQuestionsToSave.push({
               ...result.data,
               createdBy: req.user._id,
+              collegeId: req.collegeId || undefined,
             });
           }
         }
@@ -423,6 +425,7 @@ exports.importQuestionsJson = async (req, res, next) => {
           const createdProblem = await CodingProblem.create({
             ...codingItem,
             createdBy: req.user._id,
+            collegeId: req.collegeId || undefined,
           });
 
           if (testCases.length > 0) {

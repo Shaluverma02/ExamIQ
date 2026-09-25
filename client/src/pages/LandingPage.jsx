@@ -1,346 +1,282 @@
-import React, { useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Terminal,
-  Shield,
-  Award,
-  Cpu,
-  Code2,
   ArrowRight,
+  ArrowUpRight,
+  Award,
+  BarChart3,
+  BookOpenCheck,
   CheckCircle2,
-  Users,
-  Lock,
-  Zap,
   ChevronDown,
   ChevronUp,
-  Sparkles,
-  Play,
+  Code2,
   FileCheck,
+  GraduationCap,
   Layers,
-  Globe,
-  Check,
-  CheckSquare,
-  Bot,
-  Brain,
-  ShieldAlert,
-  FileText,
+  LayoutDashboard,
+  Menu,
+  Search,
+  ShieldCheck,
+  Terminal,
+  Users,
+  X,
 } from 'lucide-react';
+import API from '../services/api';
+import Brand from '../components/common/Brand';
+import ThemeToggle from '../components/common/ThemeToggle';
+import '../styles/public.css';
+
+const capabilities = [
+  {
+    title: 'Exam delivery',
+    description: 'Faculty can build assessments, assign batches, manage schedules, and review attempts from one workspace.',
+    icon: BookOpenCheck,
+  },
+  {
+    title: 'Coding practice',
+    description: 'Students get problem-solving and practice arenas with language selection, cases, and result feedback.',
+    icon: Code2,
+  },
+  {
+    title: 'Proctoring workflows',
+    description: 'Live monitoring, proctor dashboards, warnings, and audit trails are grouped for exam operations.',
+    icon: ShieldCheck,
+  },
+  {
+    title: 'Certificates',
+    description: 'Passing records can be issued as credentials and checked from the public verification page.',
+    icon: Award,
+  },
+  {
+    title: 'Group management',
+    description: 'Admins and faculty can organize students into groups, courses, departments, and semesters.',
+    icon: Layers,
+  },
+  {
+    title: 'Analytics',
+    description: 'Dashboards summarize users, exams, submissions, scores, and performance trends.',
+    icon: BarChart3,
+  },
+];
+
+const steps = [
+  'Create question banks and exams',
+  'Assign students, groups, and retake rules',
+  'Run assessments with monitoring tools',
+  'Review results, exports, and certificates',
+];
+
+const faqs = [
+  {
+    q: 'Who uses ExamiQ?',
+    a: 'Students, faculty, and administrators each get a dedicated workspace for learning, assessment, and institution management.',
+  },
+  {
+    q: 'Does it support coding exams?',
+    a: 'Yes. Faculty can manage coding questions and assessments, and students can build their skills in dedicated practice arenas.',
+  },
+  {
+    q: 'Can certificates be verified publicly?',
+    a: 'Yes. Enter a certificate ID below to check an issued credential. You do not need to sign in to verify a certificate.',
+  },
+];
+
+const defaultOverview = {
+  stats: [
+    { label: 'Active Students', value: '-' },
+    { label: 'Faculty', value: '-' },
+    { label: 'Published Exams', value: '-' },
+    { label: 'Avg Score', value: '-' },
+  ],
+  recentAssessments: [],
+};
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const [openFaq, setOpenFaq] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [overview, setOverview] = useState(defaultOverview);
+  const [overviewLoading, setOverviewLoading] = useState(true);
+  const [overviewUnavailable, setOverviewUnavailable] = useState(false);
+  const [certificateId, setCertificateId] = useState('');
 
-  const toggleFaq = (idx) => {
-    setOpenFaq(openFaq === idx ? null : idx);
+  useEffect(() => {
+    let alive = true;
+
+    const loadOverview = async () => {
+      try {
+        setOverviewLoading(true);
+        const res = await API.get('/public/overview');
+        if (alive) {
+          setOverview({
+            stats: res.data?.stats?.length ? res.data.stats : defaultOverview.stats,
+            recentAssessments: res.data?.recentAssessments || [],
+          });
+        }
+      } catch (err) {
+        if (alive) {
+          setOverview(defaultOverview);
+          setOverviewUnavailable(true);
+        }
+      } finally {
+        if (alive) setOverviewLoading(false);
+      }
+    };
+
+    loadOverview();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const handleCertificateSearch = (e) => {
+    e.preventDefault();
+    const value = certificateId.trim();
+    if (value) navigate(`/verify-certificate/${encodeURIComponent(value)}`);
   };
 
-  const faqs = [
-    {
-      q: 'How does the proctored anti-cheating security engine work?',
-      a: 'ExamiQ enforces strict fullscreen lockout, window focus loss detection, copy-paste blocking, and live WebRTC webcam monitoring with snapshot logging. A maximum of 4 security violations triggers automatic exam submission immediately.',
-    },
-    {
-      q: 'Which programming languages are supported in the isolated Code Judge?',
-      a: 'Our sandboxed code judge supports Python 3, JavaScript (Node.js), C++ (g++), C (gcc), and Java (OpenJDK). Each submission is evaluated against custom hidden test cases with strict CPU time & memory limits.',
-    },
-    {
-      q: 'How does the Retake Assessment feature and score tracking work?',
-      a: 'Assessments can be configured with customizable retake rules (allowRetake & maxAttempts). Retaking an assessment creates a brand-new attempt without overwriting previous scores. Faculty can view both Best Score and Latest Score per student.',
-    },
-    {
-      q: 'How are completion certificates verified by third parties?',
-      a: 'Every passing certificate includes a unique cryptographic Verification ID and a scannable QR Code routing to an authentic online credential validation page.',
-    },
-  ];
-
   return (
-    <div className="landing-page-root min-vh-100 d-flex flex-column" style={{ backgroundColor: '#070b14', color: '#f8fafc', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      {/* Background Glow Elements */}
-      <div
-        className="position-fixed top-0 start-50 translate-middle-x pointer-events-none"
-        style={{
-          width: '90vw',
-          height: '550px',
-          background: 'radial-gradient(ellipse at top, rgba(37, 99, 235, 0.25) 0%, rgba(14, 165, 233, 0.12) 40%, rgba(7, 11, 20, 0) 75%)',
-          zIndex: 0,
-        }}
-      />
-
-      {/* Header / Navbar */}
-      <header className="px-4 px-md-5 py-3 d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-30 sticky-top backdrop-blur" style={{ zIndex: 100, backgroundColor: 'rgba(11, 17, 32, 0.92)' }}>
-        <div className="d-flex align-items-center gap-3 style-cursor-pointer" onClick={() => navigate('/')}>
-          <div className="rounded-3 p-2 text-white shadow-lg d-flex align-items-center justify-content-center" style={{ background: 'linear-gradient(135deg, #2563eb 0%, #0284c7 100%)' }}>
-            <Terminal size={24} />
+    <div className="landing-page eq-public">
+      <a className="skip-link" href="#main-content">Skip to content</a>
+      <header className="landing-header">
+        <nav className="landing-container landing-nav" aria-label="Main navigation">
+          <Link to="/" className="text-decoration-none" aria-label="ExamiQ home"><Brand /></Link>
+          <div id="public-navigation" className={`landing-nav-links ${menuOpen ? 'is-open' : ''}`}>
+            <a href="#platform" onClick={() => setMenuOpen(false)}>Platform</a>
+            <a href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a>
+            <a href="#portals" onClick={() => setMenuOpen(false)}>For your role</a>
+            <a href="#verify" onClick={() => setMenuOpen(false)}>Verify certificate</a>
           </div>
-          <span className="fs-3 fw-extrabold tracking-tight landing-text-bright">
-            Exami<span style={{ color: '#38bdf8' }}>Q</span>
-            <span className="badge ms-2 fs-6 px-2.5 py-0.5 font-monospace landing-badge-pill">PRO</span>
-          </span>
-        </div>
-
-        <div className="d-flex align-items-center gap-2.5">
-          <Link
-            to="/login"
-            className="btn px-4 py-2 fw-bold rounded-pill font-monospace small transition-all landing-btn-signin"
-          >
-            Sign In
-          </Link>
-          <Link
-            to="/register"
-            className="btn px-4 py-2 fw-extrabold rounded-pill font-monospace small shadow-lg border-0"
-            style={{ background: 'linear-gradient(135deg, #2563eb 0%, #0284c7 100%)', color: '#ffffff' }}
-          >
-            Get Started 🚀
-          </Link>
-        </div>
+          <div className="landing-nav-actions">
+            <ThemeToggle />
+            <Link to="/login" className="landing-signin">Sign in</Link>
+            <Link to="/register" className="btn btn-primary">Get started <ArrowUpRight size={16} /></Link>
+            <button type="button" className="eq-public-menu" aria-expanded={menuOpen} aria-controls="public-navigation" aria-label={menuOpen ? 'Close navigation' : 'Open navigation'} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={20} /> : <Menu size={20} />}</button>
+          </div>
+        </nav>
       </header>
 
-      {/* Hero Section */}
-      <section className="container py-5 text-center position-relative" style={{ zIndex: 10 }}>
-        {/* Top Hero Pill Badge */}
-        <div className="d-inline-flex align-items-center gap-2 px-3.5 py-1.5 rounded-pill mb-4 font-monospace extra-small fw-bold landing-badge-pill">
-          <Sparkles size={15} style={{ color: '#fbbf24' }} className="animate-pulse" />
-          <span style={{ color: '#38bdf8' }}>Next-Gen Assessment & Live Sandboxed Coding Arena</span>
-        </div>
-
-        {/* Hero Heading (Explicit Pure White + Gradient Highlight) */}
-        <h1 className="display-3 fw-extrabold mb-4 leading-tight landing-text-bright" style={{ maxWidth: 960, margin: '0 auto', fontSize: '3.4rem', color: '#ffffff' }}>
-          Empowering Institutions with{' '}
-          <span
-            className="landing-text-gradient"
-            style={{
-              background: 'linear-gradient(135deg, #60a5fa 0%, #38bdf8 50%, #c084fc 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              display: 'inline-block',
-            }}
-          >
-            Proctored Exams
-          </span>{' '}
-          & Code Evaluation
-        </h1>
-
-        {/* Subheading Paragraph (Explicit High-Contrast Bright Slate) */}
-        <p className="lead mb-5 mx-auto font-medium landing-text-slate" style={{ maxWidth: 780, fontSize: '1.15rem', color: '#cbd5e1' }}>
-          All-in-one assessment platform featuring WebRTC camera proctoring, 4-warning anti-cheat auto-submission, 5-language sandboxed code judge, student retake rules, and QR-verified credentials.
-        </p>
-
-        {/* CTA Buttons */}
-        <div className="d-flex flex-wrap justify-content-center gap-3 mb-5">
-          <Link
-            to="/login"
-            className="btn btn-lg px-5 py-3 rounded-pill fw-extrabold d-flex align-items-center gap-2 shadow-lg border-0 transition-all"
-            style={{ background: 'linear-gradient(135deg, #2563eb 0%, #0284c7 100%)', color: '#ffffff' }}
-          >
-            Enter Student Portal <ArrowRight size={20} />
-          </Link>
-          <Link
-            to="/register"
-            className="btn btn-lg px-5 py-3 rounded-pill fw-extrabold transition-all landing-btn-white"
-          >
-            Faculty & Admin Access
-          </Link>
-        </div>
-
-        {/* Live Interactive Code Assessment Mock Preview */}
-        <div className="my-5 rounded-4 border border-secondary border-opacity-60 shadow-lg p-3 text-start mx-auto" style={{ maxWidth: 980, background: 'linear-gradient(135deg, #0f172a 0%, #070b14 100%)' }}>
-          {/* Mock Window Header */}
-          <div className="px-3 py-2 border-bottom border-secondary border-opacity-40 d-flex align-items-center justify-content-between bg-black bg-opacity-40 rounded-top-3">
-            <div className="d-flex align-items-center gap-2">
-              <span className="rounded-circle bg-danger d-inline-block" style={{ width: 10, height: 10 }} />
-              <span className="rounded-circle bg-warning d-inline-block" style={{ width: 10, height: 10 }} />
-              <span className="rounded-circle bg-success d-inline-block" style={{ width: 10, height: 10 }} />
-              <span className="extra-small font-monospace ms-2 landing-text-muted">ExamiQ Sandboxed Coding Workspace — Problem #102</span>
+      <main id="main-content">
+        <section className="landing-container landing-hero">
+          <div className="landing-hero-copy">
+            <span className="landing-eyebrow"><span /> The connected assessment platform</span>
+            <h1 className="landing-headline">Great learning.<br />Better assessment.<br /><span>All in one place.</span></h1>
+            <p className="landing-lead">Bring exams, coding practice, and results together. Give every student a clear path forward, and every institution the tools to guide them.</p>
+            <div className="landing-hero-actions">
+              <Link to="/register" className="btn btn-primary btn-lg">Get started <ArrowRight size={19} /></Link>
+              <Link to="/login" className="eq-public-secondary">Open your workspace <ArrowUpRight size={17} /></Link>
             </div>
-            <div className="d-flex align-items-center gap-2">
-              <span className="badge px-2.5 py-1 font-monospace extra-small d-flex align-items-center gap-1" style={{ backgroundColor: 'rgba(22, 163, 74, 0.2)', color: '#4ade80', border: '1px solid rgba(74, 222, 128, 0.4)' }}>
-                <CheckCircle2 size={12} /> AI Proctoring Active
-              </span>
-              <span className="badge font-monospace extra-small" style={{ backgroundColor: '#2563eb', color: '#ffffff' }}>Time: 24:18 Mins</span>
-            </div>
+            <div className="landing-audience"><span><CheckCircle2 size={16} /> Role-based workspaces</span><span><CheckCircle2 size={16} /> Connected results</span></div>
           </div>
 
-          {/* Mock IDE Layout */}
-          <div className="row g-0">
-            {/* Left Mock Problem Spec */}
-            <div className="col-12 col-md-5 p-3 border-end border-secondary border-opacity-40 bg-dark bg-opacity-30 font-monospace">
-              <div className="d-flex align-items-center justify-content-between mb-2">
-                <span className="badge px-2 py-0.5 extra-small" style={{ backgroundColor: '#16a34a', color: '#ffffff' }}>EASY</span>
-                <span className="extra-small fw-bold" style={{ color: '#38bdf8' }}>Marks: 20 pts</span>
-              </div>
-              <h6 className="fw-bold mb-2 landing-text-bright">Two Sum — Pair Search</h6>
-              <p className="extra-small mb-3 landing-text-slate">
-                Given an array of integers <code style={{ color: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.1)', padding: '2px 4px', borderRadius: '4px' }}>nums</code> and an integer <code style={{ color: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.1)', padding: '2px 4px', borderRadius: '4px' }}>target</code>, return indices of the two numbers such that they add up to target.
-              </p>
-              <div className="p-2 rounded border border-secondary extra-small mb-2" style={{ backgroundColor: '#000000' }}>
-                <div landing-text-muted>Input: nums = [2,7,11,15], target = 9</div>
-                <div className="fw-bold" style={{ color: '#4ade80' }}>Output: [0,1]</div>
-              </div>
-            </div>
-
-            {/* Right Mock Code Editor */}
-            <div className="col-12 col-md-7 p-3 font-monospace extra-small" style={{ backgroundColor: '#000000' }}>
-              <div className="d-flex justify-content-between align-items-center mb-2" style={{ color: '#94a3b8' }}>
-                <span>Language: <strong style={{ color: '#38bdf8' }}>Python 3</strong></span>
-                <span className="fw-bold" style={{ color: '#4ade80' }}>Status: Passed (10/10 Test Cases)</span>
-              </div>
-              <pre className="m-0 leading-relaxed landing-text-bright" style={{ fontSize: '0.84rem' }}>
-                <span style={{ color: '#60a5fa' }}>def</span> <span style={{ color: '#fbbf24' }}>twoSum</span>(nums, target):{'\n'}
-                {'    '}hashmap = &#123;&#125;{'\n'}
-                {'    '}<span style={{ color: '#60a5fa' }}>for</span> i, n <span style={{ color: '#60a5fa' }}>in</span> <span style={{ color: '#38bdf8' }}>enumerate</span>(nums):{'\n'}
-                {'        '}diff = target - n{'\n'}
-                {'        '}<span style={{ color: '#60a5fa' }}>if</span> diff <span style={{ color: '#60a5fa' }}>in</span> hashmap:{'\n'}
-                {'            '}<span style={{ color: '#60a5fa' }}>return</span> [hashmap[diff], i]{'\n'}
-                {'        '}hashmap[n] = i{'\n'}
-                {'    '}<span style={{ color: '#60a5fa' }}>return</span> []
-              </pre>
-            </div>
-          </div>
-        </div>
-
-        {/* Statistics Bar */}
-        <div className="row g-3 w-100 my-5">
-          <div className="col-6 col-md-3">
-            <div className="p-3.5 rounded-4 border border-secondary text-center shadow-sm" style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)' }}>
-              <h2 className="fw-extrabold m-0" style={{ color: '#3b82f6' }}>99.9%</h2>
-              <div className="font-monospace mt-1 small landing-text-slate">Judge Accuracy</div>
-            </div>
-          </div>
-          <div className="col-6 col-md-3">
-            <div className="p-3.5 rounded-4 border border-secondary text-center shadow-sm" style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)' }}>
-              <h2 className="fw-extrabold m-0" style={{ color: '#38bdf8' }}>5+</h2>
-              <div className="font-monospace mt-1 small landing-text-slate">Compiler Engines</div>
-            </div>
-          </div>
-          <div className="col-6 col-md-3">
-            <div className="p-3.5 rounded-4 border border-secondary text-center shadow-sm" style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)' }}>
-              <h2 className="fw-extrabold m-0" style={{ color: '#fbbf24' }}>4 Max</h2>
-              <div className="font-monospace mt-1 small landing-text-slate">Violation Auto-Submit</div>
-            </div>
-          </div>
-          <div className="col-6 col-md-3">
-            <div className="p-3.5 rounded-4 border border-secondary text-center shadow-sm" style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)' }}>
-              <h2 className="fw-extrabold m-0" style={{ color: '#4ade80' }}>Instant</h2>
-              <div className="font-monospace mt-1 small landing-text-slate">QR Verified Credentials</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Core Capabilities Grid */}
-        <div className="my-5 pt-3 text-start">
-          <div className="text-center mb-5">
-            <h2 className="fw-extrabold landing-text-bright">Built for High-Stakes Assessments</h2>
-            <p className="small landing-text-slate">Comprehensive tools engineered for academic excellence and technical evaluation.</p>
-          </div>
-
-          <div className="row g-4">
-            <div className="col-12 col-md-4">
-              <div className="p-4 h-100 rounded-4 border border-secondary transition-all" style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)' }}>
-                <div className="p-3 rounded-3 d-inline-block mb-3" style={{ backgroundColor: 'rgba(37, 99, 235, 0.2)', color: '#3b82f6' }}>
-                  <Code2 size={26} />
+          <div className="landing-preview-wrap">
+            <div className="landing-preview">
+              <div className="landing-preview-topbar"><span><span className="landing-preview-dot" /> ExamiQ workspace</span><span className="eq-preview-avatar" aria-hidden="true">EQ</span></div>
+              <div className="eq-preview-layout">
+              <aside className="eq-preview-sidebar" aria-label="Platform preview"><span className="eq-preview-side-active"><LayoutDashboard size={17} /><span>Overview</span></span><span><BookOpenCheck size={17} /><span>Assessments</span></span><span><Code2 size={17} /><span>Practice</span></span><span><BarChart3 size={17} /><span>Results</span></span><span><Award size={17} /><span>Certificates</span></span><div className="eq-preview-side-footer"><ShieldCheck size={18} /><small>A workspace for<br />every next step.</small></div></aside>
+              <div className="landing-preview-body">
+                <div className="landing-preview-heading">
+                  <div><div className="page-eyebrow">Platform overview</div><h2>Progress starts here.</h2></div>
+                  <span className="landing-preview-heading-icon"><BarChart3 size={23} /></span>
                 </div>
-                <h5 className="fw-bold mb-2 landing-text-bright">Isolated Code Judge</h5>
-                <p className="small m-0 landing-text-slate">
-                  Sandboxed execution for C, C++, Java, Python, and JavaScript with custom test cases, memory limits, and diagnostic logs.
-                </p>
-              </div>
-            </div>
-
-            <div className="col-12 col-md-4">
-              <div className="p-4 h-100 rounded-4 border border-secondary transition-all" style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)' }}>
-                <div className="p-3 rounded-3 d-inline-block mb-3" style={{ backgroundColor: 'rgba(220, 38, 38, 0.2)', color: '#f87171' }}>
-                  <ShieldAlert size={26} />
+                <div className="landing-preview-stats" aria-busy={overviewLoading}>
+                  {overview.stats.map((item, index) => {
+                    const Icon = [Users, GraduationCap, BookOpenCheck, BarChart3][index % 4];
+                    return <div className="landing-preview-stat" key={item.label}><Icon size={18} /><strong>{overviewLoading ? '…' : item.value}</strong><span>{item.label}</span></div>;
+                  })}
                 </div>
-                <h5 className="fw-bold mb-2 landing-text-bright">Anti-Cheat & Proctoring</h5>
-                <p className="small m-0 landing-text-slate">
-                  Fullscreen lockout, focus loss detection, WebRTC webcam monitoring, and 4-warning automatic exam submission engine.
-                </p>
-              </div>
-            </div>
-
-            <div className="col-12 col-md-4">
-              <div className="p-4 h-100 rounded-4 border border-secondary transition-all" style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)' }}>
-                <div className="p-3 rounded-3 d-inline-block mb-3" style={{ backgroundColor: 'rgba(22, 163, 74, 0.2)', color: '#4ade80' }}>
-                  <Award size={26} />
+                <div className="landing-assessment-heading"><h3>Recent assessments</h3><span>{overviewLoading ? 'Loading' : overviewUnavailable ? 'Unavailable' : 'Platform activity'}</span></div>
+                <div className="landing-assessment-list" aria-live="polite" aria-busy={overviewLoading}>
+                  {overviewLoading ? (
+                    <div className="landing-preview-empty"><BookOpenCheck size={27} /><p>Loading current assessments…</p></div>
+                  ) : overviewUnavailable ? (
+                    <div className="landing-preview-empty"><BookOpenCheck size={27} /><p>Platform activity is unavailable right now.</p><span>You can still open your workspace to continue.</span></div>
+                  ) : overview.recentAssessments.length === 0 ? (
+                    <div className="landing-preview-empty"><BookOpenCheck size={27} /><p>Your next challenge is on its way.</p><span>Published assessments will appear here.</span></div>
+                  ) : overview.recentAssessments.map((exam) => (
+                    <div className="landing-assessment" key={exam.id}>
+                      <span className="landing-assessment-icon"><FileCheck size={19} /></span>
+                      <div className="landing-assessment-info"><strong>{exam.title}</strong><span>{exam.category} · {exam.totalMarks || 0} marks</span></div>
+                      <span className={`badge ${exam.status === 'Open' ? 'bg-success' : 'bg-secondary'}`}>{exam.status}</span>
+                    </div>
+                  ))}
                 </div>
-                <h5 className="fw-bold mb-2 landing-text-bright">QR Verified Credentials</h5>
-                <p className="small m-0 landing-text-slate">
-                  Generate high-resolution course completion certificates with unique ID verification badges and scannable QR verification.
-                </p>
+                <Link to="/login" className="landing-preview-link">Find your next assessment <ArrowRight size={16} /></Link>
+              </div>
               </div>
             </div>
-
-            <div className="col-12 col-md-4">
-              <div className="p-4 h-100 rounded-4 border border-secondary transition-all" style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)' }}>
-                <div className="p-3 rounded-3 d-inline-block mb-3" style={{ backgroundColor: 'rgba(217, 119, 6, 0.2)', color: '#fbbf24' }}>
-                  <Layers size={26} />
-                </div>
-                <h5 className="fw-bold mb-2 landing-text-bright">Multi-Attempt Score Matrix</h5>
-                <p className="small m-0 landing-text-slate">
-                  Configurable retake rules (allowRetake & maxAttempts). View Best Score vs Latest Score for every student with Excel exports.
-                </p>
-              </div>
-            </div>
-
-            <div className="col-12 col-md-4">
-              <div className="p-4 h-100 rounded-4 border border-secondary transition-all" style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)' }}>
-                <div className="p-3 rounded-3 d-inline-block mb-3" style={{ backgroundColor: 'rgba(2, 132, 199, 0.2)', color: '#38bdf8' }}>
-                  <Users size={26} />
-                </div>
-                <h5 className="fw-bold mb-2 landing-text-bright">Student Batch Governance</h5>
-                <p className="small m-0 landing-text-slate">
-                  Effortlessly divide candidates into structured batches and manage user roles (Admin, Faculty, Student) with roll number governance.
-                </p>
-              </div>
-            </div>
-
-            <div className="col-12 col-md-4">
-              <div className="p-4 h-100 rounded-4 border border-secondary transition-all" style={{ backgroundColor: 'rgba(15, 23, 42, 0.85)' }}>
-                <div className="p-3 rounded-3 d-inline-block mb-3" style={{ backgroundColor: 'rgba(168, 85, 247, 0.2)', color: '#c084fc' }}>
-                  <Brain size={26} />
-                </div>
-                <h5 className="fw-bold mb-2 landing-text-bright">AI Code Review & Analytics</h5>
-                <p className="small m-0 landing-text-slate">
-                  Instant AI time/space complexity analysis ($O(N)$), edge cases breakdown, and personalized study roadmaps.
-                </p>
-              </div>
-            </div>
+            <div className="landing-preview-note"><span className="landing-note-icon"><ShieldCheck size={21} /></span><div><strong>From practice to achievement</strong><span>One connected learning experience.</span></div></div>
           </div>
-        </div>
+        </section>
 
-        {/* FAQ Section */}
-        <div className="w-100 my-5 pt-4 text-start mx-auto" style={{ maxWidth: 880 }}>
-          <h3 className="fw-extrabold text-center mb-4 landing-text-bright">Frequently Asked Questions</h3>
-          <div className="d-flex flex-column gap-3">
-            {faqs.map((faq, idx) => (
-              <div key={idx} className="rounded-4 border border-secondary p-4 transition-all" style={{ backgroundColor: 'rgba(15, 23, 42, 0.9)' }}>
-                <div
-                  className="d-flex justify-content-between align-items-center cursor-pointer fw-bold fs-6 landing-text-bright"
-                  onClick={() => toggleFaq(idx)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <span>{faq.q}</span>
-                  {openFaq === idx ? <ChevronUp size={20} style={{ color: '#38bdf8' }} /> : <ChevronDown size={20} style={{ color: '#94a3b8' }} />}
-                </div>
-                {openFaq === idx && (
-                  <p className="small mt-3 m-0 pt-3 border-top border-secondary border-opacity-40 leading-relaxed font-medium landing-text-slate">
-                    {faq.a}
-                  </p>
-                )}
+        <div className="eq-platform-strip"><div className="landing-container"><span>BUILT AROUND YOUR WORKFLOW</span><div><BookOpenCheck size={19} /> Assessments</div><div><Code2 size={19} /> Coding practice</div><div><ShieldCheck size={19} /> Proctoring</div><div><BarChart3 size={19} /> Analytics</div></div></div>
+
+        <section id="platform" className="landing-container landing-section">
+          <div className="landing-section-heading">
+            <div><div className="page-eyebrow">One platform, more possibilities</div><h2>Everything you need.<br />Working together.</h2></div>
+            <p>Bring the everyday work of learning and assessment together, from the first question to the final result.</p>
+          </div>
+          <div className="landing-capability-grid">
+            {capabilities.map((item) => {
+              const Icon = item.icon;
+              return (
+                <article className="landing-capability" key={item.title}><span className="landing-capability-icon"><Icon size={23} /></span><h3>{item.title}</h3><p>{item.description}</p></article>
+              );
+            })}
+          </div>
+        </section>
+
+        <section id="how-it-works" className="landing-container landing-section">
+          <div className="landing-workflow">
+            <div className="landing-workflow-copy">
+              <div className="page-eyebrow">A clear path from start to finish</div>
+              <h2>Less admin.<br />More impact.</h2>
+              <p>Set up, run, and review your assessments in one connected workflow.</p>
+              <Link to="/register" className="btn btn-primary">Create your account <ArrowUpRight size={17} /></Link>
+            </div>
+            <ol className="landing-steps">{steps.map((step, index) => <li className="landing-step" key={step}><span className="landing-step-number">0{index + 1}</span><span>{step}</span><ArrowUpRight size={18} /></li>)}</ol>
+          </div>
+        </section>
+
+        <section id="portals" className="landing-container landing-section">
+          <div className="landing-section-heading"><div><div className="page-eyebrow">Designed for your role</div><h2>Your work. Your workspace.</h2></div><p>A dedicated experience for everyone who makes learning happen.</p></div>
+          <div className="landing-role-grid">
+            {[
+              ['Students', 'Build confidence, one challenge at a time.', 'Practice, exams, results, certificates, and leaderboards.', Users],
+              ['Faculty', 'Turn your expertise into their next step.', 'Exam builder, assignments, question banks, and analytics.', Terminal],
+              ['Administrators', 'Keep your institution moving together.', 'Users, groups, categories, audit logs, and system analytics.', ShieldCheck],
+            ].map(([title, subtitle, description, Icon]) => (
+              <Link to="/login" className="landing-role" key={title}><div className="landing-role-top"><span className="landing-role-icon"><Icon size={24} /></span><ArrowUpRight size={21} /></div><div className="page-eyebrow">For {title.toLowerCase()}</div><h3>{subtitle}</h3><p>{description}</p><span className="landing-role-action">Open {title === 'Administrators' ? 'admin' : title === 'Students' ? 'student' : 'faculty'} portal <ArrowRight size={16} /></span></Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="landing-container landing-section landing-faq-layout">
+          <div><div className="page-eyebrow">Good to know</div><h2>A few answers<br />before you begin.</h2><p className="text-secondary">Get familiar with your new workspace.</p></div>
+          <div className="landing-faqs">
+            {faqs.map((faq, index) => (
+              <div className={`landing-faq ${openFaq === index ? 'is-open' : ''}`} key={faq.q}>
+                <h3><button id={`faq-question-${index}`} type="button" className="landing-faq-button" onClick={() => setOpenFaq(openFaq === index ? null : index)} aria-expanded={openFaq === index} aria-controls={`faq-answer-${index}`}><span>{faq.q}</span>{openFaq === index ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</button></h3>
+                <div id={`faq-answer-${index}`} className="landing-faq-answer" role="region" aria-labelledby={`faq-question-${index}`} hidden={openFaq !== index}><p>{faq.a}</p></div>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Footer */}
-      <footer className="py-4 border-top border-secondary border-opacity-40 text-center small mt-auto" style={{ backgroundColor: '#000000', color: '#94a3b8' }}>
-        <div className="container d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
-          <div className="d-flex align-items-center gap-2">
-            <Terminal size={18} style={{ color: '#38bdf8' }} />
-            <span className="fw-bold landing-text-bright">ExamiQ Educational Assessment System</span>
+        <section id="verify" className="landing-container landing-section">
+          <div className="landing-verify">
+            <span className="landing-verify-icon"><Award size={32} /></span>
+            <div className="landing-verify-copy"><div className="page-eyebrow">Achievement, verified</div><h2>A credential you can check.</h2><p>Have an ExamiQ certificate? Enter its ID to verify it.</p></div>
+            <form className="landing-verify-form" onSubmit={handleCertificateSearch}><label htmlFor="certificate-id" className="visually-hidden">Certificate ID</label><input id="certificate-id" className="form-control" value={certificateId} onChange={(e) => setCertificateId(e.target.value)} placeholder="Enter certificate ID" required /><button className="btn btn-primary" type="submit"><Search size={17} /> Verify</button></form>
           </div>
-          <div>© 2026 ExamiQ Platform. All Rights Reserved.</div>
+        </section>
+      </main>
+
+      <footer className="landing-footer">
+        <div className="landing-container landing-footer-inner">
+          <Link to="/" className="text-decoration-none" aria-label="ExamiQ home"><Brand /></Link>
+          <span>Learning, assessment, achievement.</span>
+          <div><a href="#verify">Verify a certificate</a><span>© {new Date().getFullYear()} ExamiQ</span></div>
         </div>
       </footer>
     </div>

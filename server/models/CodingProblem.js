@@ -197,6 +197,13 @@ const codingProblemSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+
+    collegeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'College',
+      default: null,
+      index: true,
+    },
   },
 
   {

@@ -36,8 +36,13 @@ const FormSchema = new mongoose.Schema(
     formType: {
       type: String,
       required: true,
-      unique: true,
       enum: ['college_registration', 'course_registration', 'student_registration'],
+    },
+    collegeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'College',
+      default: null,
+      index: true,
     },
     title: {
       type: String,
@@ -55,5 +60,7 @@ const FormSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+FormSchema.index({ collegeId: 1, formType: 1 }, { unique: true });
 
 module.exports = mongoose.model('FormSchema', FormSchema);

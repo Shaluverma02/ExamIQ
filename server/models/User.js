@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['student', 'faculty', 'admin'],
+      enum: ['student', 'faculty', 'college_admin', 'admin', 'recruiter'],
       default: 'student',
     },
     phone: {
@@ -32,10 +32,27 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    collegeIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'College',
+      },
+    ],
+    activeCollegeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'College',
+      default: null,
+    },
     isEmailVerified: {
       type: Boolean,
       default: false,
     },
+    isPhoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+    phoneVerificationCodeHash: String,
+    phoneVerificationExpire: Date,
     verificationToken: String,
     resetPasswordToken: String,
     resetPasswordExpire: Date,

@@ -5,6 +5,7 @@ const examSchema = new mongoose.Schema(
     title: { type: String, required: true, trim: true },
     description: { type: String, default: '' },
     category: { type: String, default: 'General' },
+    collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'College', default: null, index: true },
     facultyId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     questions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
     codingProblems: [{ type: mongoose.Schema.Types.ObjectId, ref: 'CodingProblem' }],

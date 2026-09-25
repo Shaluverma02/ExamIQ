@@ -16,11 +16,13 @@ const { protect, authorize } = require('../middleware/auth');
 router.get('/public', getPublicGroups);
 
 router.use(protect);
-router.use(authorize('admin', 'faculty'));
 
-router.route('/').get(getGroups).post(createGroup);
-router.route('/:id').get(getGroupById).put(updateGroup).delete(deleteGroup);
-router.put('/:id/toggle-status', toggleGroupStatus);
-router.post('/:id/students', assignStudentsToGroup);
+router.get('/', authorize('admin', 'faculty', 'college_admin'), getGroups);
+router.get('/:id', authorize('admin', 'faculty', 'college_admin'), getGroupById);
+router.post('/', authorize('admin', 'college_admin', 'faculty'), createGroup);
+router.put('/:id', authorize('admin', 'college_admin', 'faculty'), updateGroup);
+router.delete('/:id', authorize('admin', 'college_admin'), deleteGroup);
+router.put('/:id/toggle-status', authorize('admin', 'college_admin', 'faculty'), toggleGroupStatus);
+router.post('/:id/students', authorize('admin', 'college_admin', 'faculty'), assignStudentsToGroup);
 
 module.exports = router;

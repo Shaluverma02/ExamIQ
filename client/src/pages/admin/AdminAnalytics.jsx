@@ -13,6 +13,7 @@ import ProctoringAuditModal from '../../components/ProctoringAuditModal';
 import { downloadCSV } from '../../utils/exportCSV';
 import { downloadResultsExcel } from '../../utils/downloadExcel';
 import { toast } from 'react-toastify';
+import PageHeader from '../../components/common/PageHeader';
 
 const AdminAnalytics = () => {
   const [analytics, setAnalytics] = useState(null);
@@ -75,7 +76,7 @@ const AdminAnalytics = () => {
   };
 
   if (loading || !analytics) {
-    return <div className="text-center py-5 text-light">Loading platform analytics...</div>;
+    return <div className="text-center py-5 text-body">Loading platform analytics...</div>;
   }
 
   // User role breakdown
@@ -105,16 +106,9 @@ const AdminAnalytics = () => {
     .slice(0, 5);
 
   return (
-    <div>
+    <div className="workspace-page management-page">
       {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <div>
-          <h3 className="fw-extrabold text-light m-0 d-flex align-items-center gap-2">
-            <Shield className="text-danger" size={28} /> Admin Platform Analytics
-          </h3>
-          <p className="text-muted small m-0">Full platform overview — users, exams, performance & security</p>
-        </div>
-
+      <PageHeader icon={BarChart3} eyebrow="Performance" title="Platform analytics" description="Understand participation, assessment outcomes, and platform activity." actions={(
         <div className="d-flex gap-2 flex-wrap">
           <button
             className="btn btn-success fw-bold btn-sm rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm"
@@ -151,7 +145,7 @@ const AdminAnalytics = () => {
             <ShieldCheck size={15} /> Anti-Cheat Audit
           </button>
         </div>
-      </div>
+      )} />
 
       {/* KPI Cards */}
       <div className="row g-3 mb-4">
@@ -164,9 +158,9 @@ const AdminAnalytics = () => {
           { label: 'Avg Score', value: `${analytics.averagePercentage || 0}%`, icon: <BarChart3 size={22} />, color: 'secondary' },
         ].map((card, i) => (
           <div key={i} className="col-6 col-md-4 col-lg-2">
-            <div className="glass-card p-3 text-center h-100">
+            <div className="card p-3 text-center h-100">
               <div className={`text-${card.color} mb-2`}>{card.icon}</div>
-              <h4 className="fw-extrabold text-light m-0">{card.value}</h4>
+              <h4 className="fw-bold text-body m-0">{card.value}</h4>
               <span className="text-muted" style={{ fontSize: '0.75rem' }}>{card.label}</span>
             </div>
           </div>
@@ -177,8 +171,8 @@ const AdminAnalytics = () => {
       <div className="row g-4 mb-4">
         {/* Platform Overview Bar */}
         <div className="col-12 col-lg-6">
-          <div className="glass-card p-4 h-100">
-            <h6 className="fw-bold text-light mb-3">Platform Overview</h6>
+          <div className="card p-4 h-100">
+            <h6 className="fw-bold text-body mb-3">Platform Overview</h6>
             <div style={{ height: 240 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={barData}>
@@ -199,8 +193,8 @@ const AdminAnalytics = () => {
         <div className="col-12 col-lg-6">
           <div className="row g-3 h-100">
             <div className="col-6">
-              <div className="glass-card p-3 h-100">
-                <h6 className="fw-bold text-light mb-2 text-center small">User Roles</h6>
+              <div className="card p-3 h-100">
+                <h6 className="fw-bold text-body mb-2 text-center small">User Roles</h6>
                 <div style={{ height: 180 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -219,8 +213,8 @@ const AdminAnalytics = () => {
               </div>
             </div>
             <div className="col-6">
-              <div className="glass-card p-3 h-100">
-                <h6 className="fw-bold text-light mb-2 text-center small">Pass / Fail</h6>
+              <div className="card p-3 h-100">
+                <h6 className="fw-bold text-body mb-2 text-center small">Pass / Fail</h6>
                 <div style={{ height: 180 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -243,13 +237,13 @@ const AdminAnalytics = () => {
       </div>
 
       {/* Recent Registrations */}
-      <div className="glass-card p-4">
-        <h6 className="fw-bold text-light mb-3">Recently Registered Users</h6>
+      <div className="card p-4">
+        <h6 className="fw-bold text-body mb-3">Recently Registered Users</h6>
         {recentUsers.length === 0 ? (
           <p className="text-muted text-center py-3">No users registered yet.</p>
         ) : (
           <div className="table-responsive">
-            <table className="table table-dark table-hover align-middle m-0">
+            <table className="table table-hover align-middle m-0">
               <thead>
                 <tr className="text-muted small text-uppercase">
                   <th>Name</th>
@@ -262,7 +256,7 @@ const AdminAnalytics = () => {
               <tbody>
                 {recentUsers.map((u) => (
                   <tr key={u._id}>
-                    <td className="fw-semibold text-light">{u.name}</td>
+                    <td className="fw-semibold text-body">{u.name}</td>
                     <td className="text-muted small">{u.email}</td>
                     <td>
                       <span className={`badge ${

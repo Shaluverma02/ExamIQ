@@ -1,17 +1,31 @@
 const nodemailer = require('nodemailer');
 
-const sendEmail = async (options) => {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.mailtrap.io',
-    port: process.env.SMTP_PORT || 2525,
+const getRequiredSmtpConfig = () => {
+  const required = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM'];
+  const missing = required.filter((key) => !process.env[key]);
+
+  if (missing.length > 0) {
+    const err = new Error(`Email service is not configured. Missing: ${missing.join(', ')}`);
+    err.statusCode = 503;
+    err.code = 'EMAIL_NOT_CONFIGURED';
+    throw err;
+  }
+
+  return {
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT),
     auth: {
-      user: process.env.SMTP_USER || 'mock_user',
-      pass: process.env.SMTP_PASS || 'mock_pass',
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
     },
-  });
+  };
+};
+
+const sendEmail = async (options) => {
+  const transporter = nodemailer.createTransport(getRequiredSmtpConfig());
 
   const message = {
-    from: `${process.env.FROM_NAME || 'Exam Portal'} <${process.env.SMTP_FROM || 'no-reply@examportal.edu'}>`,
+    from: `${process.env.FROM_NAME || 'Exam Portal'} <${process.env.SMTP_FROM}>`,
     to: options.email,
     subject: options.subject,
     text: options.message,
@@ -22,10 +36,10 @@ const sendEmail = async (options) => {
     const info = await transporter.sendMail(message);
     console.log(`Email sent: %s`, info.messageId);
     return info;
-  } catch (err) {
-    console.warn(`[Nodemailer Fallback] Email to ${options.email} could not be dispatched via SMTP (${err.message}). Logging message instead:`);
-    console.log(`SUBJECT: ${options.subject}\nMESSAGE: ${options.message}`);
-    return { mock: true };
+  } catch (error) {
+    error.statusCode = 503;
+    error.code = error.code === 'EAUTH' ? 'EMAIL_AUTH_FAILED' : 'EMAIL_DELIVERY_FAILED';
+    throw error;
   }
 };
 

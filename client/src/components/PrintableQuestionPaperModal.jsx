@@ -75,15 +75,15 @@ const PrintableQuestionPaperModal = ({ isOpen, onClose, examId }) => {
       style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1060 }}
     >
       <div className="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
-        <div className="modal-content glass-card text-light border border-secondary shadow-lg rounded-4 overflow-hidden">
+        <div className="modal-content card text-body border shadow-lg rounded-3 overflow-hidden">
           {/* Modal Header */}
-          <div className="modal-header bg-dark border-bottom border-secondary px-4 py-3">
+          <div className="modal-header bg-body-tertiary border-bottom border px-4 py-3">
             <div className="d-flex align-items-center gap-3">
               <div className="p-2 bg-primary text-white rounded-circle d-flex align-items-center justify-content-center">
                 <FileText size={22} />
               </div>
               <div>
-                <h5 className="modal-title fw-extrabold text-light m-0">
+                <h5 className="modal-title fw-bold text-body m-0">
                   Printable Assessment Question Paper Export
                 </h5>
                 <p className="text-muted small m-0">Official A4 format suitable for offline examinations & answer keys</p>
@@ -91,7 +91,7 @@ const PrintableQuestionPaperModal = ({ isOpen, onClose, examId }) => {
             </div>
 
             <div className="d-flex align-items-center gap-2">
-              <div className="form-check form-switch me-3 text-light small">
+              <div className="form-check form-switch me-3 text-body small">
                 <input
                   className="form-check-input cursor-pointer"
                   type="checkbox"
@@ -111,7 +111,7 @@ const PrintableQuestionPaperModal = ({ isOpen, onClose, examId }) => {
           {/* Modal Body */}
           <div className="modal-body p-4 bg-secondary bg-opacity-20" style={{ minHeight: '60vh' }}>
             {loading || !exam ? (
-              <div className="text-center py-5 text-light">
+              <div className="text-center py-5 text-body">
                 <div className="spinner-border text-primary mb-2" />
                 <div>Preparing Official Question Paper PDF...</div>
               </div>
@@ -134,7 +134,7 @@ const PrintableQuestionPaperModal = ({ isOpen, onClose, examId }) => {
                       EXAMIQ NATIONAL ASSESSMENT PORTAL
                     </h3>
                     <h5 className="fw-semibold text-secondary mb-2">END-SEMESTER OFFICIAL EXAMINATION</h5>
-                    <div className="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary small fw-bold">
+                    <div className="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border small fw-bold">
                       <span>COURSE / CATEGORY: {exam.category || 'GENERAL'}</span>
                       <span>DATE: {new Date().toLocaleDateString()}</span>
                     </div>
@@ -159,7 +159,7 @@ const PrintableQuestionPaperModal = ({ isOpen, onClose, examId }) => {
                   </table>
 
                   {/* Candidate Information Grid */}
-                  <div className="border border-dark p-3 rounded mb-4" style={{ fontSize: '0.85rem' }}>
+                  <div className="border-dark p-3 rounded mb-4" style={{ fontSize: '0.85rem' }}>
                     <div className="row g-2">
                       <div className="col-6">CANDIDATE NAME: ____________________________</div>
                       <div className="col-6">ROLL NUMBER: ____________________________</div>
@@ -217,7 +217,7 @@ const PrintableQuestionPaperModal = ({ isOpen, onClose, examId }) => {
                           </div>
 
                           {includeAnswers && q.explanation && (
-                            <div className="mt-2 p-2 bg-warning bg-opacity-10 border border-warning rounded small text-dark">
+                            <div className="mt-2 p-2 bg-warning bg-opacity-10 border-warning rounded small text-dark">
                               <strong>Solution Explanation:</strong> {q.explanation}
                             </div>
                           )}
@@ -234,7 +234,7 @@ const PrintableQuestionPaperModal = ({ isOpen, onClose, examId }) => {
                       </h5>
 
                       {exam.codingProblems.map((cp, cpIdx) => (
-                        <div key={cp._id || cpIdx} className="mb-4 pb-3 border-bottom border-secondary">
+                        <div key={cp._id || cpIdx} className="mb-4 pb-3 border-bottom border">
                           <div className="fw-bold d-flex justify-content-between mb-1">
                             <span>Problem {cpIdx + 1}: {cp.title}</span>
                             <span className="font-monospace small">[{cp.marks || 10} Marks]</span>
@@ -243,17 +243,17 @@ const PrintableQuestionPaperModal = ({ isOpen, onClose, examId }) => {
 
                           <div className="row g-2 mb-2 small font-monospace">
                             <div className="col-6 bg-light p-2 rounded border">
-                              <strong>Sample Input:</strong>
-                              <pre className="m-0 text-success">{cp.sampleInput || '5\n1 2 3 4 5'}</pre>
+                              <strong>Public Example Input:</strong>
+                              <pre className="m-0 text-success">{cp.examples?.[0]?.input || 'No public example input provided'}</pre>
                             </div>
                             <div className="col-6 bg-light p-2 rounded border">
-                              <strong>Sample Output:</strong>
-                              <pre className="m-0 text-primary">{cp.sampleOutput || '15'}</pre>
+                              <strong>Public Example Output:</strong>
+                              <pre className="m-0 text-primary">{cp.examples?.[0]?.output || 'No public example output provided'}</pre>
                             </div>
                           </div>
 
                           {includeAnswers && cp.solutionCode && (
-                            <div className="p-2 bg-dark text-success rounded border font-monospace small">
+                            <div className="p-2 bg-body-tertiary text-success rounded border font-monospace small">
                               <strong>Optimal Reference Solution:</strong>
                               <pre className="m-0 text-success">{cp.solutionCode}</pre>
                             </div>
@@ -273,7 +273,7 @@ const PrintableQuestionPaperModal = ({ isOpen, onClose, examId }) => {
           </div>
 
           {/* Modal Footer Actions */}
-          <div className="modal-footer border-top border-secondary px-4 py-3 justify-content-between">
+          <div className="modal-footer border-top border px-4 py-3 justify-content-between">
             <button className="btn btn-outline-secondary rounded-pill px-4" onClick={onClose}>
               Close Preview
             </button>

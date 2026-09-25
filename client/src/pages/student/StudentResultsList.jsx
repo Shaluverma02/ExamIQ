@@ -1,7 +1,11 @@
+import '../../styles/student.css';
+import PageHeader from '../../components/common/PageHeader';
+import StatCard from '../../components/common/StatCard';
+import EmptyState from '../../components/common/EmptyState';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import API from '../../services/api';
-import { Trophy, CheckCircle2, XCircle, Clock, ArrowRight, FileText, Search, Download } from 'lucide-react';
+import { Trophy, CheckCircle2, XCircle, Clock, ArrowRight, Search, Download } from 'lucide-react';
 import { downloadResultsExcel } from '../../utils/downloadExcel';
 
 const StudentResultsList = () => {
@@ -9,6 +13,7 @@ const StudentResultsList = () => {
   const [loading, setLoading] = useState(true);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [search, setSearch] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchResults();
@@ -17,10 +22,11 @@ const StudentResultsList = () => {
   const fetchResults = async () => {
     try {
       setLoading(true);
+      setError('');
       const res = await API.get('/results');
       setResults(res.data.results || []);
     } catch (err) {
-      console.error(err);
+      setError('We could not load your results. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -44,18 +50,14 @@ const StudentResultsList = () => {
       : 0;
 
   return (
-    <div>
-      {/* Header */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-        <div>
-          <h3 className="fw-extrabold text-light m-0">My Exam Results</h3>
-          <p className="text-muted small m-0">Review your performance across all assessments</p>
-        </div>
-        <div className="d-flex align-items-center gap-2">
+    <div className="student-page">
+      <PageHeader eyebrow="Your progress" title="Assessment results" description="Review your scores, understand your progress, and plan your next step." />
+      <div className="student-toolbar">
+        <div className="d-flex align-items-center flex-wrap gap-3 w-100 justify-content-between">
           <button
-            className="btn btn-success fw-bold btn-sm rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm"
+            className="btn btn-outline-secondary d-flex align-items-center gap-2"
             onClick={handleDownloadExcel}
-            disabled={downloadingExcel}
+            disabled={downloadingExcel || loading || results.length === 0}
           >
             {downloadingExcel ? (
               <>
@@ -68,11 +70,11 @@ const StudentResultsList = () => {
               </>
             )}
           </button>
-          <div className="position-relative" style={{ width: 260 }}>
+          <div className="position-relative student-search">
             <Search size={16} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" />
             <input
               type="text"
-              className="form-control bg-secondary text-light border-0 ps-5"
+              className="form-control ps-5" aria-label="Search results by exam or category"
               placeholder="Search by exam or category..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -81,39 +83,39 @@ const StudentResultsList = () => {
         </div>
       </div>
 
-      {/* Summary Cards */}
       <div className="row g-3 mb-4">
-        <div className="col-6 col-md-4">
-          <div className="glass-card p-3 text-center">
-            <h3 className="fw-extrabold text-light m-0">{results.length}</h3>
-            <span className="text-muted small">Total Attempts</span>
-          </div>
-        </div>
-        <div className="col-6 col-md-4">
-          <div className="glass-card p-3 text-center">
-            <h3 className="fw-extrabold text-success m-0">{passCount}</h3>
-            <span className="text-muted small">Passed</span>
-          </div>
-        </div>
-        <div className="col-6 col-md-4">
-          <div className="glass-card p-3 text-center">
-            <h3 className="fw-extrabold text-warning m-0">{avgScore}%</h3>
-            <span className="text-muted small">Average Score</span>
-          </div>
-        </div>
+        <div className="col-12 col-sm-4"><StatCard icon={Trophy} label="Total attempts" value={loading ? '…' : error ? '—' : results.length} trend="Evaluated assessments" /></div>
+        <div className="col-12 col-sm-4"><StatCard icon={CheckCircle2} label="Assessments passed" value={loading ? '…' : error ? '—' : passCount} trend="Your successful attempts" /></div>
+        <div className="col-12 col-sm-4"><StatCard icon={Clock} label="Average score" value={loading ? '…' : error || !results.length ? '—' : avgScore + '%'} trend="Across evaluated attempts" /></div>
       </div>
-
       {/* Results List */}
       {loading ? (
-        <div className="text-center py-5 text-muted">Loading your results...</div>
+        <div className="student-loading card" role="status"><span className="spinner-border text-primary" aria-hidden="true" /><p>Loading your results…</p></div>
+      ) : error ? (
+        <EmptyState title="Results unavailable" description={error} actionLabel="Try again" onAction={fetchResults} />
       ) : filtered.length === 0 ? (
-        <div className="glass-card text-center py-5">
-          <FileText size={48} className="text-muted mb-3" />
-          <p className="text-muted mb-0">
+        <div className="card text-center py-5 px-3">
+          <div
+            className={`mx-auto mb-3 rounded-circle d-flex align-items-center justify-content-center ${
+              results.length === 0 ? 'bg-warning bg-opacity-10 text-warning' : 'bg-primary bg-opacity-10 text-primary'
+            }`}
+            style={{ width: 72, height: 72 }}
+          >
+            {results.length === 0 ? <Trophy size={34} /> : <Search size={34} />}
+          </div>
+          <h5 className="fw-bold text-body mb-2">
+            {results.length === 0 ? 'No exams attempted yet' : 'No results found'}
+          </h5>
+          <p className="text-muted mb-3">
             {results.length === 0
-              ? 'No exams attempted yet. Go to Exams tab to start!'
-              : 'No results match your search.'}
+              ? 'Go to the Assessments tab and start your first exam.'
+              : 'Try another exam title or category.'}
           </p>
+          {results.length === 0 && (
+            <Link to="/student/exams" className="btn btn-primary rounded-pill px-4 mx-auto">
+              Go to Assessments <ArrowRight size={16} />
+            </Link>
+          )}
         </div>
       ) : (
         <div className="d-flex flex-column gap-3">
@@ -122,8 +124,8 @@ const StudentResultsList = () => {
             return (
               <div
                 key={result._id}
-                className={`glass-card p-4 border ${
-                  isPass ? 'border-success border-opacity-25' : 'border-danger border-opacity-25'
+                className={`card student-result-row p-4 border ${
+                  isPass ? 'is-pass' : 'is-fail'
                 }`}
               >
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
@@ -137,7 +139,7 @@ const StudentResultsList = () => {
                       {isPass ? <CheckCircle2 size={24} /> : <XCircle size={24} />}
                     </div>
                     <div>
-                      <h6 className="fw-bold text-light mb-1">
+                      <h6 className="fw-bold text-body mb-1">
                         {result.examId?.title || 'Assessment'}
                       </h6>
                       <div className="d-flex gap-3 small text-muted flex-wrap">
@@ -155,9 +157,9 @@ const StudentResultsList = () => {
                   </div>
 
                   {/* Right: Score + Badge + Button */}
-                  <div className="d-flex align-items-center gap-3 ms-auto flex-wrap">
+                  <div className="d-flex align-items-center gap-3 ms-md-auto flex-wrap">
                     <div className="text-end">
-                      <div className="fw-extrabold fs-5 text-light">
+                      <div className="fw-bold fs-5 text-body">
                         {result.totalScore}{' '}
                         <span className="text-muted fw-normal fs-6">/ {result.totalMarks}</span>
                       </div>
@@ -170,7 +172,7 @@ const StudentResultsList = () => {
 
                     <Link
                       to={`/student/results/${result._id}`}
-                      className="btn btn-outline-light btn-sm d-flex align-items-center gap-1 rounded-pill px-3"
+                      className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 rounded-pill px-3"
                     >
                       Details <ArrowRight size={14} />
                     </Link>

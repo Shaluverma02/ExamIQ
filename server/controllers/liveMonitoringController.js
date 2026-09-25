@@ -8,13 +8,16 @@ const User = require('../models/User');
 exports.getLiveAssessmentMonitoring = async (req, res, next) => {
   try {
     const { assessmentId } = req.params;
-    const exam = await Exam.findById(assessmentId);
+    const exam = await Exam.findOne({ _id: assessmentId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
 
     if (!exam) {
       return res.status(404).json({ success: false, message: 'Assessment not found' });
     }
+    if (req.user.role === 'faculty' && exam.facultyId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to monitor this assessment' });
+    }
 
-    const attempts = await ExamAttempt.find({ examId: assessmentId })
+    const attempts = await ExamAttempt.find({ examId: assessmentId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
       .populate('studentId', 'name email profileImage rollNumber')
       .sort({ updatedAt: -1 });
 
@@ -73,9 +76,12 @@ exports.forceTerminateStudentAttempt = async (req, res, next) => {
   try {
     const { attemptId, reason = 'Faculty Terminated Attempt' } = req.body;
 
-    const attempt = await ExamAttempt.findById(attemptId);
+    const attempt = await ExamAttempt.findOne({ _id: attemptId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).populate('examId');
     if (!attempt) {
       return res.status(404).json({ success: false, message: 'Student attempt session not found' });
+    }
+    if (req.user.role === 'faculty' && attempt.examId?.facultyId?.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'You are not authorized to terminate this attempt' });
     }
 
     attempt.status = 'submitted';

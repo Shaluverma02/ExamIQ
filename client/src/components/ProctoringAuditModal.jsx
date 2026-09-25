@@ -80,9 +80,9 @@ const ProctoringAuditModal = ({ isOpen, onClose, examId }) => {
         style={{ backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)', zIndex: 1050 }}
       >
         <div className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-          <div className="modal-content text-light border border-warning shadow-lg" style={{ backgroundColor: 'var(--bg-card)' }}>
+          <div className="modal-content text-body border-warning shadow-lg" style={{ backgroundColor: 'var(--bg-card)' }}>
             {/* Header */}
-            <div className="modal-header border-secondary d-flex align-items-center justify-content-between" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <div className="modal-header border d-flex align-items-center justify-content-between" style={{ backgroundColor: 'var(--bg-secondary)' }}>
               <h5 className="modal-title d-flex align-items-center gap-2 text-warning fw-bold">
                 <ShieldCheck className="text-warning" size={26} />
                 Proctoring &amp; Anti-Cheat Audit Console
@@ -107,7 +107,7 @@ const ProctoringAuditModal = ({ isOpen, onClose, examId }) => {
                     className="text-warning mb-3 spinner-border"
                     style={{ width: '3rem', height: '3rem' }}
                   />
-                  <h6 className="text-light fw-bold">Loading Proctoring Event Timelines...</h6>
+                  <h6 className="text-body fw-bold">Loading Proctoring Event Timelines...</h6>
                 </div>
               ) : (
                 <div className="d-flex flex-column gap-4">
@@ -126,7 +126,7 @@ const ProctoringAuditModal = ({ isOpen, onClose, examId }) => {
                       },
                     ].map((m, idx) => (
                       <div key={idx} className="col-12 col-sm-6 col-md">
-                        <div className="p-3 rounded border border-secondary text-center h-100" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                        <div className="p-3 rounded border text-center h-100" style={{ backgroundColor: 'var(--bg-secondary)' }}>
                           <span className="text-muted small d-block mb-1">
                             {m.icon}{m.label}
                           </span>
@@ -139,8 +139,8 @@ const ProctoringAuditModal = ({ isOpen, onClose, examId }) => {
                   </div>
 
                   {/* Candidate Table */}
-                  <div className="table-responsive rounded border border-secondary" style={{ maxHeight: '260px', overflowY: 'auto' }}>
-                    <table className="table table-dark table-hover align-middle m-0 small">
+                  <div className="table-responsive rounded border" style={{ maxHeight: '260px', overflowY: 'auto' }}>
+                    <table className="table table-hover align-middle m-0 small">
                       <thead className="sticky-top" style={{ backgroundColor: 'var(--bg-secondary)', top: 0, zIndex: 1 }}>
                         <tr className="text-muted">
                           <th>Student</th>
@@ -172,7 +172,7 @@ const ProctoringAuditModal = ({ isOpen, onClose, examId }) => {
                                   <div className="fw-bold">{item.studentName}</div>
                                   <span className="text-muted small text-truncate d-block" style={{ maxWidth: 160 }}>{item.studentEmail}</span>
                                 </td>
-                                <td className="text-light">{item.examTitle}</td>
+                                <td className="text-body">{item.examTitle}</td>
                                 <td className="fw-bold text-warning">{item.metrics.tabSwitches}</td>
                                 <td className="fw-bold text-danger">{item.metrics.copyPastes}</td>
                                 <td>
@@ -215,7 +215,7 @@ const ProctoringAuditModal = ({ isOpen, onClose, examId }) => {
 
                   {/* ─── Event Timeline with Snapshot Thumbnails ─── */}
                   {selectedAttempt && (
-                    <div className="p-3 rounded border border-warning bg-dark">
+                    <div className="p-3 rounded border-warning bg-body-tertiary">
                       <div className="d-flex justify-content-between align-items-center mb-3">
                         <h6 className="text-warning fw-bold m-0 d-flex align-items-center gap-2">
                           <Clock size={18} /> Anti-Cheat Timeline: {selectedAttempt.studentName}
@@ -251,7 +251,7 @@ const ProctoringAuditModal = ({ isOpen, onClose, examId }) => {
                                   >
                                     {log.eventType?.replace(/_/g, ' ')}
                                   </span>
-                                  <span className="text-light small">{log.metadata || 'Security event triggered'}</span>
+                                  <span className="text-body small">{log.metadata || 'Security event triggered'}</span>
                                 </div>
                                 <div className="d-flex align-items-center gap-2">
                                   {log.snapshot && (
@@ -306,7 +306,7 @@ const ProctoringAuditModal = ({ isOpen, onClose, examId }) => {
               )}
             </div>
 
-            <div className="modal-footer border-secondary" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <div className="modal-footer border" style={{ backgroundColor: 'var(--bg-secondary)' }}>
               <button type="button" className="btn btn-secondary btn-sm px-4" onClick={onClose}>
                 Close Audit Console
               </button>

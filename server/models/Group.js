@@ -13,36 +13,41 @@ const groupSchema = new mongoose.Schema(
       uppercase: true,
       trim: true,
     },
+    collegeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'College',
+      default: null,
+      index: true,
+    },
     college: {
       type: String,
       required: [true, 'College name is required'],
       trim: true,
-      default: 'Engineering College',
     },
     course: {
       type: String,
       trim: true,
-      default: 'General',
+      default: '',
     },
     department: {
       type: String,
       trim: true,
-      default: 'Computer Science',
+      default: '',
     },
     semester: {
       type: String,
       trim: true,
-      default: '1st',
+      default: '',
     },
     section: {
       type: String,
       trim: true,
-      default: 'A',
+      default: '',
     },
     academicYear: {
       type: String,
       trim: true,
-      default: '2025-2026',
+      default: '',
     },
     description: {
       type: String,

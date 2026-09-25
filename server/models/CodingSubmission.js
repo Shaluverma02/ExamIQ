@@ -97,6 +97,13 @@ const codingSubmissionSchema = new mongoose.Schema(
       index: true,
     },
 
+    collegeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'College',
+      default: null,
+      index: true,
+    },
+
     // =====================================================
     // PROBLEM
     // =====================================================

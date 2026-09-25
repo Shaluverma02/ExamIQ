@@ -95,7 +95,7 @@ const AudioProctor = ({ onAudioViolation }) => {
 
   return (
     <div
-      className="position-fixed bottom-0 end-0 m-3 p-2 px-3 rounded-pill bg-dark bg-opacity-90 border border-secondary text-light font-monospace extra-small d-flex align-items-center gap-2 shadow-lg"
+      className="position-fixed bottom-0 end-0 m-3 p-2 px-3 rounded-pill bg-body-tertiary bg-opacity-90 border text-body font-monospace extra-small d-flex align-items-center gap-2 shadow-lg"
       style={{ zIndex: 1050, backdropFilter: 'blur(6px)' }}
     >
       <Mic size={14} className="text-info animate-pulse" />
