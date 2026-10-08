@@ -5,6 +5,16 @@ const ExamAssignment = require('../models/ExamAssignment');
 const Result = require('../models/Result');
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+const validateRoster = async (students, collegeId) => {
+  if (!Array.isArray(students) || students.some(id => typeof id !== 'string')) return 'Student IDs must be an array';
+  if (!collegeId) return 'An active college is required';
+  const ids = [...new Set(students)];
+  if (!ids.length) return null;
+  const profiles = await Student.find({ userId: { $in: ids }, collegeId }).select('userId');
+  const validIds = new Set(profiles.map(profile => String(profile.userId)));
+  return ids.every(id => validIds.has(id)) ? null : 'All students must belong to the selected college';
+};
+
 // @desc    Get public groups by college (for student registration dropdown)
 // @route   GET /api/groups/public
 // @access  Public
@@ -61,7 +71,7 @@ exports.getGroups = async (req, res, next) => {
     }
 
     const groups = await Group.find(query)
-      .populate('students', 'name email role phone')
+      .populate({ path: 'students', select: 'name email role phone', match: { collegeIds: req.collegeId } })
       .populate('createdBy', 'name email')
       .sort({ createdAt: -1 });
 
@@ -77,7 +87,7 @@ exports.getGroups = async (req, res, next) => {
 exports.getGroupById = async (req, res, next) => {
   try {
     const group = await Group.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
-      .populate('students', 'name email role phone createdAt')
+      .populate({ path: 'students', select: 'name email role phone createdAt', match: { collegeIds: req.collegeId } })
       .populate('createdBy', 'name email');
 
     if (!group) {
@@ -86,7 +96,7 @@ exports.getGroupById = async (req, res, next) => {
 
     // Get student profiles for enrolled students
     const studentUserIds = group.students.map((s) => s._id);
-    const studentProfiles = await Student.find({ userId: { $in: studentUserIds } });
+    const studentProfiles = await Student.find({ userId: { $in: studentUserIds }, collegeId: req.collegeId });
     const profileMap = {};
     studentProfiles.forEach((sp) => {
       profileMap[sp.userId.toString()] = sp;
@@ -175,6 +185,8 @@ exports.createGroup = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Group name and code are required' });
     }
 
+    const rosterError = await validateRoster(students, req.collegeId);
+    if (rosterError) return res.status(400).json({ success: false, message: rosterError });
     const college = req.college.name;
 
     // Check duplicate code within the same college
@@ -210,8 +222,8 @@ exports.createGroup = async (req, res, next) => {
     // Update students' groupId
     if (students.length > 0) {
       await Student.updateMany(
-        { userId: { $in: students } },
-        { $set: { groupId: group._id } }
+        { userId: { $in: students }, collegeId: req.collegeId },
+        { $set: { groupId: group._id, collegeId: req.collegeId } }
       );
     }
 
@@ -255,6 +267,11 @@ exports.updateGroup = async (req, res, next) => {
       students,
     } = req.body;
 
+    if (students !== undefined) {
+      const rosterError = await validateRoster(students, req.collegeId);
+      if (rosterError) return res.status(400).json({ success: false, message: rosterError });
+    }
+    if (college && college !== req.college?.name) return res.status(400).json({ success: false, message: 'Group college must match the active college workspace' });
     if (code && code.toUpperCase() !== group.code) {
       const targetCollege = college || group.college;
       const existing = await Group.findOne({
@@ -287,8 +304,8 @@ exports.updateGroup = async (req, res, next) => {
 
     // Sync student groupId
     if (students !== undefined) {
-      await Student.updateMany({ groupId: group._id }, { $set: { groupId: null } });
-      await Student.updateMany({ userId: { $in: students } }, { $set: { groupId: group._id } });
+      await Student.updateMany({ groupId: group._id, collegeId: req.collegeId }, { $set: { groupId: null } });
+      await Student.updateMany({ userId: { $in: students }, collegeId: req.collegeId }, { $set: { groupId: group._id, collegeId: req.collegeId } });
     }
 
     res.status(200).json({ success: true, message: 'Group updated successfully', group });
@@ -332,12 +349,14 @@ exports.assignStudentsToGroup = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Group not found' });
     }
 
-    group.students = studentIds;
+    const rosterError = await validateRoster(studentIds, req.collegeId);
+    if (rosterError) return res.status(400).json({ success: false, message: rosterError });
+    group.students = [...new Set(studentIds)];
     await group.save();
 
     // Sync Student model groupId
-    await Student.updateMany({ groupId: group._id }, { $set: { groupId: null } });
-    await Student.updateMany({ userId: { $in: studentIds } }, { $set: { groupId: group._id } });
+    await Student.updateMany({ groupId: group._id, collegeId: req.collegeId }, { $set: { groupId: null } });
+    await Student.updateMany({ userId: { $in: studentIds }, collegeId: req.collegeId }, { $set: { groupId: group._id, collegeId: req.collegeId } });
 
     res.status(200).json({ success: true, message: 'Group roster updated', group });
   } catch (err) {
@@ -356,7 +375,7 @@ exports.deleteGroup = async (req, res, next) => {
     }
 
     // Remove groupId from Student records
-    await Student.updateMany({ groupId: group._id }, { $set: { groupId: null } });
+    await Student.updateMany({ groupId: group._id, collegeId: req.collegeId }, { $set: { groupId: null } });
 
     await group.deleteOne();
     res.status(200).json({ success: true, message: 'Group deleted successfully' });

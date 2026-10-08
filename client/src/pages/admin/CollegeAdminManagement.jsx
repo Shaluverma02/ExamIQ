@@ -6,15 +6,13 @@ import PageHeader from '../../components/common/PageHeader';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import EmptyState from '../../components/common/EmptyState';
+import CollegeAdminForm from '../../components/CollegeAdminForm';
 
-const initialForm = { name: '', email: '', password: '', phone: '', collegeId: '' };
 
 const CollegeAdminManagement = () => {
   const [colleges, setColleges] = useState([]);
   const [admins, setAdmins] = useState([]);
-  const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   const loadData = async () => {
     try {
@@ -33,23 +31,6 @@ const CollegeAdminManagement = () => {
   };
 
   useEffect(() => { loadData(); }, []);
-
-  const updateField = (field, value) => setForm((previous) => ({ ...previous, [field]: value }));
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    try {
-      setSaving(true);
-      await API.post('/admin/college-admins', form);
-      toast.success('College admin created successfully');
-      setForm(initialForm);
-      loadData();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Unable to create college admin');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <div className="workspace-page management-page">
@@ -74,14 +55,8 @@ const CollegeAdminManagement = () => {
                 <span className="icon-box"><UserPlus size={21} /></span>
                 <div><h5 className="mb-1">Add college admin</h5><p className="text-muted small mb-0">Assign one admin to one institution.</p></div>
               </div>
-              <form onSubmit={handleSubmit} className="vstack gap-2">
-                <Input label="Full name" required placeholder="College administrator" value={form.name} onChange={(event) => updateField('name', event.target.value)} />
-                <Input label="Email address" type="email" required icon={Mail} placeholder="admin@college.edu" value={form.email} onChange={(event) => updateField('email', event.target.value)} />
-                <Input label="Temporary password" type="password" required icon={KeyRound} placeholder="At least 6 characters" minLength={6} value={form.password} onChange={(event) => updateField('password', event.target.value)} />
-                <Input label="Mobile number" type="tel" icon={Phone} placeholder="Optional contact number" value={form.phone} onChange={(event) => updateField('phone', event.target.value)} />
-                <div className="mb-3"><label className="form-label" htmlFor="college-admin-college">College *</label><select id="college-admin-college" className="form-select" required value={form.collegeId} onChange={(event) => updateField('collegeId', event.target.value)}><option value="">Select college</option>{colleges.map((college) => <option key={college._id} value={college._id}>{college.name} ({college.code})</option>)}</select></div>
-                <Button type="submit" loading={saving} icon={Plus} className="w-100">Create college admin</Button>
-              </form>
+              <CollegeAdminForm colleges={colleges} onSuccess={loadData}/>
+
             </div>
           </div>
         </div>

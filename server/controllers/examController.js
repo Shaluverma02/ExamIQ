@@ -5,8 +5,59 @@ const ExamAttempt = require('../models/ExamAttempt');
 const CodingSubmission = require('../models/CodingSubmission');
 const Result = require('../models/Result');
 const Certificate = require('../models/Certificate');
+const ExamAssignment = require('../models/ExamAssignment');
 const { isStudentAuthorizedForExam } = require('./examAssignmentController');
+const createNotifications = require('../utils/createNotifications');
 const crypto = require('crypto');
+const { getResultRelease } = require('../utils/resultRelease');
+
+const areExamValuesEqual = (field, incoming, current) => {
+  if (field === 'startDate' || field === 'endDate') {
+    return new Date(incoming).getTime() === new Date(current).getTime();
+  }
+  if (field === 'sectionAssignments') {
+    const normalize = values => (values || []).map(v => String(v.questionId?._id || v.questionId) + ':' + v.section).sort();
+    return JSON.stringify(normalize(incoming)) === JSON.stringify(normalize(current));
+  }
+  if (field === 'questions' || field === 'codingProblems') {
+    const incomingIds = (incoming || []).map((value) => String(value?._id || value));
+    const currentIds = (current || []).map((value) => String(value?._id || value));
+    return incomingIds.length === currentIds.length &&
+      incomingIds.every((value, index) => value === currentIds[index]);
+  }
+  if (['duration', 'totalMarks', 'passingMarks'].includes(field)) {
+    return Number(incoming) === Number(current);
+  }
+  return incoming === current;
+};
+
+const validateSectionAssignments = (assignments, questions) => {
+  if (!Array.isArray(assignments)) return 'Test section mappings must be an array';
+  const ids = new Set((questions || []).map(value => String(value?._id || value)));
+  const seen = new Set();
+  for (const entry of assignments) {
+    const id = String(entry?.questionId?._id || entry?.questionId);
+    if (!ids.has(id) || seen.has(id) || !['aptitude', 'reasoning', 'verbal', 'general'].includes(entry?.section)) return 'Each test section mapping must reference one selected question and a valid section';
+    seen.add(id);
+  }
+  return null;
+};
+
+const validateCollegeReferences = async (body, collegeId) => {
+  if (!collegeId) return null;
+  for (const [field, model] of [['questions', Question], ['codingProblems', CodingProblem]]) {
+    if (body[field] === undefined) continue;
+    if (!Array.isArray(body[field])) return field + ' must be an array';
+    const ids = [...new Set(body[field].map(value => String(value?._id || value)))];
+    if (ids.length && await model.countDocuments({ _id: { $in: ids }, collegeId }) !== ids.length) return 'All ' + field + ' must belong to the selected college';
+  }
+  if (body.targetGroups !== undefined) {
+    if (!Array.isArray(body.targetGroups)) return 'targetGroups must be an array';
+    const ids = [...new Set(body.targetGroups.map(value => String(value?._id || value)))];
+    if (ids.length && await require('../models/Group').countDocuments({ _id: { $in: ids }, collegeId }) !== ids.length) return 'All target groups must belong to the selected college';
+  }
+  return null;
+};
 
 // @desc    Get all exams (for student available/active or faculty list)
 // @route   GET /api/exams
@@ -142,12 +193,17 @@ exports.getExamById = async (req, res, next) => {
       attempt = await ExamAttempt.findOne({
         studentId: req.user._id,
         examId: exam._id,
-      });
+        ...(req.collegeId ? { collegeId: req.collegeId } : {}),
+        status: 'started',
+      }).sort({ attemptNumber: -1 });
     }
 
     res.status(200).json({
       success: true,
-      exam,
+      exam: req.user.role === 'student' ? {
+        ...exam.toObject(),
+        questions: (exam.questions || []).map(question => ({ ...question.toObject(), explanation: undefined, options: (question.options || []).map(option => ({ _id: option._id, optionText: option.optionText })) })),
+      } : exam,
       attempt,
     });
   } catch (err) {
@@ -160,6 +216,12 @@ exports.getExamById = async (req, res, next) => {
 // @access  Private (Faculty, Admin)
 exports.createExam = async (req, res, next) => {
   try {
+    if (req.body.sectionAssignments !== undefined) {
+      const error = validateSectionAssignments(req.body.sectionAssignments, req.body.questions);
+      if (error) return res.status(400).json({ success: false, message: error });
+    }
+    const referenceError = await validateCollegeReferences(req.body, req.collegeId);
+    if (referenceError) return res.status(400).json({ success: false, message: referenceError });
     req.body.facultyId = req.user._id;
     if (req.collegeId) req.body.collegeId = req.collegeId;
     const exam = await Exam.create(req.body);
@@ -187,11 +249,64 @@ exports.updateExam = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
+    if (req.body.sectionAssignments !== undefined) {
+      const error = validateSectionAssignments(req.body.sectionAssignments, req.body.questions || exam.questions);
+      if (error) return res.status(400).json({ success: false, message: error });
+    }
+    const protectedFields = [
+      'questions',
+      'codingProblems',
+      'sectionAssignments',
+      'duration',
+      'totalMarks',
+      'passingMarks',
+      'negativeMarking',
+      'startDate',
+      'endDate',
+    ];
+    const attemptsExist = await ExamAttempt.exists({
+      examId: exam._id,
+      ...(req.collegeId ? { collegeId: req.collegeId } : {}),
+    });
+    const activeAttemptExists = await ExamAttempt.exists({
+      examId: exam._id,
+      status: 'started',
+      ...(req.collegeId ? { collegeId: req.collegeId } : {}),
+    });
+    if (req.body.status === 'archived' && activeAttemptExists) {
+      return res.status(409).json({
+        success: false,
+        code: 'EXAM_HAS_ACTIVE_ATTEMPTS',
+        message: 'This assessment has active student attempts. Wait for them to finish before archiving it.',
+      });
+    }
+    const changesAffectAttempts = protectedFields.some((field) => (
+      req.body[field] !== undefined &&
+      !areExamValuesEqual(field, req.body[field], exam[field])
+    ));
+    if (attemptsExist && changesAffectAttempts) {
+      return res.status(409).json({
+        success: false,
+        code: 'EXAM_HAS_ATTEMPTS',
+        message: 'Assessment content, scoring, and schedule cannot be changed after a student attempt exists. Create a new exam to preserve existing attempt and result accuracy.',
+      });
+    }
+
+    const referenceError = await validateCollegeReferences(req.body, req.collegeId);
+    if (referenceError) return res.status(400).json({ success: false, message: referenceError });
+    req.body.facultyId = exam.facultyId;
     if (req.collegeId) req.body.collegeId = req.collegeId;
     exam = await Exam.findOneAndUpdate({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }, req.body, {
       new: true,
       runValidators: true,
     });
+
+    if (req.body.status === 'archived') {
+      await ExamAssignment.updateMany(
+        { examId: exam._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}), status: 'published' },
+        { status: 'archived' }
+      );
+    }
 
     res.status(200).json({ success: true, message: 'Exam updated', exam });
   } catch (err) {
@@ -207,6 +322,18 @@ exports.deleteExam = async (req, res, next) => {
     const exam = await Exam.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     if (!exam) {
       return res.status(404).json({ success: false, message: 'Exam not found' });
+    }
+
+    const attemptsExist = await ExamAttempt.exists({
+      examId: exam._id,
+      ...(req.collegeId ? { collegeId: req.collegeId } : {}),
+    });
+    if (attemptsExist) {
+      return res.status(409).json({
+        success: false,
+        code: 'EXAM_HAS_ATTEMPTS',
+        message: 'This assessment has student attempts or results and cannot be deleted. Archive it to preserve the record.',
+      });
     }
 
     await exam.deleteOne();
@@ -259,14 +386,14 @@ exports.startExamAttempt = async (req, res, next) => {
 
       const attemptCount = existingAttempts.length;
 
-      if (attemptCount > 0 && exam.allowRetake === false) {
+      if (!authCheck.assignment && attemptCount > 0 && exam.allowRetake === false) {
         return res.status(400).json({
           success: false,
           message: 'Retake is disabled for this assessment',
         });
       }
 
-      if (exam.maxAttempts && exam.maxAttempts > 0 && attemptCount >= exam.maxAttempts) {
+      if (!authCheck.assignment && exam.maxAttempts && exam.maxAttempts > 0 && attemptCount >= exam.maxAttempts) {
         return res.status(400).json({
           success: false,
           message: `Maximum attempts reached (${attemptCount} / ${exam.maxAttempts})`,
@@ -334,6 +461,7 @@ exports.startExamAttempt = async (req, res, next) => {
         negativeMarking: exam.negativeMarking,
         allowRetake: exam.allowRetake,
         maxAttempts: exam.maxAttempts,
+        sectionAssignments: exam.sectionAssignments || [],
         questions: sanitizedQuestions,
         codingProblems: exam.codingProblems,
       },
@@ -348,36 +476,30 @@ exports.startExamAttempt = async (req, res, next) => {
 // @access  Private (Student)
 exports.saveAnswer = async (req, res, next) => {
   try {
-    const { questionId, selectedOptions, isMarkedForReview } = req.body;
-
-    const attempt = await ExamAttempt.findOne({
-      studentId: req.user._id,
-      examId: req.params.id,
-      ...(req.collegeId ? { collegeId: req.collegeId } : {}),
-      status: 'started',
-    });
-
-    if (!attempt) {
-      return res.status(404).json({ success: false, message: 'Active attempt not found' });
+    const { questionId, codingProblemId, selectedOptions, isMarkedForReview } = req.body;
+    const exam = await Exam.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
+    const attempt = await ExamAttempt.findOne({ studentId: req.user._id, examId: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}), status: 'started' });
+    if (!exam || !attempt) return res.status(404).json({ success: false, message: 'Active attempt not found' });
+    if (Date.now() >= new Date(attempt.startedAt).getTime() + exam.duration * 60000) return res.status(409).json({ success: false, message: 'Exam duration has elapsed' });
+    if (codingProblemId) {
+      if (!(exam.codingProblems || []).some(id => String(id) === String(codingProblemId))) return res.status(400).json({ success: false, message: 'Problem is not part of this exam' });
+      await ExamAttempt.updateOne({ _id: attempt._id, status: 'started' }, { $addToSet: { codingVisited: codingProblemId } });
+      return res.status(200).json({ success: true, message: 'Coding progress saved' });
     }
-
-    const answerIdx = attempt.answers.findIndex(
-      (a) => a.questionId.toString() === questionId.toString()
-    );
-
+    if (!questionId || !(exam.questions || []).some(id => String(id) === String(questionId))) return res.status(400).json({ success: false, message: 'Question is not part of this exam' });
+    if (selectedOptions !== undefined) {
+      const question = await Question.findById(questionId);
+      if (!Array.isArray(selectedOptions) || selectedOptions.some(value => !(question?.options || []).some(option => option.optionText === value)) || (question?.questionType !== 'multiple' && selectedOptions.length > 1)) return res.status(400).json({ success: false, message: 'Invalid answer options' });
+    }
+    if (isMarkedForReview !== undefined && typeof isMarkedForReview !== 'boolean') return res.status(400).json({ success: false, message: 'Invalid review flag' });
+    const answerIdx = attempt.answers.findIndex(a => String(a.questionId) === String(questionId));
     if (answerIdx > -1) {
       if (selectedOptions !== undefined) attempt.answers[answerIdx].selectedOptions = selectedOptions;
       if (isMarkedForReview !== undefined) attempt.answers[answerIdx].isMarkedForReview = isMarkedForReview;
       attempt.answers[answerIdx].isVisited = true;
     } else {
-      attempt.answers.push({
-        questionId,
-        selectedOptions: selectedOptions || [],
-        isMarkedForReview: !!isMarkedForReview,
-        isVisited: true,
-      });
+      attempt.answers.push({ questionId, selectedOptions: selectedOptions || [], isMarkedForReview: Boolean(isMarkedForReview), isVisited: true });
     }
-
     await attempt.save();
     res.status(200).json({ success: true, message: 'Answer saved' });
   } catch (err) {
@@ -452,7 +574,9 @@ exports.submitExam = async (req, res, next) => {
       return res.status(200).json({
         success: true,
         message: 'Exam already submitted',
-        result: existingResult,
+        result: getResultRelease(existingResult, exam).released ? existingResult : null,
+        locked: !getResultRelease(existingResult, exam).released,
+        releaseAt: getResultRelease(existingResult, exam).releaseAt,
       });
     }
 
@@ -516,6 +640,7 @@ exports.submitExam = async (req, res, next) => {
         examId: exam._id,
         ...(req.collegeId ? { collegeId: req.collegeId } : {}),
         problemId: cp._id,
+        submittedAt: { $gte: attempt.startedAt },
       }).sort({ score: -1 });
 
       if (bestSubmission) {
@@ -525,7 +650,7 @@ exports.submitExam = async (req, res, next) => {
 
     const totalScore = objectiveScore + codingScore;
     const percentage = Number(((totalScore / (exam.totalMarks || 100)) * 100).toFixed(2));
-    const status = percentage >= (exam.passingMarks || 40) ? 'Pass' : 'Fail';
+    const status = totalScore >= (exam.passingMarks || 40) ? 'Pass' : 'Fail';
 
     await attempt.save();
 
@@ -548,6 +673,20 @@ exports.submitExam = async (req, res, next) => {
       status,
     });
 
+    let notificationWarning = false;
+    try {
+      await createNotifications({
+        userIds: [req.user._id],
+        title: 'Assessment submitted',
+        message: `Your assessment "${exam.title}" was submitted. Locked for analysis until faculty releases results.`,
+        type: 'info',
+        link: '/student/results',
+      });
+    } catch (notificationError) {
+      notificationWarning = true;
+      console.error('Result created but student notification failed:', notificationError);
+    }
+
     // 4. Generate Certificate if Passed
     if (status === 'Pass') {
       const certId = `CERT-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
@@ -566,7 +705,10 @@ exports.submitExam = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Exam submitted and evaluated successfully',
-      result,
+      notificationWarning,
+      locked: !getResultRelease(result, exam).released,
+      releaseAt: getResultRelease(result, exam).releaseAt,
+      result: getResultRelease(result, exam).released ? result : null,
     });
   } catch (err) {
     next(err);
@@ -608,8 +750,13 @@ exports.retakeAssessment = async (req, res, next) => {
 
     const totalPrevious = previousAttempts.length;
 
+    const activeAttempt = previousAttempts.find(item => item.status === 'started');
+    if (activeAttempt) return res.status(200).json({ success: true, message: 'Resume your active attempt', attempt: activeAttempt, attemptNumber: activeAttempt.attemptNumber, remainingTime: activeAttempt.remainingTime });
+
+
+
     // Retake Rules Validation
-    if (totalPrevious > 0 && exam.allowRetake === false) {
+    if (!authCheck.assignment && totalPrevious > 0 && exam.allowRetake === false) {
       return res.status(400).json({
         success: false,
         message: 'Retake is disabled for this assessment',
@@ -617,20 +764,11 @@ exports.retakeAssessment = async (req, res, next) => {
     }
 
     const maxLimit = exam.maxAttempts;
-    if (maxLimit && maxLimit > 0 && totalPrevious >= maxLimit) {
+    if (!authCheck.assignment && maxLimit && maxLimit > 0 && totalPrevious >= maxLimit) {
       return res.status(400).json({
         success: false,
         message: `Maximum attempts reached (${totalPrevious} / ${maxLimit})`,
       });
-    }
-
-    // Finalize any previously unsubmitted active attempt before creating new retake session
-    for (const oldAttempt of previousAttempts) {
-      if (oldAttempt.status === 'started') {
-        oldAttempt.status = 'submitted';
-        oldAttempt.submittedAt = new Date();
-        await oldAttempt.save();
-      }
     }
 
     // Create Fresh Attempt
@@ -666,4 +804,3 @@ exports.retakeAssessment = async (req, res, next) => {
     next(err);
   }
 };
-

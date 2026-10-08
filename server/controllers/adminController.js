@@ -74,7 +74,7 @@ exports.getUsers = async (req, res, next) => {
     const { role, search, page = 1, limit = 50 } = req.query;
     const query = {};
     if (role) query.role = role;
-    if (req.collegeId) query.collegeIds = req.collegeId;
+    if (req.collegeId) query._id = { $in: await getCollegeUserIds(req, role || null) };
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -107,25 +107,28 @@ exports.getCollegeAdmins = async (req, res, next) => {
   try {
     const memberships = await Membership.find({ role: 'college_admin', status: 'active' })
       .populate('userId', 'name email phone isActive createdAt')
-      .populate('collegeId', 'name code');
-    res.status(200).json({ success: true, admins: memberships });
+      .populate({ path: 'collegeId', select: 'name code', match: { isDeleted: { $ne: true } } });
+    res.status(200).json({ success: true, admins: memberships.filter(item => item.collegeId && item.userId) });
   } catch (err) {
     next(err);
   }
 };
 
 exports.createCollegeAdmin = async (req, res, next) => {
+  let createdAdminId = null;
   try {
     const { name, email, password, phone, collegeId } = req.body;
     if (!name || !email || !password || !collegeId) {
       return res.status(400).json({ success: false, message: 'Name, email, password and college are required' });
     }
 
+    if (String(password).length < 6) return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
     const [college, existingUser] = await Promise.all([
       College.findById(collegeId),
       User.findOne({ email: email.toLowerCase().trim() }),
     ]);
-    if (!college) return res.status(404).json({ success: false, message: 'College not found' });
+    if (!college || college.isDeleted) return res.status(404).json({ success: false, message: 'College not found' });
+    if (!college.isActive) return res.status(400).json({ success: false, message: 'Activate the college before adding an administrator' });
     if (existingUser) return res.status(400).json({ success: false, message: 'An account with this email already exists' });
 
     const user = await User.create({
@@ -134,10 +137,13 @@ exports.createCollegeAdmin = async (req, res, next) => {
       password: await bcrypt.hash(password, 10),
       phone: phone || '',
       role: 'college_admin',
+      collegeIds: [college._id],
+      activeCollegeId: college._id,
       isEmailVerified: true,
       isPhoneVerified: true,
     });
 
+    createdAdminId = user._id;
     const membership = await Membership.create({
       userId: user._id,
       collegeId: college._id,
@@ -145,14 +151,14 @@ exports.createCollegeAdmin = async (req, res, next) => {
       status: 'active',
       createdBy: req.user._id,
     });
-    user.collegeIds = [college._id];
-    user.activeCollegeId = college._id;
-    await user.save();
-
     const userObject = user.toObject();
     delete userObject.password;
     res.status(201).json({ success: true, message: 'College admin created successfully', user: userObject, membership });
   } catch (err) {
+    if (createdAdminId) {
+      await Membership.deleteMany({ userId: createdAdminId }).catch(() => {});
+      await User.findByIdAndDelete(createdAdminId).catch(() => {});
+    }
     next(err);
   }
 };
@@ -200,7 +206,8 @@ exports.updateStudentProfile = async (req, res, next) => {
   try {
     const { rollNumber, college, course, branch, semester, groupId } = req.body;
     const targetUser = await User.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeIds: req.collegeId } : {}) });
-    if (!targetUser) return res.status(404).json({ success: false, message: 'Student not found in this college' });
+    if (!targetUser || targetUser.role !== 'student') return res.status(404).json({ success: false, message: 'Student not found in this college' });
+    if (groupId && !await Group.exists({ _id: groupId, collegeId: req.collegeId })) return res.status(400).json({ success: false, message: 'Group must belong to the same college' });
 
     const prevStudent = await Student.findOne({ userId: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     if (prevStudent?.groupId && prevStudent.groupId.toString() !== (groupId || '').toString()) {
@@ -209,7 +216,7 @@ exports.updateStudentProfile = async (req, res, next) => {
 
     const student = await Student.findOneAndUpdate(
       { userId: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) },
-      { collegeId: req.collegeId || undefined, rollNumber, college: college || req.college?.name || '', course, branch, semester, groupId: groupId || null },
+      { collegeId: req.collegeId || undefined, rollNumber, college: req.college?.name || '', course, branch, semester, groupId: groupId || null },
       { upsert: true, new: true }
     ).populate('groupId', 'name code');
 

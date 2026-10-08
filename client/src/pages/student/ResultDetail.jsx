@@ -15,6 +15,9 @@ const ResultDetail = () => {
   const navigate = useNavigate();
   const [result, setResult] = useState(null);
   const [certificate, setCertificate] = useState(null);
+  const [retakeLimits, setRetakeLimits] = useState({ max: 0, used: 1 });
+  const [retakeAllowed, setRetakeAllowed] = useState(false);
+  const [locked, setLocked] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
 
@@ -36,7 +39,7 @@ const ResultDetail = () => {
     const examId = result.examId._id || result.examId;
     try {
       setIsStartingRetake(true);
-      const res = await API.post(`/assessments/${examId}/retake`);
+      const res = await API.post(`/exams/${examId}/retake`);
       toast.success(`New attempt #${res.data.attemptNumber || ''} created!`);
       setShowRetakeModal(false);
       navigate(`/student/exam/${examId}/attempt`);
@@ -57,11 +60,14 @@ const ResultDetail = () => {
       const res = await API.get(`/results/${resultId}`);
       setResult(res.data.result);
       setCertificate(res.data.certificate);
+      setRetakeAllowed(Boolean(res.data.retakeAllowed));
+      setRetakeLimits({ max: res.data.retakeLimit ?? 0, used: res.data.attemptsUsed ?? 1 });
 
       if (res.data.result?.status === 'Pass') {
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
       }
     } catch (err) {
+      if (err.response?.data?.code === 'RESULT_LOCKED') setLocked(err.response.data);
       console.error(err);
     } finally {
       setLoading(false);
@@ -91,6 +97,8 @@ const ResultDetail = () => {
     setDownloadingExcel(false);
   };
 
+  if (locked) return <div className="card p-5 text-center"><h1 className="h4">Locked for analysis</h1><p className="text-muted">{locked.releaseAt ? 'Results will be available on ' + new Date(locked.releaseAt).toLocaleString() : 'Your faculty will release the results.'}</p><Link to="/student/dashboard" className="btn btn-primary mx-auto">Back to dashboard</Link></div>;
+
   if (loading || !result) {
     return <div className="text-center py-5 text-body">Loading evaluation summary...</div>;
   }
@@ -115,7 +123,7 @@ const ResultDetail = () => {
     .find((item) => item.code);
 
   return (
-    <div>
+    <div className="student-page student-result-detail">
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <Link to="/student/results" className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
           <ArrowLeft size={16} /> Back to Results
@@ -141,7 +149,7 @@ const ResultDetail = () => {
         </div>
       </div>
 
-      <div className={`p-4 rounded-3 mb-4 text-white ${isPass ? 'bg-success bg-opacity-20 border-success' : 'bg-danger bg-opacity-20 border-danger'}`}>
+      <div className={`student-result-summary p-4 rounded-3 mb-4 text-body ${isPass ? 'bg-success bg-opacity-20 border-success' : 'bg-danger bg-opacity-20 border-danger'}`}>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
           <div>
             <div className="d-flex align-items-center gap-2 mb-1">
@@ -241,7 +249,7 @@ const ResultDetail = () => {
         </div>
 
         <div className="d-flex align-items-center gap-2 flex-wrap">
-          {result.examId?.allowRetake !== false && (!result.examId?.maxAttempts || result.examId.maxAttempts === 0 || (result.attemptNumber || 1) < result.examId.maxAttempts) ? (
+          {retakeAllowed ? (
             <button
               type="button"
               className="btn btn-info fw-bold px-4 py-2 rounded-pill font-monospace d-flex align-items-center gap-2 shadow"
@@ -269,8 +277,8 @@ const ResultDetail = () => {
         onClose={() => setShowRetakeModal(false)}
         onConfirm={handleStartRetake}
         assessmentTitle={result.examId?.title || 'Assessment'}
-        previousAttempts={result.attemptNumber || 1}
-        maxAttempts={result.examId?.maxAttempts || 3}
+        previousAttempts={retakeLimits.used}
+        maxAttempts={retakeLimits.max}
         loading={isStartingRetake}
       />
 
@@ -290,4 +298,4 @@ const ResultDetail = () => {
   );
 };
 
-export default ResultDetail;
+export default ResultDetail;

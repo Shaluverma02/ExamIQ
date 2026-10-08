@@ -34,8 +34,8 @@ router.get('/assessments/:assessmentId/results', protect, (req, res, next) => {
 });
 router.get('/assessments/:assessmentId/attempts/:attemptId', protect, getResultById);
 router.delete('/assessments/:assessmentId/attempts/:attemptId', protect, authorize('admin', 'faculty'), deleteAttemptResult);
-router.get('/assessments/:assessmentId/students/:studentId/attempts', protect, getAssessmentStudentAttempts);
-router.get('/assessments/:assessmentId/result-statistics', protect, getAssessmentResultStatistics);
+router.get('/assessments/:assessmentId/students/:studentId/attempts', protect, authorize('admin', 'faculty', 'college_admin'), getAssessmentStudentAttempts);
+router.get('/assessments/:assessmentId/result-statistics', protect, authorize('admin', 'faculty', 'college_admin'), getAssessmentResultStatistics);
 const { analyzeAssessmentPlagiarism } = require('../controllers/plagiarismController');
 const { getLiveAssessmentMonitoring, forceTerminateStudentAttempt } = require('../controllers/liveMonitoringController');
 

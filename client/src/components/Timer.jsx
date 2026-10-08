@@ -4,27 +4,33 @@ import { Clock, AlertCircle } from 'lucide-react';
 const Timer = ({ initialSeconds = 0, onTimeUp }) => {
   const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
   const onTimeUpRef = useRef(onTimeUp);
+  const firedRef = useRef(false);
 
   // Keep the ref updated with the latest onTimeUp callback
   useEffect(() => {
     onTimeUpRef.current = onTimeUp;
   }, [onTimeUp]);
 
+  // Reset when initialSeconds changes (e.g., attempt loaded)
   useEffect(() => {
     setSecondsLeft(initialSeconds);
+    firedRef.current = false;
   }, [initialSeconds]);
 
+  // Single stable interval — does NOT depend on secondsLeft
   useEffect(() => {
-    if (secondsLeft <= 0) {
-      if (onTimeUpRef.current) onTimeUpRef.current();
-      return;
-    }
+    if (initialSeconds <= 0) return;
 
     const interval = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          if (onTimeUpRef.current) onTimeUpRef.current();
+          if (!firedRef.current) {
+            firedRef.current = true;
+            setTimeout(() => {
+              if (onTimeUpRef.current) onTimeUpRef.current();
+            }, 0);
+          }
           return 0;
         }
         return prev - 1;
@@ -32,14 +38,13 @@ const Timer = ({ initialSeconds = 0, onTimeUp }) => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [secondsLeft]);
+  }, [initialSeconds]);
 
   const formatTime = (totalSecs) => {
-    if (totalSecs < 0) return '00:00';
+    if (totalSecs <= 0) return '00:00';
     const hrs = Math.floor(totalSecs / 3600);
     const mins = Math.floor((totalSecs % 3600) / 60);
     const secs = totalSecs % 60;
-
     const pad = (n) => String(n).padStart(2, '0');
     return hrs > 0 ? `${pad(hrs)}:${pad(mins)}:${pad(secs)}` : `${pad(mins)}:${pad(secs)}`;
   };
@@ -49,12 +54,13 @@ const Timer = ({ initialSeconds = 0, onTimeUp }) => {
 
   return (
     <div
-      className={`exam-timer-box d-flex align-items-center gap-2 px-3 py-2 rounded border fw-bold ${isCritical
+      className={`exam-timer-box d-flex align-items-center gap-2 px-3 py-2 rounded border fw-bold ${
+        isCritical
           ? 'bg-danger bg-opacity-25 text-danger border-danger shadow-sm'
           : isWarning
-            ? 'bg-warning bg-opacity-25 text-warning border-warning'
-            : 'bg-body-tertiary text-body border'
-        }`}
+          ? 'bg-warning bg-opacity-25 text-warning border-warning'
+          : 'bg-body-tertiary text-body border'
+      }`}
       style={{ minWidth: '130px', justifyContent: 'center' }}
     >
       {isCritical ? (

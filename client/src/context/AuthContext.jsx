@@ -1,5 +1,5 @@
 ﻿import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
-import API from '../services/api';
+import API, { SESSION_EXPIRED_EVENT } from '../services/api';
 import { toast } from 'react-toastify';
 
 export const AuthContext = createContext();
@@ -15,11 +15,15 @@ const readJsonStorage = (key, fallback = null) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => readJsonStorage('user', null));
+  const [token, setToken] = useState(() => sessionStorage.getItem('token') || localStorage.getItem('token') || '');
+  const [user, setUser] = useState(() => (
+    sessionStorage.getItem('token') || localStorage.getItem('token')
+      ? readJsonStorage('user', null)
+      : null
+  ));
   const [profile, setProfile] = useState(null);
   const [memberships, setMemberships] = useState([]);
   const [activeCollege, setActiveCollege] = useState(() => readJsonStorage('activeCollege', null));
-  const [token, setToken] = useState(() => localStorage.getItem('token') || '');
   const [loading, setLoading] = useState(true);
 
   const persistCollege = (college) => {
@@ -28,7 +32,7 @@ export const AuthProvider = ({ children }) => {
     else localStorage.removeItem('activeCollege');
   };
 
-  const applyAuthPayload = (data) => {
+  const applyAuthPayload = (data, rememberMe = true) => {
     const jwtToken = data?.token;
     const userData = data?.user;
     const nextMemberships = data?.memberships || [];
@@ -38,7 +42,13 @@ export const AuthProvider = ({ children }) => {
 
     if (jwtToken) {
       setToken(jwtToken);
-      localStorage.setItem('token', jwtToken);
+      if (rememberMe) {
+        localStorage.setItem('token', jwtToken);
+        sessionStorage.removeItem('token');
+      } else {
+        sessionStorage.setItem('token', jwtToken);
+        localStorage.removeItem('token');
+      }
     }
 
     setUser(userData);
@@ -58,6 +68,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
 
     localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('activeCollege');
 
@@ -77,11 +88,20 @@ export const AuthProvider = ({ children }) => {
       return currentUser;
     } catch (error) {
       console.error('Fetch user session error:', error);
-      logout(false);
+      if ([401, 403].includes(error.response?.status)) {
+        logout(false);
+        return null;
+      }
       return null;
     } finally {
       setLoading(false);
     }
+  }, [logout]);
+
+  useEffect(() => {
+    const handleSessionExpired = () => logout(false);
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
   }, [logout]);
 
   useEffect(() => {
@@ -92,10 +112,10 @@ export const AuthProvider = ({ children }) => {
     fetchMe();
   }, [token, fetchMe]);
 
-  const login = async (email, password) => {
+  const login = async (email, password, rememberMe = true) => {
     try {
       const res = await API.post('/auth/login', { email, password });
-      const userData = applyAuthPayload(res.data);
+      const userData = applyAuthPayload(res.data, rememberMe);
       toast.success(`Welcome back, ${userData.name || 'User'}!`);
       return userData;
     } catch (error) {
@@ -157,6 +177,7 @@ export const AuthProvider = ({ children }) => {
     setMemberships([{ collegeId: demoCollege, role: selected.role, status: 'active' }]);
     persistCollege(demoCollege);
     localStorage.setItem('token', demoToken);
+    sessionStorage.removeItem('token');
     localStorage.setItem('user', JSON.stringify(nextUser));
 
     toast.success(`Demo login successful for ${selected.name}.`);

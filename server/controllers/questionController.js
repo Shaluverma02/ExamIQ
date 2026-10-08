@@ -1,3 +1,4 @@
+const { SECTION_IDS, normalizeSection, inferQuestionSection } = require('../utils/questionSections');
 const Question = require('../models/Question');
 const CodingProblem = require('../models/CodingProblem');
 const TestCase = require('../models/TestCase');
@@ -7,10 +8,15 @@ const TestCase = require('../models/TestCase');
 // @access  Private (Faculty, Admin)
 exports.getQuestions = async (req, res, next) => {
   try {
-    const { category, difficulty, search, page = 1, limit = 20 } = req.query;
+    const { category, section, difficulty, search, page = 1, limit = 20 } = req.query;
     const query = req.collegeId ? { collegeId: req.collegeId } : {};
 
     if (category) query.category = category;
+    if (section) {
+      const normalized = normalizeSection(section);
+      if (!SECTION_IDS.includes(normalized)) return res.status(400).json({ success: false, message: 'Invalid question section' });
+      query.section = normalized;
+    }
     if (difficulty) query.difficulty = difficulty;
     if (search) {
       query.questionText = { $regex: search, $options: 'i' };
@@ -45,6 +51,8 @@ exports.getQuestions = async (req, res, next) => {
 // @access  Private (Faculty, Admin)
 exports.createQuestion = async (req, res, next) => {
   try {
+    req.body.section = normalizeSection(req.body.section) || inferQuestionSection(req.body);
+    if (!SECTION_IDS.includes(req.body.section)) return res.status(400).json({ success: false, message: 'Invalid question section' });
     req.body.createdBy = req.user._id;
     if (req.collegeId) req.body.collegeId = req.collegeId;
     const question = await Question.create(req.body);
@@ -87,6 +95,11 @@ exports.updateQuestion = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized to update this question' });
     }
 
+    if (req.body.section !== undefined) {
+      req.body.section = normalizeSection(req.body.section);
+      if (!SECTION_IDS.includes(req.body.section)) return res.status(400).json({ success: false, message: 'Invalid question section' });
+    }
+    if (req.collegeId) req.body.collegeId = req.collegeId;
     question = await Question.findOneAndUpdate({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }, req.body, {
       new: true,
       runValidators: true,
@@ -156,6 +169,9 @@ const validateAndNormalizeQuestion = (item) => {
       },
     };
   }
+
+  const section = normalizeSection(item.section) || inferQuestionSection(item);
+  if (!SECTION_IDS.includes(section)) errors.push('section must be aptitude, reasoning, verbal or general. Use type coding for coding problems.');
 
   // Objective Question Check
   const questionText = (item.questionText || item.question || '').toString().trim();
@@ -259,6 +275,7 @@ const validateAndNormalizeQuestion = (item) => {
     valid: true,
     data: {
       questionText,
+      section,
       questionType,
       options,
       marks,
@@ -286,21 +303,12 @@ exports.importQuestionsJson = async (req, res, next) => {
 
       if (fileName.endsWith('.csv')) {
         try {
-          const lines = fileContent.split(/\r?\n/).filter((l) => l.trim() !== '');
-          if (lines.length >= 2) {
-            const headers = lines[0].split(',').map((h) => h.trim().replace(/^["']|["']$/g, ''));
-            rawItems = lines.slice(1).map((line) => {
-              const values = line.split(',').map((v) => v.trim().replace(/^["']|["']$/g, ''));
-              const obj = {};
-              headers.forEach((h, idx) => {
-                obj[h] = values[idx] || '';
-              });
-              if (obj.optionA || obj.optionB) {
-                obj.options = [obj.optionA, obj.optionB, obj.optionC, obj.optionD].filter(Boolean);
-              }
-              return obj;
-            });
-          }
+          const XLSX = require('xlsx');
+          const workbook = XLSX.read(fileContent, { type: 'string', raw: true });
+          rawItems = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { raw: false, defval: '' }).map(obj => {
+            if (obj.optionA || obj.optionB) obj.options = [obj.optionA, obj.optionB, obj.optionC, obj.optionD].filter(Boolean);
+            return obj;
+          });
         } catch (err) {
           return res.status(400).json({ success: false, message: 'Invalid CSV file format' });
         }
@@ -339,9 +347,9 @@ exports.importQuestionsJson = async (req, res, next) => {
     const validateOnly = req.body.validateOnly === true || req.body.validateOnly === 'true';
 
     // Fetch existing questions for duplicate checking
-    const existingQuestions = await Question.find({ createdBy: req.user._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).select('questionText category topic');
+    const existingQuestions = await Question.find({ createdBy: req.user._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).select('questionText category topic section tags');
     const existingMap = new Set(
-      existingQuestions.map((q) => `${q.questionText.trim().toLowerCase()}|${(q.category || '').trim().toLowerCase()}`)
+      existingQuestions.map((q) => `${q.questionText.trim().toLowerCase()}|${(q.category || '').trim().toLowerCase()}|${q.section || inferQuestionSection(q)}`)
     );
 
     const validationResults = [];
@@ -353,10 +361,10 @@ exports.importQuestionsJson = async (req, res, next) => {
     let invalidCount = 0;
 
     rawItems.forEach((item, index) => {
-      const result = validateAndNormalizeQuestion(item);
+      const result = validateAndNormalizeQuestion({ ...item, section: item.section || req.body.section || '' });
       const qText = result.isCoding ? result.data.title : (result.data ? result.data.questionText : (result.questionText || ''));
       const qCat = result.data ? result.data.category : (item.category || 'General');
-      const questionKey = `${qText.trim().toLowerCase()}|${qCat.trim().toLowerCase()}`;
+      const questionKey = `${qText.trim().toLowerCase()}|${qCat.trim().toLowerCase()}|${result.data?.section || (result.isCoding ? 'coding' : '')}`;
       const isDuplicate = existingMap.has(questionKey);
 
       if (isDuplicate) {
@@ -373,6 +381,7 @@ exports.importQuestionsJson = async (req, res, next) => {
           difficulty: result.data.difficulty,
           topic: result.data.topic,
           category: result.data.category,
+          section: result.isCoding ? 'coding' : result.data.section,
           status: isDuplicate ? 'duplicate' : 'valid',
           message: isDuplicate ? 'Duplicate question detected' : 'Valid',
         });

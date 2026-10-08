@@ -1,11 +1,11 @@
 const College = require('../models/College');
 const Membership = require('../models/Membership');
 const User = require('../models/User');
-const bcrypt = require('bcryptjs');
+const ExamAttempt = require('../models/ExamAttempt');
 
 exports.getPublicColleges = async (req, res, next) => {
   try {
-    const colleges = await College.find({ isActive: true, 'settings.allowSelfRegistration': true })
+    const colleges = await College.find({ isDeleted: { $ne: true }, isActive: true, 'settings.allowSelfRegistration': true })
       .select('name code logoUrl domain')
       .sort({ name: 1 });
 
@@ -29,11 +29,13 @@ exports.getMyColleges = async (req, res, next) => {
 
 exports.getColleges = async (req, res, next) => {
   try {
-    const colleges = await College.find({})
+    const colleges = await College.find({ isDeleted: { $ne: true } })
       .sort({ createdAt: -1 })
       .populate('createdBy', 'name email');
 
-    res.status(200).json({ success: true, colleges });
+    const admins = await Membership.find({ collegeId: { $in: colleges.map(college => college._id) }, role: 'college_admin', status: 'active' }).populate('userId', 'name email isActive');
+    const enriched = colleges.map(college => ({ ...college.toObject(), admins: admins.filter(admin => String(admin.collegeId) === String(college._id) && admin.userId).map(admin => admin.userId) }));
+    res.status(200).json({ success: true, colleges: enriched });
   } catch (err) {
     next(err);
   }
@@ -41,85 +43,49 @@ exports.getColleges = async (req, res, next) => {
 
 exports.createCollege = async (req, res, next) => {
   let createdCollegeId = null;
-  let createdAdminId = null;
   try {
-    const { name, code, domain, logoUrl, address, contactEmail, contactPhone, settings, adminName, adminEmail, adminPassword } = req.body;
-    if (!name || !code || !adminName || !adminEmail || !adminPassword) {
-      return res.status(400).json({ success: false, message: 'College details and College Admin name, email, and password are required' });
-    }
-    if (adminPassword.length < 6) return res.status(400).json({ success: false, message: 'College Admin password must be at least 6 characters' });
-
-    const normalizedAdminEmail = adminEmail.toLowerCase().trim();
-    if (await User.exists({ email: normalizedAdminEmail })) {
-      return res.status(409).json({ success: false, message: 'An account with this College Admin email already exists' });
-    }
-
-    const college = await College.create({
-      name,
-      code,
-      domain,
-      logoUrl,
-      address,
-      contactEmail,
-      contactPhone,
-      settings,
-      createdBy: req.user._id,
-    });
+    const { name, code, domain, logoUrl, address, contactEmail, contactPhone, settings } = req.body;
+    if (!String(name || '').trim() || !String(code || '').trim()) return res.status(400).json({ success: false, message: 'College name and code are required' });
+    const college = await College.create({ name: name.trim(), code: code.trim().toUpperCase(), domain, logoUrl, address, contactEmail, contactPhone, settings, isActive: req.body.isActive !== false, createdBy: req.user._id });
     createdCollegeId = college._id;
-
     await Membership.findOneAndUpdate(
       { userId: req.user._id, collegeId: college._id },
       { userId: req.user._id, collegeId: college._id, role: 'admin', status: 'active', createdBy: req.user._id },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
-
-    await User.findByIdAndUpdate(req.user._id, {
-      $addToSet: { collegeIds: college._id },
-      $set: { activeCollegeId: req.user.activeCollegeId || college._id },
-    });
-
-    const collegeAdmin = await User.create({
-      name: adminName.trim(),
-      email: normalizedAdminEmail,
-      password: await bcrypt.hash(adminPassword, 10),
-      role: 'college_admin',
-      isEmailVerified: true,
-      isPhoneVerified: true,
-      isActive: true,
-      collegeIds: [college._id],
-      activeCollegeId: college._id,
-    });
-    createdAdminId = collegeAdmin._id;
-
-    await Membership.create({
-      userId: collegeAdmin._id,
-      collegeId: college._id,
-      role: 'college_admin',
-      status: 'active',
-      createdBy: req.user._id,
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'College and College Admin created successfully',
-      college,
-      collegeAdmin: { name: collegeAdmin.name, email: normalizedAdminEmail, password: adminPassword },
-    });
+    await User.findByIdAndUpdate(req.user._id, { $addToSet: { collegeIds: college._id }, $set: { activeCollegeId: req.user.activeCollegeId || college._id } });
+    res.status(201).json({ success: true, message: 'College created. Add a college administrator separately.', college });
   } catch (err) {
-    if (createdAdminId) await User.findByIdAndDelete(createdAdminId).catch(() => {});
     if (createdCollegeId) {
       await Membership.deleteMany({ collegeId: createdCollegeId }).catch(() => {});
       await User.findByIdAndUpdate(req.user?._id, { $pull: { collegeIds: createdCollegeId } }).catch(() => {});
       await College.findByIdAndDelete(createdCollegeId).catch(() => {});
     }
+    if (err.code === 11000) return res.status(409).json({ success: false, message: 'This college code already exists. Choose a different code.' });
     next(err);
   }
+};
+
+// Remove the workspace from use while preserving academic records.
+exports.deleteCollege = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Only Super Admin can delete a college' });
+    const college = await College.findOne({ _id: req.params.id, isDeleted: { $ne: true } });
+    if (!college || college.isDeleted) return res.status(404).json({ success: false, message: 'College not found' });
+    if (await ExamAttempt.exists({ collegeId: college._id, status: 'started' })) return res.status(409).json({ success: false, code: 'COLLEGE_HAS_ACTIVE_ATTEMPTS', message: 'Students are taking an exam in this college. Wait until all attempts finish before deleting it.' });
+    college.isDeleted = true;
+    college.isActive = false;
+    college.deletedAt = new Date();
+    college.settings.allowSelfRegistration = false;
+    await college.save();
+    res.status(200).json({ success: true, message: 'College removed. Academic records are preserved.' });
+  } catch (err) { next(err); }
 };
 
 exports.updateCollege = async (req, res, next) => {
   try {
     const college = await College.findById(req.params.id);
-    if (!college) return res.status(404).json({ success: false, message: 'College not found' });
+    if (!college || college.isDeleted) return res.status(404).json({ success: false, message: 'College not found' });
 
     const isMember = (req.memberships || []).some((item) => item.collegeId?._id?.toString() === college._id.toString());
     if (req.user.role !== 'admin' && !isMember) {
@@ -142,7 +108,7 @@ exports.switchCollege = async (req, res, next) => {
   try {
     const { collegeId } = req.body;
     const membership = await Membership.findOne({ userId: req.user._id, collegeId, status: 'active' }).populate('collegeId', 'name code logoUrl isActive');
-    if (!membership) {
+    if (!membership || !membership.collegeId?.isActive) {
       return res.status(403).json({ success: false, message: 'You are not a member of this college' });
     }
 

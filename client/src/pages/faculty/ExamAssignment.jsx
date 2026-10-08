@@ -24,6 +24,12 @@ import '../../styles/faculty.css';
 
 const FACULTY_ACCENT = 'var(--app-primary)';
 
+const toLocalDateTimeInput = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+
 const statusFilters = [
   { key: 'all', label: 'All' },
   { key: 'draft', label: 'Draft' },
@@ -135,8 +141,8 @@ const ExamAssignment = () => {
       examId: assignment.examId?._id || assignment.examId,
       groupIds: (assignment.groupIds || []).map((g) => g._id || g),
       studentIds: (assignment.studentIds || []).map((s) => s._id || s),
-      startDate: assignment.startDate ? assignment.startDate.slice(0, 16) : '',
-      endDate: assignment.endDate ? assignment.endDate.slice(0, 16) : '',
+      startDate: toLocalDateTimeInput(assignment.startDate),
+      endDate: toLocalDateTimeInput(assignment.endDate),
       duration: assignment.duration || '',
       attemptsAllowed: assignment.attemptsAllowed || 1,
       title: assignment.title || '',
@@ -188,6 +194,13 @@ const ExamAssignment = () => {
       return;
     }
 
+    const editingAssignment = assignments.find((assignment) => assignment._id === editingId);
+    const scheduleChanged = editingAssignment?.status === 'published' && (
+      new Date(form.startDate).getTime() !== new Date(editingAssignment.startDate).getTime() ||
+      new Date(form.endDate).getTime() !== new Date(editingAssignment.endDate).getTime()
+    );
+    if (scheduleChanged && !window.confirm('This assignment is already published. Changing its schedule will notify assigned students. Continue?')) return;
+
     const payload = {
       examId: form.examId,
       groupIds: form.groupIds,
@@ -225,6 +238,11 @@ const ExamAssignment = () => {
   };
 
   const handlePublish = async (id) => {
+    const assignment = assignments.find((item) => item._id === id);
+    if (!assignment) return;
+    const studentCount = assignment.studentIds?.length || 0;
+    const title = assignment.title || assignment.examId?.title || 'this assessment';
+    if (!window.confirm(`Publish "${title}" to ${studentCount} assigned student(s)? They will be notified and can access it during the scheduled window.`)) return;
     try {
       await examAssignmentAPI.publish(id);
       toast.success('Assignment published — students can now see it');

@@ -1,11 +1,13 @@
-import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Award, Building2, ChevronDown, ChevronRight, LogOut, Menu, Shield, Terminal, User } from 'lucide-react';
+import { Award, Bell, Building2, CheckCheck, ChevronDown, ChevronRight, LogOut, Menu, Shield, Terminal, User } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import Brand from '../components/common/Brand';
 import ThemeToggle from '../components/common/ThemeToggle';
+import API from '../services/api';
 
 const routeTitles = [
+  ['/profile', 'My Profile'],
   ['/student/dashboard', 'Student Dashboard'],
   ['/student/exams', 'Assessments'],
   ['/student/results', 'Results'],
@@ -58,7 +60,21 @@ const Navbar = ({ onToggleMobileSidebar, mobileSidebarOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const profileMenuRef = useRef(null);
+  const notificationMenuRef = useRef(null);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const response = await API.get('/notifications');
+      setNotifications(response.data?.notifications || []);
+      setUnreadCount(response.data?.unreadCount || 0);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    }
+  }, []);
 
   const pageTitle = useMemo(() => {
     const match = [...routeTitles]
@@ -70,16 +86,30 @@ const Navbar = ({ onToggleMobileSidebar, mobileSidebarOpen }) => {
   useEffect(() => {
     document.title = `${pageTitle} · ExamiQ`;
     setShowProfileMenu(false);
+    setShowNotifications(false);
   }, [pageTitle, location.pathname]);
+
+  useEffect(() => {
+    if (!user) return undefined;
+    fetchNotifications();
+    const interval = window.setInterval(fetchNotifications, 60000);
+    return () => window.clearInterval(interval);
+  }, [user?._id, fetchNotifications]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
         setShowProfileMenu(false);
       }
+      if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
     };
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') setShowProfileMenu(false);
+      if (event.key === 'Escape') {
+        setShowProfileMenu(false);
+        setShowNotifications(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
@@ -119,6 +149,32 @@ const Navbar = ({ onToggleMobileSidebar, mobileSidebarOpen }) => {
     navigate('/login');
   };
 
+  const handleNotificationClick = async (notification) => {
+    try {
+      if (!notification.isRead) {
+        await API.put(`/notifications/${notification._id}/read`);
+        setNotifications((items) => items.map((item) => (
+          item._id === notification._id ? { ...item, isRead: true } : item
+        )));
+        setUnreadCount((count) => Math.max(0, count - 1));
+      }
+      setShowNotifications(false);
+      if (notification.link) navigate(notification.link);
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await API.put('/notifications/read-all');
+      setNotifications((items) => items.map((item) => ({ ...item, isRead: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Failed to mark notifications as read:', error);
+    }
+  };
+
   return (
     <nav className="app-navbar navbar sticky-top" aria-label="Workspace toolbar">
       <div className="container-fluid px-3 px-lg-4">
@@ -147,6 +203,70 @@ const Navbar = ({ onToggleMobileSidebar, mobileSidebarOpen }) => {
 
         <div className="d-flex align-items-center gap-2">
           <ThemeToggle />
+          {user && (
+            <div className="position-relative" ref={notificationMenuRef}>
+              <button
+                type="button"
+                className="theme-toggle position-relative"
+                onClick={() => {
+                  setShowNotifications((open) => !open);
+                  setShowProfileMenu(false);
+                }}
+                aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+                aria-expanded={showNotifications}
+                aria-controls="notification-options"
+              >
+                <Bell size={18} />
+                {unreadCount > 0 && (
+                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {showNotifications && (
+                <div
+                  id="notification-options"
+                  className="dropdown-menu show position-absolute end-0 mt-2 shadow-lg p-0 overflow-hidden"
+                  style={{ width: 'min(360px, calc(100vw - 24px))' }}
+                >
+                  <div className="d-flex align-items-center justify-content-between px-3 py-2 border-bottom">
+                    <strong>Notifications</strong>
+                    <button
+                      type="button"
+                      className="btn btn-link btn-sm text-decoration-none p-1"
+                      disabled={!unreadCount}
+                      onClick={handleMarkAllRead}
+                    >
+                      <CheckCheck size={15} className="me-1" />Mark all read
+                    </button>
+                  </div>
+                  <div className="overflow-auto" style={{ maxHeight: 360 }}>
+                    {notifications.length === 0 ? (
+                      <p className="small text-muted text-center my-0 p-4">You’re all caught up.</p>
+                    ) : notifications.map((notification) => (
+                      <button
+                        type="button"
+                        key={notification._id}
+                        className={`dropdown-item text-wrap border-bottom py-3 ${notification.isRead ? '' : 'bg-body-tertiary'}`}
+                        onClick={() => handleNotificationClick(notification)}
+                      >
+                        <span className="d-flex align-items-start gap-2">
+                          {!notification.isRead && <span className="badge bg-primary rounded-circle p-1 mt-1" aria-label="Unread" />}
+                          <span>
+                            <strong className="d-block small">{notification.title}</strong>
+                            <span className="d-block small text-muted">{notification.message}</span>
+                            <span className="d-block text-muted mt-1" style={{ fontSize: 11 }}>
+                              {new Date(notification.createdAt).toLocaleString()}
+                            </span>
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <span className="navbar-divider" aria-hidden="true" />
 
           {user && (
@@ -238,12 +358,21 @@ const Navbar = ({ onToggleMobileSidebar, mobileSidebarOpen }) => {
 
                   <div className="py-1">
                     <Link
-                      to={dashboardPath}
+                      to="/profile"
                       className="dropdown-item d-flex align-items-center gap-2"
                       onClick={() => setShowProfileMenu(false)}
                     >
                       <User size={16} className="text-muted" />
-                    My dashboard
+                      My profile
+                    </Link>
+
+                    <Link
+                      to={dashboardPath}
+                      className="dropdown-item d-flex align-items-center gap-2"
+                      onClick={() => setShowProfileMenu(false)}
+                    >
+                      <RoleIcon size={16} className="text-muted" />
+                      My dashboard
                     </Link>
 
                     <button

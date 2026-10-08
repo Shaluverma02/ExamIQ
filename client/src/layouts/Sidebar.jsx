@@ -78,6 +78,10 @@ const facultySections = [
 ];
 
 const adminSections = [
+  { title: 'Assessments', items: [
+    { label: 'Manage Exams', path: '/admin/exams', icon: BookOpen },
+    { label: 'Create Exam', path: '/admin/exams/create', icon: PlusCircle },
+  ] },
   {
     title: 'Administration',
     items: [

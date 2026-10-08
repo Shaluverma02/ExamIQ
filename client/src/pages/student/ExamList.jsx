@@ -11,7 +11,7 @@ import {
   Play,
   ArrowRight,
   FileText,
-  Filter,
+  CalendarClock,
 } from 'lucide-react';
 import PageHeader from '../../components/common/PageHeader';
 import EmptyState from '../../components/common/EmptyState';
@@ -21,7 +21,7 @@ import '../../styles/student.css';
 const ExamList = () => {
   const [assignments, setAssignments] = useState([]);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'available', 'completed', 'expired'
+  const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -49,14 +49,16 @@ const ExamList = () => {
   const getStatus = (assignment) => {
     if (assignment.computedStatus) return assignment.computedStatus;
     const now = new Date();
+    const isUpcoming = assignment.startDate ? new Date(assignment.startDate) > now : false;
     const isExpired = assignment.endDate ? new Date(assignment.endDate) < now : false;
     const attemptsExhausted = assignment.attemptsRemaining != null && assignment.attemptsRemaining <= 0;
-    const isCompleted = attemptsExhausted || ['submitted', 'auto-submitted', 'evaluated'].includes(assignment.attempt?.status);
+    const isCompleted = attemptsExhausted;
     const isInProgress = assignment.attempt?.status === 'started' && !isExpired;
 
     if (isCompleted) return 'completed';
-    if (isExpired) return 'expired';
     if (isInProgress) return 'in_progress';
+    if (isExpired) return 'expired';
+    if (isUpcoming) return 'upcoming';
     return 'available';
   };
 
@@ -73,6 +75,7 @@ const ExamList = () => {
     const status = getStatus(a);
     if (statusFilter === 'all') return true;
     if (statusFilter === 'available') return status === 'available' || status === 'in_progress';
+    if (statusFilter === 'upcoming') return status === 'upcoming';
     if (statusFilter === 'completed') return status === 'completed';
     if (statusFilter === 'expired') return status === 'expired';
     return true;
@@ -84,6 +87,7 @@ const ExamList = () => {
       const s = getStatus(a);
       return s === 'available' || s === 'in_progress';
     }).length,
+    upcoming: assignments.filter((a) => getStatus(a) === 'upcoming').length,
     completed: assignments.filter((a) => getStatus(a) === 'completed').length,
     expired: assignments.filter((a) => getStatus(a) === 'expired').length,
   };
@@ -99,7 +103,7 @@ const ExamList = () => {
       {/* Filter Tabs and Search Toolbar */}
       <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
         {/* Status Filter Tabs */}
-        <div className="btn-group p-1 bg-body-tertiary rounded-3 border" role="group" aria-label="Assessment status filter">
+        <div className="btn-group flex-wrap p-1 bg-body-tertiary rounded-3 border" role="group" aria-label="Assessment status filter">
           <button
             type="button"
             className={`btn btn-sm rounded-2 fw-semibold px-3 ${statusFilter === 'all' ? 'btn-primary shadow-sm' : 'btn-ghost text-secondary'}`}
@@ -113,6 +117,13 @@ const ExamList = () => {
             onClick={() => setStatusFilter('available')}
           >
             Available <span className="badge bg-secondary bg-opacity-25 ms-1">{counts.available}</span>
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm rounded-2 fw-semibold px-3 ${statusFilter === 'upcoming' ? 'btn-primary shadow-sm' : 'btn-ghost text-secondary'}`}
+            onClick={() => setStatusFilter('upcoming')}
+          >
+            Upcoming <span className="badge bg-info bg-opacity-25 text-info ms-1">{counts.upcoming}</span>
           </button>
           <button
             type="button"
@@ -167,7 +178,9 @@ const ExamList = () => {
               ? 'No completed assessments yet'
               : statusFilter === 'expired'
               ? 'No expired assessments'
-              : 'No assigned assessments'
+                : statusFilter === 'upcoming'
+                  ? 'No upcoming assessments'
+                : 'No assigned assessments'
           }
           description={
             search
@@ -176,6 +189,8 @@ const ExamList = () => {
               ? 'Exams you have submitted or completed will appear here.'
               : statusFilter === 'expired'
               ? 'Exams whose deadline has passed will appear here.'
+              : statusFilter === 'upcoming'
+                ? 'Scheduled assessments will appear here before their opening time.'
               : 'Assessments assigned by your faculty will appear here.'
           }
           actionLabel={search ? 'Clear search' : ''}
@@ -190,6 +205,7 @@ const ExamList = () => {
             const isExpired = status === 'expired';
             const isInProgress = status === 'in_progress';
             const isAvailable = status === 'available';
+            const isUpcoming = status === 'upcoming';
 
             return (
               <div key={assignment._id} className="col-12 col-md-6 col-xl-4">
@@ -204,7 +220,9 @@ const ExamList = () => {
                       ? '3px solid #dc2626'
                       : isInProgress
                       ? '3px solid #ca8a04'
-                      : '3px solid #2563eb',
+                        : isUpcoming
+                          ? '3px solid #0891b2'
+                        : '3px solid #2563eb',
                   }}
                 >
                   <div>
@@ -232,6 +250,11 @@ const ExamList = () => {
                       {isAvailable && (
                         <span className="badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-25 py-1.5 px-2.5">
                           Available
+                        </span>
+                      )}
+                      {isUpcoming && (
+                        <span className="badge bg-info bg-opacity-15 text-info border border-info border-opacity-25 d-inline-flex align-items-center gap-1 py-1.5 px-2.5">
+                          <CalendarClock size={13} /> Upcoming
                         </span>
                       )}
                     </div>
@@ -265,6 +288,18 @@ const ExamList = () => {
                           }) : 'Open'}
                         </span>
                       </div>
+                      {isUpcoming && assignment.startDate && (
+                        <div className="d-flex align-items-center gap-1.5 mb-1 text-info">
+                          <CalendarClock size={13} />
+                          <span>Opens: {new Date(assignment.startDate).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })}</span>
+                        </div>
+                      )}
                       <div className="d-flex justify-content-between align-items-center">
                         <span>Attempts: {assignment.attemptsUsed ?? 0}/{assignment.attemptsAllowed ?? 1}</span>
                         <span>Marks: {exam?.totalMarks ?? '—'}</span>
@@ -305,6 +340,15 @@ const ExamList = () => {
                       >
                         <AlertCircle size={16} /> Expired
                       </button>
+                    ) : isUpcoming ? (
+                      <button
+                        type="button"
+                        className="btn btn-outline-info flex-grow-1 fw-bold py-2 rounded-3 d-flex align-items-center justify-content-center gap-2"
+                        disabled
+                        aria-label={`Assessment opens ${new Date(assignment.startDate).toLocaleString()}`}
+                      >
+                        <CalendarClock size={16} /> Opens later
+                      </button>
                     ) : isInProgress ? (
                       <Link
                         to={`/student/exam/${exam?._id}/attempt`}
@@ -317,7 +361,7 @@ const ExamList = () => {
                         to={`/student/exam/${exam?._id}/attempt`}
                         className="btn btn-primary flex-grow-1 fw-bold py-2 rounded-3 d-flex align-items-center justify-content-center gap-2"
                       >
-                        Start Assessment <ArrowRight size={16} />
+                        {assignment.canRetake || assignment.attemptsUsed > 0 ? 'Reattempt Assessment' : 'Start Assessment'} <ArrowRight size={16} />
                       </Link>
                     )}
 

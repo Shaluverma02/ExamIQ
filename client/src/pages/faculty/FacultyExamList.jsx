@@ -1,9 +1,10 @@
 import '../../styles/faculty.css';
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import ResultReleaseControls from '../../components/ResultReleaseControls';
 import API from '../../services/api';
 import {
-  BookOpen, PlusCircle, Search, Clock, FileQuestion,
+  Archive, BookOpen, PlusCircle, Search, Clock, FileQuestion,
   Code2, Edit, Eye, Trash2, AlertCircle, FileText,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -12,6 +13,20 @@ import PageHeader from '../../components/common/PageHeader';
 import StatCard from '../../components/common/StatCard';
 
 const FacultyExamList = () => {
+  const { pathname } = useLocation();
+  const examBasePath = pathname.startsWith('/admin/') ? '/admin/exams' : '/faculty/exams';
+  const [releaseExam, setReleaseExam] = useState(null);
+  const [savingRelease, setSavingRelease] = useState(false);
+  const saveRelease = async (releaseNow = false) => {
+    if (!releaseExam || savingRelease) return;
+    try {
+      setSavingRelease(true);
+      await API.put('/exams/' + releaseExam._id, { resultReleaseMode: releaseNow ? 'immediate' : releaseExam.resultReleaseMode || 'manual', resultReleaseDelayHours: Number(releaseExam.resultReleaseDelayHours ?? 24) });
+      toast.success(releaseNow ? 'Results released to students' : 'Result release settings saved');
+      setReleaseExam(null);
+      await fetchExams();
+    } catch (error) { toast.error(error.response?.data?.message || 'Could not save result release settings'); } finally { setSavingRelease(false); }
+  };
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -47,9 +62,20 @@ const FacultyExamList = () => {
       setExams((prev) => prev.filter((e) => e._id !== examId));
       toast.success('Exam deleted successfully');
     } catch (err) {
-      toast.error('Failed to delete exam');
+      toast.error(err.response?.data?.message || 'Failed to delete exam');
     } finally {
       setDeleting(null);
+    }
+  };
+
+  const handleArchive = async (exam) => {
+    if (!window.confirm(`Archive "${exam.title}"? It will no longer be available to students, while existing results are preserved.`)) return;
+    try {
+      await API.put(`/exams/${exam._id}`, { status: 'archived' });
+      setExams((prev) => prev.map((item) => item._id === exam._id ? { ...item, status: 'archived' } : item));
+      toast.success('Assessment archived; existing records were preserved.');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to archive assessment');
     }
   };
 
@@ -71,7 +97,7 @@ const FacultyExamList = () => {
         title="Manage exams"
         description="Review exam windows, question mix, publishing status, and assessment actions from one place."
         actions={(
-          <Link to="/faculty/exams/create" className="btn btn-primary">
+          <Link to={examBasePath + '/create'} className="btn btn-primary">
             <PlusCircle size={16} /> Create exam
           </Link>
         )}
@@ -130,7 +156,7 @@ const FacultyExamList = () => {
               : 'No exams match your filters.'}
           </p>
           {exams.length === 0 && (
-            <Link to="/faculty/exams/create" className="btn btn-primary rounded-pill px-4">
+            <Link to={examBasePath + '/create'} className="btn btn-primary rounded-pill px-4">
               <PlusCircle size={16} className="me-2" /> Create First Exam
             </Link>
           )}
@@ -159,9 +185,19 @@ const FacultyExamList = () => {
                     >
                       <FileText size={14} /> PDF
                     </button>
-                    <Link to={`/faculty/exams/edit/${exam._id}`} className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
+                    <button type="button" className="btn btn-outline-info btn-sm" onClick={() => setReleaseExam({ ...exam, resultReleaseMode: exam.resultReleaseMode || 'manual' })}><Eye size={14} /> Result release</button>
+                    <Link to={`${examBasePath}/edit/${exam._id}`} className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
                       <Edit size={14} /> Edit
                     </Link>
+                    {exam.status === 'published' && (
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+                        onClick={() => handleArchive(exam)}
+                      >
+                        <Archive size={14} /> Archive
+                      </button>
+                    )}
                     <button className="btn btn-outline-danger btn-sm d-flex align-items-center gap-1" onClick={() => handleDelete(exam._id)} disabled={deleting === exam._id}>
                       <Trash2 size={14} /> {deleting === exam._id ? 'Deleting...' : 'Delete'}
                     </button>
@@ -192,6 +228,13 @@ const FacultyExamList = () => {
         </div>
       )}
 
+      {releaseExam && <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3" style={{ background: 'rgba(0,0,0,.5)', zIndex: 2000 }}>
+        <section className="card p-4 w-100" role="dialog" aria-modal="true" aria-labelledby="release-dialog-title" style={{ maxWidth: 540 }}>
+          <h2 id="release-dialog-title" className="h5">Result release · {releaseExam.title}</h2>
+          <ResultReleaseControls idPrefix="manage-release" mode={releaseExam.resultReleaseMode} delayHours={releaseExam.resultReleaseDelayHours} onChange={changes => setReleaseExam(prev => ({ ...prev, ...changes }))} />
+          <div className="d-flex flex-wrap gap-2 mt-3"><button type="button" className="btn btn-primary" onClick={() => saveRelease(false)} disabled={savingRelease}>Save settings</button><button type="button" className="btn btn-success" onClick={() => saveRelease(true)} disabled={savingRelease}>Release now</button><button type="button" className="btn btn-outline-secondary" onClick={() => setReleaseExam(null)} disabled={savingRelease}>Cancel</button></div>
+        </section>
+      </div>}
       {/* Printable Question Paper Modal */}
       <PrintableQuestionPaperModal
         isOpen={showPdfModal}

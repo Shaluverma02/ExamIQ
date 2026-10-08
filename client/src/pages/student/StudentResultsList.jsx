@@ -9,6 +9,7 @@ import { Trophy, CheckCircle2, XCircle, Clock, ArrowRight, Search, Download } fr
 import { downloadResultsExcel } from '../../utils/downloadExcel';
 
 const StudentResultsList = () => {
+  const [lockedResults, setLockedResults] = useState([]);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
@@ -19,12 +20,20 @@ const StudentResultsList = () => {
     fetchResults();
   }, []);
 
+  useEffect(() => {
+    const scheduled = lockedResults.map(result => result.releaseAt ? new Date(result.releaseAt).getTime() : Infinity).filter(Number.isFinite);
+    if (!scheduled.length) return;
+    const timeout = setTimeout(() => fetchResults(), Math.min(2147483647, Math.max(1000, Math.min(...scheduled) - Date.now() + 500)));
+    return () => clearTimeout(timeout);
+  }, [lockedResults]);
+
   const fetchResults = async () => {
     try {
       setLoading(true);
       setError('');
       const res = await API.get('/results');
       setResults(res.data.results || []);
+      setLockedResults(res.data.lockedResults || []);
     } catch (err) {
       setError('We could not load your results. Please try again.');
     } finally {
@@ -70,6 +79,7 @@ const StudentResultsList = () => {
               </>
             )}
           </button>
+          <button type="button" className="btn btn-outline-secondary" onClick={fetchResults} disabled={loading}>Refresh results</button>
           <div className="position-relative student-search">
             <Search size={16} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" />
             <input
@@ -84,10 +94,11 @@ const StudentResultsList = () => {
       </div>
 
       <div className="row g-3 mb-4">
-        <div className="col-12 col-sm-4"><StatCard icon={Trophy} label="Total attempts" value={loading ? '…' : error ? '—' : results.length} trend="Evaluated assessments" /></div>
+        <div className="col-12 col-sm-4"><StatCard icon={Trophy} label="Total attempts" value={loading ? '…' : error ? '—' : results.length + lockedResults.length} trend="Evaluated assessments" /></div>
         <div className="col-12 col-sm-4"><StatCard icon={CheckCircle2} label="Assessments passed" value={loading ? '…' : error ? '—' : passCount} trend="Your successful attempts" /></div>
         <div className="col-12 col-sm-4"><StatCard icon={Clock} label="Average score" value={loading ? '…' : error || !results.length ? '—' : avgScore + '%'} trend="Across evaluated attempts" /></div>
       </div>
+      {!loading && !error && lockedResults.filter(result => (result.examId?.title || '').toLowerCase().includes(search.toLowerCase())).map(result => <section key={result._id} className="card p-4 mb-3"><div className="d-flex flex-wrap justify-content-between align-items-center gap-2"><h2 className="h6 mb-0">{result.examId?.title || 'Assessment'} · Attempt {result.attemptNumber || 1}</h2><span className="badge bg-warning">Locked for analysis</span></div><p className="small text-muted mt-2 mb-0">{result.releaseAt ? 'Available on ' + new Date(result.releaseAt).toLocaleString() : 'Your faculty will release this result.'}</p></section>)}
       {/* Results List */}
       {loading ? (
         <div className="student-loading card" role="status"><span className="spinner-border text-primary" aria-hidden="true" /><p>Loading your results…</p></div>
@@ -104,11 +115,11 @@ const StudentResultsList = () => {
             {results.length === 0 ? <Trophy size={34} /> : <Search size={34} />}
           </div>
           <h5 className="fw-bold text-body mb-2">
-            {results.length === 0 ? 'No exams attempted yet' : 'No results found'}
+            {lockedResults.length ? 'Results are under analysis' : results.length === 0 ? 'No exams attempted yet' : 'No results found'}
           </h5>
           <p className="text-muted mb-3">
             {results.length === 0
-              ? 'Go to the Assessments tab and start your first exam.'
+              ? (lockedResults.length ? 'Your submitted assessments appear above. Scores will be available after faculty releases them.' : 'Go to the Assessments tab and start your first exam.')
               : 'Try another exam title or category.'}
           </p>
           {results.length === 0 && (

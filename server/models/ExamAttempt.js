@@ -35,6 +35,7 @@ const examAttemptSchema = new mongoose.Schema(
       default: 'started',
     },
     answers: [answerSchema],
+    codingVisited: [{ type: mongoose.Schema.Types.ObjectId, ref: 'CodingProblem' }],
     codingSubmissions: [
       {
         problemId: { type: mongoose.Schema.Types.ObjectId, ref: 'CodingProblem' },

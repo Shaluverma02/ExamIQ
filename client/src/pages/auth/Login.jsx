@@ -59,7 +59,7 @@ const Login = () => {
 
     try {
       setIsSubmitting(true);
-      const userData = await login(email, password);
+      const userData = await login(email, password, rememberMe);
       navigate(getDashboardPath(userData?.role), { replace: true });
     } catch (err) {
       const message = err.message || 'Invalid credentials or account issue. Please try again.';

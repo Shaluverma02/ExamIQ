@@ -1,6 +1,7 @@
+import { inferSection, SECTION_LABELS } from '../../utils/examSections';
 import '../../styles/faculty.css';
 import React, { useEffect, useState } from 'react';
-import API from '../../services/api';
+import API, { questionAPI } from '../../services/api';
 import {
   Trash2,
   Edit3,
@@ -66,6 +67,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
   const [difficultyFilter, setDifficultyFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [sectionFilter, setSectionFilter] = useState('');
 
   // Modals State
   const [showAiModal, setShowAiModal] = useState(false);
@@ -86,6 +88,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
     negativeMarks: 0,
     difficulty: 'easy',
     category: 'General',
+    section: 'general',
     topic: 'General',
     explanation: '',
   });
@@ -119,7 +122,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
     try {
       setLoading(true);
       const [qRes, cRes] = await Promise.all([
-        API.get('/questions'),
+        questionAPI.getAll(),
         API.get('/coding'),
       ]);
       setQuestions(qRes.data.questions || []);
@@ -144,6 +147,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
       negativeMarks: 0,
       difficulty: 'easy',
       category: 'General',
+    section: 'general',
       topic: 'General',
       explanation: '',
     });
@@ -190,6 +194,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
 
       const payload = {
         questionText: mcqForm.questionText,
+        section: mcqForm.section,
         options,
         marks: Number(mcqForm.marks),
         negativeMarks: Number(mcqForm.negativeMarks),
@@ -241,6 +246,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
       negativeMarks: q.negativeMarks || 0,
       difficulty: q.difficulty || 'easy',
       category: q.category || 'General',
+      section: inferSection(q),
       topic: q.topic || 'General',
       explanation: q.explanation || '',
     });
@@ -360,7 +366,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
     const matchesDifficulty = !difficultyFilter || q.difficulty === difficultyFilter;
     const matchesType = !typeFilter || (q.questionType || 'single') === typeFilter;
     const matchesCategory = !categoryFilter || (q.category || '').toLowerCase().includes(categoryFilter.toLowerCase());
-    return matchesSearch && matchesDifficulty && matchesType && matchesCategory;
+    return matchesSearch && matchesDifficulty && matchesType && matchesCategory && (!sectionFilter || inferSection(q) === sectionFilter);
   });
 
   const filteredProblems = problems.filter((p) => {
@@ -484,6 +490,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
             </select>
           </div>
 
+          {activeTab === 'mcq' && <div className="col-6 col-md-2"><select className="form-select form-select-sm" aria-label="Filter question section" value={sectionFilter} onChange={e => setSectionFilter(e.target.value)}><option value="">All sections</option>{Object.entries(SECTION_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></div>}
           <div className="col-6 col-md-2">
             <input
               type="text"
@@ -502,6 +509,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                 setDifficultyFilter('');
                 setTypeFilter('');
                 setCategoryFilter('');
+                setSectionFilter('');
               }}
             >
               <RefreshCw size={14} /> Reset
@@ -581,7 +589,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                           </span>
                         </td>
                         <td>
-                          <span className="small text-muted">{q.category || 'General'} / {q.topic || 'General'}</span>
+                          <span className="badge bg-primary mb-1">{SECTION_LABELS[inferSection(q)]}</span><br/><span className="small text-muted">{q.category || 'General'} / {q.topic || 'General'}</span>
                         </td>
                         <td>
                           <span className="fw-bold text-info">{q.marks} pts</span>
@@ -897,6 +905,7 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
                     </div>
                   </div>
 
+                  <div className="mb-3"><label htmlFor="question-bank-section" className="form-label small text-muted fw-semibold">Test section</label><select id="question-bank-section" className="form-select" value={mcqForm.section} onChange={e => setMcqForm({ ...mcqForm, section: e.target.value })}>{Object.entries(SECTION_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select><p className="small text-muted mt-2 mb-0">This section is used automatically when you add the question to an exam. You can change it in the exam builder.</p></div>
                   <div className="row g-2 mb-3">
                     <div className="col-6">
                       <label className="form-label small text-muted fw-semibold">Category</label>

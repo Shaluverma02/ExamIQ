@@ -94,6 +94,29 @@ small, .small { font-size: .875rem; }
 .skip-link { position: fixed; top: -100px; left: 1rem; z-index: 2000; padding: .75rem 1rem; border-radius: .5rem; background: var(--app-primary-fill); color: #fff; }
 .skip-link:focus { top: 1rem; }
 
+.pre-exam-screen { background: var(--app-bg); color: var(--app-text); }
+.pre-exam-panel { background: var(--app-subtle); color: var(--app-text); }
+.pre-exam-hidden { display: none !important; }
+.pre-exam-step-nav { display: flex; flex-direction: column; gap: .5rem; }
+.pre-exam-step { display: flex; align-items: center; gap: .75rem; width: 100%; min-height: 64px; padding: .7rem; color: var(--app-muted); background: var(--app-surface); border: 1px solid var(--app-border); border-radius: 10px; text-align: left; transition: border-color .15s, background .15s, color .15s; }
+.pre-exam-step:hover { color: var(--app-text); border-color: var(--app-blue); }
+.pre-exam-step.active { color: var(--app-blue); background: var(--app-blue-soft); border-color: var(--app-blue); }
+.pre-exam-step.complete .pre-exam-step-number { color: #fff; background: var(--app-success); border-color: var(--app-success); }
+.pre-exam-step-number { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex: 0 0 30px; color: var(--app-muted); background: var(--app-surface); border: 1px solid var(--app-border); border-radius: 50%; font-size: .8rem; font-weight: 700; }
+.pre-exam-step strong, .pre-exam-step small { display: block; }
+.pre-exam-step strong { color: inherit; font-size: .8125rem; }
+.pre-exam-step small { margin-top: .1rem; color: var(--app-muted); font-size: .7rem; }
+.pre-exam-step-progress { margin-top: .65rem; color: var(--app-muted); font-size: .75rem; text-align: center; }
+
+@media (max-width: 991.98px) {
+  .pre-exam-step-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pre-exam-step { min-height: 58px; }
+}
+@media (max-width: 420px) {
+  .pre-exam-step { gap: .5rem; padding: .55rem; }
+  .pre-exam-step small { font-size: .65rem; }
+}
+
 .app-shell { min-height: 100vh; background: var(--app-bg); color: var(--app-text); }
 .app-sidebar-slot { position: fixed; inset: 0 auto 0 0; width: var(--app-sidebar-width); z-index: 1040; }
 .app-workspace { margin-left: var(--app-sidebar-width); min-width: 0; }

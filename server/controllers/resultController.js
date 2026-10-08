@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const { isStudentAuthorizedForExam } = require('./examAssignmentController');
+const { getResultRelease, releasedResultsQuery } = require('../utils/resultRelease');
 const User = require('../models/User');
 const Exam = require('../models/Exam');
 const Question = require('../models/Question');
@@ -32,7 +34,7 @@ exports.getResults = async (req, res, next) => {
     let studentUserIds = null;
     let targetGroup = null;
 
-    if (groupId) {
+    if (groupId && req.user.role !== 'student') {
       targetGroup = await Group.findOne({ _id: groupId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }).populate('students', '_id');
       if (targetGroup) {
         // Find students assigned to this group in Group model OR Student model
@@ -42,7 +44,7 @@ exports.getResults = async (req, res, next) => {
         studentUserIds = Array.from(new Set([...idsFromStudentDoc, ...idsFromGroupDoc]));
         query.studentId = { $in: studentUserIds };
       }
-    } else if (course || department || semester) {
+    } else if (req.user.role !== 'student' && (course || department || semester)) {
       const filter = req.collegeId ? { collegeId: req.collegeId } : {};
       const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       if (course) filter.course = { $regex: escapeRegex(course), $options: 'i' };
@@ -54,10 +56,20 @@ exports.getResults = async (req, res, next) => {
       query.studentId = { $in: studentUserIds };
     }
 
-    const results = await Result.find(query)
+    let results = await Result.find(query)
       .populate('studentId', 'name email')
-      .populate('examId', 'title totalMarks category')
+      .populate('examId', 'title totalMarks category resultReleaseMode resultReleaseDelayHours')
       .sort({ createdAt: -1 });
+
+    const lockedResults = [];
+    if (req.user.role === 'student') {
+      results = results.filter(result => {
+        const release = getResultRelease(result);
+        if (release.released) return true;
+        lockedResults.push({ _id: result._id, examId: { _id: result.examId?._id, title: result.examId?.title, category: result.examId?.category }, attemptNumber: result.attemptNumber, releaseAt: release.releaseAt, message: 'Locked for analysis' });
+        return false;
+      });
+    }
 
     // Populate student profiles with Group for result list
     const resultUserIds = results.map((r) => r.studentId?._id).filter(Boolean);
@@ -158,6 +170,7 @@ exports.getResults = async (req, res, next) => {
     res.status(200).json({
       success: true,
       count: enrichedResults.length,
+      lockedResults,
       groupStats,
       results: enrichedResults,
       studentMatrix,
@@ -195,9 +208,15 @@ exports.getResultById = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'You are not authorized to view this result' });
     }
 
+    if (req.user.role === 'student') {
+      const release = getResultRelease(result);
+      if (!release.released) return res.status(423).json({ success: false, code: 'RESULT_LOCKED', message: 'Locked for analysis', releaseAt: release.releaseAt });
+    }
+
     const certificate = await Certificate.findOne({ resultId: result._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
 
-    res.status(200).json({ success: true, result, certificate });
+    const retakeCheck = req.user.role === 'student' ? await isStudentAuthorizedForExam(req.user._id, result.examId?._id, req.collegeId) : null;
+    res.status(200).json({ success: true, result, certificate, retakeAllowed: Boolean(retakeCheck?.authorized), retakeLimit: retakeCheck?.attemptsAllowed ?? result.examId?.maxAttempts ?? 0, attemptsUsed: retakeCheck?.attemptsUsed ?? result.attemptNumber ?? 1 });
   } catch (err) {
     next(err);
   }
@@ -218,7 +237,8 @@ exports.getLeaderboard = async (req, res, next) => {
       query.studentId = { $in: groupUserIds };
     }
 
-    const leaderboard = await Result.find(query)
+    const leaderboardQuery = req.user.role === 'student' ? await releasedResultsQuery(query, Exam) : query;
+    const leaderboard = await Result.find(leaderboardQuery)
       .populate('studentId', 'name email profileImage')
       .populate('examId', 'title')
       .sort({ totalScore: -1, percentage: -1, evaluatedAt: 1 })
@@ -251,11 +271,13 @@ exports.getCertificates = async (req, res, next) => {
       query.studentId = req.user._id;
     }
 
-    const certificates = await Certificate.find(query)
+    let certificates = await Certificate.find(query)
       .populate('studentId', 'name email')
-      .populate('examId', 'title')
+      .populate('examId', 'title resultReleaseMode resultReleaseDelayHours')
+      .populate('resultId', 'evaluatedAt createdAt')
       .sort({ issueDate: -1 });
 
+    if (req.user.role === 'student') certificates = certificates.filter(item => getResultRelease(item.resultId, item.examId).released);
     res.status(200).json({ success: true, count: certificates.length, certificates });
   } catch (err) {
     next(err);
@@ -269,11 +291,14 @@ exports.verifyCertificate = async (req, res, next) => {
   try {
     const certificate = await Certificate.findOne({ certificateId: req.params.certificateId })
       .populate('studentId', 'name email')
-      .populate('examId', 'title category totalMarks');
+      .populate('examId', 'title category totalMarks resultReleaseMode resultReleaseDelayHours')
+      .populate('resultId', 'evaluatedAt createdAt');
 
     if (!certificate) {
       return res.status(404).json({ success: false, message: 'Certificate invalid or not found' });
     }
+
+    if (!getResultRelease(certificate.resultId, certificate.examId).released) return res.status(423).json({ success: false, message: 'Locked for analysis' });
 
     res.status(200).json({
       success: true,
@@ -369,7 +394,8 @@ exports.exportResultsExcel = async (req, res, next) => {
     }
 
     // 3. Fetch Results from DB
-    const results = await Result.find(query)
+    const exportQuery = req.user.role === 'student' ? await releasedResultsQuery(query, Exam) : query;
+    const results = await Result.find(exportQuery)
       .populate('studentId', 'name email')
       .populate('examId', 'title totalMarks duration codingProblems questions')
       .populate({

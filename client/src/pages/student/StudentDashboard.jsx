@@ -1,6 +1,6 @@
 import '../../styles/student.css';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   AlertCircle, ArrowRight, BookOpen, CalendarDays, CheckCircle2, Circle,
   ClipboardList, Clock, Code2, FileCheck, Mic, RefreshCw, Sparkles, Target, UserRound,
@@ -37,6 +37,7 @@ const daysLeftLabel = (daysLeft) => {
 };
 
 const StudentDashboard = () => {
+  const { state: navigationState } = useLocation();
   const { user, setUser } = useContext(AuthContext);
   const [exams, setExams] = useState([]);
   const [assignedExams, setAssignedExams] = useState([]);
@@ -97,18 +98,24 @@ const StudentDashboard = () => {
     { title: 'Versant practice', description: 'Work on your speaking, listening, and communication skills.', href: '/student/versant', icon: Mic, detail: unavailable.includes('versant') ? 'Recent activity unavailable' : `${practiceStats.versant} recent submissions`, action: 'Practice communication', accent: 'var(--app-success)' },
   ];
 
-  // Derive the single most urgent assignment — in-progress first, then soonest due date.
+  // Keep the next-up action aligned with the assignment's actual availability window.
   const nextUp = !unavailable.includes('assignments')
     ? assignedExams
         .map((assignment) => {
-          const inProgress = assignment.attempt?.status === 'started';
-          const completed = ['submitted', 'auto-submitted', 'evaluated'].includes(assignment.attempt?.status);
+          const isExpired = assignment.endDate && new Date(assignment.endDate) < new Date();
+          const inProgress = assignment.attempt?.status === 'started' && !isExpired;
+          const upcoming = assignment.startDate && new Date(assignment.startDate) > new Date();
+          const completed = assignment.computedStatus === 'completed' || assignment.attemptsRemaining <= 0;
           const exhausted = assignment.attemptsRemaining != null && assignment.attemptsRemaining <= 0;
-          return { ...assignment, inProgress, completed, exhausted, daysLeft: daysLeftFrom(assignment.endDate) };
+          return { ...assignment, inProgress, upcoming, isExpired, completed, exhausted, daysLeft: daysLeftFrom(assignment.endDate) };
         })
-        .filter((assignment) => !assignment.completed && !assignment.exhausted)
+        .filter((assignment) => !assignment.completed && !assignment.exhausted && !assignment.isExpired)
         .sort((a, b) => {
           if (a.inProgress !== b.inProgress) return a.inProgress ? -1 : 1;
+          if (a.upcoming !== b.upcoming) return a.upcoming ? 1 : -1;
+          if (a.upcoming && b.upcoming) {
+            return new Date(a.startDate) - new Date(b.startDate);
+          }
           if (a.daysLeft == null) return 1;
           if (b.daysLeft == null) return -1;
           return a.daysLeft - b.daysLeft;
@@ -129,6 +136,7 @@ const StudentDashboard = () => {
 
   return (
     <div className="workspace-page student-dashboard">
+      {navigationState?.assessmentSubmitted && <div className="alert alert-info mb-0" role="status"><strong>Locked for analysis.</strong> Your assessment was submitted successfully. {navigationState.releaseAt ? 'Results unlock on ' + new Date(navigationState.releaseAt).toLocaleString() + '.' : 'Your faculty controls when results are released.'}</div>}
       <StudentProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
@@ -169,10 +177,6 @@ const StudentDashboard = () => {
           aria-labelledby="next-up-heading"
           className="student-next-up position-relative overflow-hidden"
         >
-          <div
-            aria-hidden="true"
-            style={{ position: 'absolute', width: 220, height: 220, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', top: -80, right: -60 }}
-          />
           <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 position-relative">
             <div className="d-flex align-items-start gap-3">
               <span
@@ -183,7 +187,7 @@ const StudentDashboard = () => {
               </span>
               <div>
                 <div className="small text-uppercase-none" style={{ color: 'rgba(255,255,255,0.7)' }} id="next-up-heading">
-                  {nextUp.inProgress ? 'Pick up where you left off' : 'Up next'}
+                  {nextUp.inProgress ? 'Pick up where you left off' : nextUp.upcoming ? 'Scheduled for later' : 'Up next'}
                 </div>
                 <h2 className="h5 fw-bold mb-1 mt-1">{nextUp.title || nextUp.examId?.title || 'Faculty assessment'}</h2>
                 <div className="d-flex flex-wrap align-items-center gap-3 small" style={{ color: 'rgba(255,255,255,0.85)' }}>
@@ -193,21 +197,27 @@ const StudentDashboard = () => {
                     </span>
                   )}
                   <span className="d-inline-flex align-items-center gap-1">
-                    <CalendarDays size={14} /> {daysLeftLabel(nextUp.daysLeft)}
+                    <CalendarDays size={14} /> {nextUp.upcoming
+                      ? `Opens ${formatDate(nextUp.startDate)}`
+                      : daysLeftLabel(nextUp.daysLeft)}
                   </span>
                 </div>
               </div>
             </div>
-            <Link
-              to={
-                (nextUp.examId?._id || (typeof nextUp.examId === 'string' ? nextUp.examId : null))
+            {nextUp.upcoming ? (
+              <Link to="/student/exams" className="btn btn-light fw-semibold flex-shrink-0 align-self-start align-self-md-center">
+                View schedule <ArrowRight size={15} />
+              </Link>
+            ) : (
+              <Link
+                to={(nextUp.examId?._id || (typeof nextUp.examId === 'string' ? nextUp.examId : null))
                   ? `/student/exam/${nextUp.examId?._id || nextUp.examId}/attempt`
-                  : '/student/exams'
-              }
-              className="btn btn-light fw-semibold flex-shrink-0 align-self-start align-self-md-center"
-            >
-              {nextUp.inProgress ? 'Resume assessment' : 'Start assessment'} <ArrowRight size={15} />
-            </Link>
+                  : '/student/exams'}
+                className="btn btn-light fw-semibold flex-shrink-0 align-self-start align-self-md-center"
+              >
+                {nextUp.inProgress ? 'Resume assessment' : 'Start assessment'} <ArrowRight size={15} />
+              </Link>
+            )}
           </div>
         </section>
       )}
@@ -237,9 +247,11 @@ const StudentDashboard = () => {
             <div className="row g-3">
               {assignedExams.slice(0, 3).map((assignment) => {
                 const examId = assignment.examId?._id || (typeof assignment.examId === 'string' ? assignment.examId : null);
-                const inProgress = assignment.attempt?.status === 'started';
-                const completed = ['submitted', 'auto-submitted', 'evaluated'].includes(assignment.attempt?.status);
+                const completed = assignment.computedStatus === 'completed' || assignment.attemptsRemaining <= 0;
                 const exhausted = assignment.attemptsRemaining != null && assignment.attemptsRemaining <= 0;
+                const upcoming = assignment.startDate && new Date(assignment.startDate) > new Date();
+                const expired = assignment.endDate && new Date(assignment.endDate) < new Date();
+                const inProgress = assignment.attempt?.status === 'started' && !expired;
                 const duration = assignment.duration || assignment.examId?.duration;
                 const daysLeft = daysLeftFrom(assignment.endDate);
                 const urgentBorder = !completed && !exhausted && daysLeft != null && daysLeft <= 1 ? '#C0453B' : !completed && !exhausted && daysLeft != null && daysLeft <= 3 ? '#C8862E' : 'transparent';
@@ -247,19 +259,25 @@ const StudentDashboard = () => {
                   <div key={assignment._id} className="col-12 col-lg-4">
                     <article className="mini-record-card d-flex flex-column h-100" style={{ borderLeft: `3px solid ${urgentBorder}` }}>
                       <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
-                        <span className={`badge ${inProgress ? 'bg-warning' : completed ? 'bg-success' : 'bg-primary'}`}>{inProgress ? 'In progress' : completed ? 'Completed' : 'Assigned'}</span>
+                        <span className={`badge ${inProgress ? 'bg-warning' : completed ? 'bg-success' : expired ? 'bg-danger' : upcoming ? 'bg-info' : 'bg-primary'}`}>{inProgress ? 'In progress' : completed ? 'Completed' : expired ? 'Expired' : upcoming ? 'Upcoming' : 'Assigned'}</span>
                         {duration && <span className="small text-muted d-inline-flex align-items-center gap-1"><Clock size={13} /> {duration} min</span>}
                       </div>
                       <h3 className="h6 fw-bold mb-2">{assignment.title || assignment.examId?.title || 'Faculty assessment'}</h3>
-                      <p className="small text-muted mb-1">Available until {formatDate(assignment.endDate, 'date confirmed by faculty')}</p>
+                      <p className="small text-muted mb-1">{upcoming ? `Opens ${formatDate(assignment.startDate)}` : `Available until ${formatDate(assignment.endDate, 'date confirmed by faculty')}`}</p>
                       {!completed && !exhausted && (
                         <p className="small fw-semibold mb-3" style={{ color: urgentBorder !== 'transparent' ? urgentBorder : '#6C7686' }}>
                           {daysLeftLabel(daysLeft)}
                         </p>
                       )}
-                      <Link to={examId && !exhausted ? `/student/exam/${examId}/attempt` : '/student/exams'} className={`btn ${exhausted ? 'btn-outline-secondary' : 'btn-primary'} btn-sm mt-auto`}>
-                        {exhausted ? 'View assessment' : inProgress ? 'Resume assessment' : completed ? 'Retake assessment' : 'Start assessment'} <ArrowRight size={15} />
-                      </Link>
+                      {upcoming || expired || completed || exhausted ? (
+                        <Link to="/student/exams" className="btn btn-outline-secondary btn-sm mt-auto">
+                          {upcoming ? 'View schedule' : expired ? 'Assessment expired' : completed || exhausted ? 'View results' : 'View assessment'} <ArrowRight size={15} />
+                        </Link>
+                      ) : (
+                        <Link to={examId ? `/student/exam/${examId}/attempt` : '/student/exams'} className="btn btn-primary btn-sm mt-auto">
+                          {inProgress ? 'Resume assessment' : 'Start assessment'} <ArrowRight size={15} />
+                        </Link>
+                      )}
                     </article>
                   </div>
                 );

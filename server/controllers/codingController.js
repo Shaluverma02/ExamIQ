@@ -2,6 +2,8 @@
 const TestCase = require('../models/TestCase');
 const CodingSubmission = require('../models/CodingSubmission');
 const CodingSession = require('../models/CodingSession');
+const Exam = require('../models/Exam');
+const ExamAttempt = require('../models/ExamAttempt');
 const { runCode } = require('../services/codeRunnerService');
 
 /**
@@ -1103,6 +1105,14 @@ exports.submitCode = async (
       });
     }
 
+    let examAttempt = null;
+    if (examId) {
+      const exam = await Exam.findOne({ _id: examId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
+      examAttempt = await ExamAttempt.findOne({ examId, studentId: req.user._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}), status: 'started' }).sort({ attemptNumber: -1 });
+      if (!exam || !examAttempt || !(exam.codingProblems || []).some(id => String(id) === String(problemId))) return res.status(403).json({ success: false, message: 'No active exam attempt for this coding problem' });
+      if (Date.now() >= new Date(examAttempt.startedAt).getTime() + exam.duration * 60000) return res.status(409).json({ success: false, message: 'Exam duration has elapsed' });
+    }
+
     /**
      * Validate language.
      */
@@ -1155,6 +1165,8 @@ exports.submitCode = async (
         }));
       }
     }
+
+    if (!finalTestCases.length) return res.status(400).json({ success: false, message: 'No test cases configured for this problem' });
 
     /**
      * Attempt number.
@@ -1356,8 +1368,7 @@ exports.submitCode = async (
        *   no input/output
        */
       testResults.push({
-        testCaseId:
-          tc._id,
+        testCaseId: /^[a-f0-9]{24}$/i.test(String(tc._id)) ? tc._id : undefined,
 
         input:
           tc.isHidden
@@ -1429,7 +1440,7 @@ exports.submitCode = async (
      * ========================================================
      */
     const totalWeight =
-      testCases.reduce(
+      finalTestCases.reduce(
         (sum, tc) =>
           sum +
           (Number(tc.weight) >
@@ -1458,10 +1469,10 @@ exports.submitCode = async (
      * Passed percentage.
      */
     const passedPercentage =
-      testCases.length > 0
+      finalTestCases.length > 0
         ? Math.round(
           (passedCount /
-            testCases.length) *
+            finalTestCases.length) *
           100
         )
         : 0;
@@ -1471,9 +1482,9 @@ exports.submitCode = async (
      */
     if (
       passedCount ===
-      testCases.length &&
+      finalTestCases.length &&
       testResults.length ===
-      testCases.length
+      finalTestCases.length
     ) {
       overallStatus =
         'Accepted';
@@ -1522,7 +1533,7 @@ exports.submitCode = async (
           passedCount,
 
         totalTestCases:
-          testCases.length,
+          finalTestCases.length,
 
         executionTime:
           averageExecutionTime,
@@ -1543,6 +1554,17 @@ exports.submitCode = async (
         submittedAt:
           new Date(),
       });
+
+    if (examAttempt) {
+      const saved = await ExamAttempt.findOne({ _id: examAttempt._id, status: 'started' });
+      if (!saved) return res.status(409).json({ success: false, message: 'Exam was submitted while code was running' });
+      const current = (saved.codingSubmissions || []).find(item => String(item.problemId) === String(problemId));
+      const record = { problemId, submissionId: submission._id, status: submission.status, score: submission.score };
+      if (!current) saved.codingSubmissions.push(record);
+      else if (record.score >= current.score) Object.assign(current, record);
+      if (!(saved.codingVisited || []).some(id => String(id) === String(problemId))) saved.codingVisited.push(problemId);
+      await saved.save();
+    }
 
     /**
      * Determine best submission.
@@ -2023,161 +2045,6 @@ exports.getMySubmissionCode =
 /**
  * ============================================================
  * RUN TRIAL CODE
- * ============================================================
- */
-exports.runTrialCode = async (req, res, next) => {
-  try {
-    const { language, sourceCode, input, timeLimit, memoryLimit } = req.body;
-
-    if (!language || !sourceCode) {
-      return res.status(400).json({
-        success: false,
-        message: 'Language and source code are required',
-      });
-    }
-
-    const result = await runCode({
-      language,
-      sourceCode,
-      input: input || '',
-      timeLimit: timeLimit ? Number(timeLimit) * 1000 : 3000,
-      memoryLimit: memoryLimit ? Number(memoryLimit) : 128,
-    });
-
-    res.status(200).json({
-      success: true,
-      result,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * ============================================================
- * SUBMIT CODE
- * ============================================================
- */
-exports.submitCode = async (req, res, next) => {
-  try {
-    const { problemId, language, sourceCode } = req.body;
-    
-    if (!problemId || !language || !sourceCode) {
-      return res.status(400).json({
-        success: false,
-        message: 'Problem ID, language, and source code are required',
-      });
-    }
-
-    const problem = await CodingProblem.findOne({ _id: problemId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
-    if (!problem) {
-      return res.status(404).json({
-        success: false,
-        message: 'Problem not found',
-      });
-    }
-
-    const testCases = await TestCase.find({ $or: [{ problemId }, { codingProblemId: problemId }] }).lean();
-    if (!testCases || testCases.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No test cases found for this problem',
-      });
-    }
-
-    let passedCount = 0;
-    let totalScore = 0;
-    let maxTime = 0;
-    let maxMemory = 0;
-    let finalStatus = 'Accepted';
-    
-    const results = [];
-
-    for (const testCase of testCases) {
-      const execResult = await runCode({
-        language,
-        sourceCode,
-        input: testCase.input,
-        timeLimit: problem.timeLimit ? Number(problem.timeLimit) * 1000 : 3000,
-        memoryLimit: problem.memoryLimit ? Number(problem.memoryLimit) : 128,
-      });
-
-      const actualOutput = normalizeOutput(execResult.output);
-      const expectedOutput = normalizeOutput(testCase.expectedOutput);
-      
-      const isPassed = execResult.status === 'Accepted' && actualOutput === expectedOutput;
-      
-      let tcStatus = execResult.status;
-      if (execResult.status === 'Accepted' && !isPassed) {
-        tcStatus = 'Wrong Answer';
-      }
-
-      if (isPassed) {
-        passedCount++;
-        totalScore += testCase.score || 0;
-      } else if (finalStatus === 'Accepted') {
-        finalStatus = tcStatus;
-      }
-
-      if (execResult.executionTime > maxTime) maxTime = execResult.executionTime;
-
-      results.push({
-        testCaseId: testCase._id,
-        status: tcStatus,
-        executionTime: execResult.executionTime || 0,
-        memoryUsed: 0,
-        input: testCase.input,
-        expectedOutput: testCase.expectedOutput,
-        actualOutput: execResult.output,
-        errorMessage: execResult.errorMessage,
-        passed: isPassed
-      });
-      
-      // Optionally stop early on compilation or runtime error
-      if (!isPassed && finalStatus !== 'Wrong Answer') {
-          break;
-      }
-    }
-
-    const passedPercentage = (passedCount / testCases.length) * 100;
-    const attemptNumber = req.user ? await getAttemptNumber(req.user._id, problemId) : 1;
-
-    let submission = new CodingSubmission({
-      studentId: req.user ? req.user._id : null,
-      collegeId: req.collegeId || problem.collegeId || undefined,
-      problemId,
-      language,
-      sourceCode,
-      status: finalStatus,
-      score: totalScore,
-      passedTestCases: passedCount,
-      totalTestCases: testCases.length,
-      passedPercentage,
-      executionTime: maxTime,
-      memoryUsed: maxMemory,
-      testCaseResults: results,
-      attemptNumber,
-      isBest: false
-    });
-
-    if (req.user) {
-        submission = await updateBestSubmission(submission);
-    } else {
-        await submission.save();
-    }
-
-    res.status(200).json({
-      success: true,
-      submission,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * ============================================================
- * START ASSESSMENT SESSION
  * ============================================================
  */
 exports.startAssessmentSession = async (req, res, next) => {

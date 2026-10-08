@@ -29,6 +29,7 @@ const getOrCreateCollege = async ({ name, createdBy }) => {
 const ensureMembership = async (user) => {
   let memberships = await Membership.find({ userId: user._id, status: 'active' }).populate('collegeId', 'name code logoUrl isActive');
   if (memberships.length > 0) return memberships;
+  if (await Membership.exists({ userId: user._id })) return []; // Do not reactivate suspended memberships.
 
   const [studentProfile, facultyProfile] = await Promise.all([
     Student.findOne({ userId: user._id }),
@@ -36,7 +37,9 @@ const ensureMembership = async (user) => {
   ]);
 
   const inferredCollegeName = studentProfile?.college || process.env.DEFAULT_COLLEGE_NAME || 'Primary Institution';
-  const college = await getOrCreateCollege({ name: inferredCollegeName, createdBy: user._id });
+  const mappedCollegeId = studentProfile?.collegeId || facultyProfile?.collegeId || user.activeCollegeId || user.collegeIds?.[0];
+  const college = mappedCollegeId ? await College.findById(mappedCollegeId) : await getOrCreateCollege({ name: inferredCollegeName, createdBy: user._id });
+  if (!college || !college.isActive) return [];
   const membershipRole = user.role === 'admin' ? 'admin' : user.role;
 
   await Membership.findOneAndUpdate(
@@ -93,11 +96,14 @@ exports.protect = async (req, res, next) => {
     }
 
     const memberships = await ensureMembership(user);
-    const requestedCollegeId = req.headers['x-college-id'] || decoded.activeCollegeId || user.activeCollegeId;
-    const selectedMembership = memberships.find((item) => item.collegeId?._id?.toString() === requestedCollegeId?.toString()) || memberships[0];
+    const activeMemberships = memberships.filter(item => item.collegeId?.isActive);
+    const requestedCollegeId = req.headers['x-college-id'] || user.activeCollegeId || decoded.activeCollegeId;
+    const selectedMembership = activeMemberships.find(item => item.collegeId?._id?.toString() === requestedCollegeId?.toString()) || (!req.headers['x-college-id'] ? activeMemberships[0] : null);
+    const isSystemManagement = user.role === 'admin' && (req.baseUrl === '/api/colleges' || (req.baseUrl === '/api/admin' && req.path === '/college-admins') || (req.baseUrl === '/api/auth' && req.path === '/me'));
+    if (!selectedMembership && !isSystemManagement) return res.status(403).json({ success: false, message: 'No active membership for the selected college. Contact your college administrator.' });
 
     req.user = user;
-    req.memberships = memberships;
+    req.memberships = activeMemberships;
     req.college = selectedMembership?.collegeId || null;
     req.collegeId = selectedMembership?.collegeId?._id || null;
     req.membershipRole = selectedMembership?.role || user.role;

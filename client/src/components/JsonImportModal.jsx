@@ -1,4 +1,5 @@
-﻿import React, { useState } from 'react';
+import { SECTION_LABELS } from '../utils/examSections';
+import React, { useState } from 'react';
 import { questionAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import {
@@ -15,51 +16,56 @@ import {
 
 const SAMPLE_JSON_DATA = [
   {
-    question: "What is the time complexity of Binary Search algorithm?",
-    type: "single",
-    options: ["O(1)", "O(log n)", "O(n)", "O(n log n)"],
-    correctAnswer: "O(log n)",
-    explanation: "Binary search repeatedly divides the search space into half.",
-    difficulty: "medium",
-    category: "Data Structures",
-    topic: "Algorithms",
-    marks: 2,
-    negativeMarks: 0
+    "question": "What is 20% of 150?",
+    "type": "single",
+    "section": "aptitude",
+    "options": [
+      "20",
+      "30",
+      "40",
+      "50"
+    ],
+    "correctAnswer": "30",
+    "marks": 2
   },
   {
-    question: "Which of the following data structures follow First-In-First-Out (FIFO)?",
-    type: "single",
-    options: ["Stack", "Queue", "Tree", "Graph"],
-    correctAnswer: "Queue",
-    explanation: "Queue inserts elements at the rear and removes from the front (FIFO).",
-    difficulty: "easy",
-    category: "Data Structures",
-    topic: "Queue",
-    marks: 1,
-    negativeMarks: 0
+    "question": "Complete the pattern: A, C, E, ?",
+    "type": "single",
+    "section": "reasoning",
+    "options": [
+      "F",
+      "G",
+      "H",
+      "I"
+    ],
+    "correctAnswer": "G",
+    "marks": 2
   },
   {
-    question: "Select all prime numbers from the given list:",
-    type: "multiple",
-    options: ["2", "4", "5", "9"],
-    correctAnswer: ["2", "5"],
-    explanation: "2 and 5 are prime numbers as they are divisible only by 1 and themselves.",
-    difficulty: "medium",
-    category: "Mathematics",
-    topic: "Number Theory",
-    marks: 2,
-    negativeMarks: 0.5
+    "question": "Choose the synonym of rapid.",
+    "type": "single",
+    "section": "verbal",
+    "options": [
+      "Slow",
+      "Quick",
+      "Late",
+      "Weak"
+    ],
+    "correctAnswer": "Quick",
+    "marks": 2
   },
   {
-    question: "JavaScript is a statically-typed programming language.",
-    type: "boolean",
-    correctAnswer: false,
-    explanation: "JavaScript is dynamically-typed; variable types are checked at runtime.",
-    difficulty: "easy",
-    category: "JavaScript",
-    topic: "Basics",
-    marks: 1,
-    negativeMarks: 0
+    "question": "Which data structure follows FIFO?",
+    "type": "single",
+    "section": "general",
+    "options": [
+      "Stack",
+      "Queue",
+      "Tree",
+      "Graph"
+    ],
+    "correctAnswer": "Queue",
+    "marks": 2
   }
 ];
 
@@ -69,6 +75,7 @@ const SAMPLE_CODING_JSON = [
     title: "Reverse Words in a String",
     description: "Given an input string s, reverse the order of the words. A word is defined as a sequence of non-space characters.",
     difficulty: "medium",
+    section: "general",
     category: "Data Structures",
     topic: "Strings",
     marks: 10,
@@ -105,6 +112,7 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [skipDuplicates, setSkipDuplicates] = useState(true);
+  const [defaultSection, setDefaultSection] = useState('');
 
   // Response Data from Server
   const [previewData, setPreviewData] = useState(null);
@@ -142,9 +150,9 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
 
   const handleDownloadTemplateCsv = () => {
     const csvContent =
-      'question,type,optionA,optionB,optionC,optionD,correctAnswer,difficulty,category,topic,marks,explanation\n' +
-      '"What is Binary Search?",single,O(1),O(log n),O(n),O(n log n),O(log n),medium,Data Structures,Algorithms,2,"Halves search space"\n' +
-      '"Queue follows FIFO structure",boolean,True,False,,,True,easy,Data Structures,Queue,1,"First in first out"';
+      'question,type,optionA,optionB,optionC,optionD,correctAnswer,difficulty,category,topic,marks,explanation,section\n' +
+      '"What is Binary Search?",single,O(1),O(log n),O(n),O(n log n),O(log n),medium,Data Structures,Algorithms,2,"Halves search space",general\n' +
+      '"Queue follows FIFO structure",boolean,True,False,,,True,easy,Data Structures,Queue,1,"First in first out",general';
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -184,6 +192,7 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
       setLoading(true);
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('section', defaultSection);
       formData.append('validateOnly', 'true');
       formData.append('skipDuplicates', skipDuplicates ? 'true' : 'false');
 
@@ -205,6 +214,7 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
       setLoading(true);
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('section', defaultSection);
       formData.append('validateOnly', 'false');
       formData.append('skipDuplicates', skipDuplicates ? 'true' : 'false');
 
@@ -226,6 +236,7 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
     setFile(null);
     setPreviewData(null);
     setImportResult(null);
+    setDefaultSection('');
   };
 
   return (
@@ -236,7 +247,7 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
           <div className="modal-header border">
             <div className="d-flex align-items-center gap-2">
               <FileJson className="text-primary" size={24} />
-              <h5 className="modal-title fw-bold">Bulk Question Import (JSON)</h5>
+              <h5 className="modal-title fw-bold">Bulk Question Import (JSON / CSV)</h5>
             </div>
             <button
               type="button"
@@ -250,7 +261,7 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
           <div className="px-4 py-2 border-bottom border bg-body-tertiary bg-opacity-50">
             <div className="d-flex align-items-center justify-content-center gap-2 small">
               <span className={`badge ${step >= 1 ? 'bg-primary' : 'bg-secondary'} px-3 py-1 font-monospace`}>
-                1. Upload JSON
+                1. Upload file
               </span>
               <span className="text-muted">â”€â”€â”€</span>
               <span className={`badge ${step >= 2 ? 'bg-primary' : 'bg-secondary'} px-3 py-1 font-monospace`}>
@@ -270,9 +281,9 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
               <div>
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                   <div>
-                    <h6 className="fw-bold mb-1">Upload Question Bank JSON File</h6>
+                    <h6 className="fw-bold mb-1">Upload section questions</h6>
                     <p className="text-muted small m-0">
-                      Upload a `.json` file containing questions adhering to the portal schema. Max file size: 5 MB.
+                      Upload a JSON or CSV file containing questions. Max file size: 5 MB.
                     </p>
                   </div>
 
@@ -301,12 +312,13 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
                   </div>
                 </div>
 
+                <div className="mb-4"><label htmlFor="import-default-section" className="form-label fw-semibold">Section for this upload</label><select id="import-default-section" className="form-select" value={defaultSection} onChange={e => setDefaultSection(e.target.value)}><option value="">Use file sections / auto-detect</option>{Object.entries(SECTION_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select><p className="small text-muted mt-2 mb-0">For separate section files, select their section here. For a mixed file, add a section field to each question: aptitude, reasoning, verbal or general. Each question’s section takes priority. Coding problems automatically go to Coding Test.</p></div>
                 {/* Dropzone */}
                 <div className="border-2 border-dashed border rounded-3 p-5 text-center bg-body-tertiary bg-opacity-20 mb-4">
                   <Upload size={48} className="text-primary mb-3 opacity-75" />
 
                   <h6 className="fw-bold text-body mb-2">
-                    {file ? file.name : 'Drag & drop your .json file here'}
+                    {file ? file.name : 'Select a .json or .csv file'}
                   </h6>
 
                   {file ? (
@@ -319,10 +331,10 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
 
                   <div>
                     <label className="btn btn-primary btn-sm px-4 rounded-pill fw-bold" style={{ cursor: 'pointer' }}>
-                      Choose JSON File
+                      Choose file
                       <input
                         type="file"
-                        accept=".json,application/json"
+                        accept=".json,.csv,application/json,text/csv"
                         className="d-none"
                         onChange={handleFileChange}
                       />
@@ -332,7 +344,7 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
 
                 <div className="p-3 rounded-3 bg-body-tertiary border small text-muted">
                   <div className="fw-bold text-body mb-1">Supported JSON Fields:</div>
-                  <code>question</code> (or <code>questionText</code>), <code>type</code> (single, multiple, boolean), <code>options</code> (array), <code>correctAnswer</code>, <code>difficulty</code>, <code>category</code>, <code>topic</code>, <code>marks</code>, <code>explanation</code>.
+                  <code>question</code> (or <code>questionText</code>), <code>type</code> (single, multiple, boolean), <code>options</code> (array), <code>correctAnswer</code>, <code>difficulty</code>, <code>category</code>, <code>topic</code>, <code>marks</code>, <code>explanation</code>, <code>section</code> (aptitude, reasoning, verbal, general).
                 </div>
               </div>
             )}
@@ -398,6 +410,7 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
                       <tr className="text-muted text-uppercase">
                         <th style={{ width: 40 }}>#</th>
                         <th>Question Text</th>
+                        <th>Section</th>
                         <th>Type</th>
                         <th>Difficulty</th>
                         <th>Category / Topic</th>
@@ -415,6 +428,7 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
                             <td className="fw-semibold text-body text-truncate" style={{ maxWidth: 300 }}>
                               {item.questionText}
                             </td>
+                            <td><span className="badge bg-primary">{item.section === 'coding' ? 'Coding Test' : SECTION_LABELS[item.section] || '—'}</span></td>
                             <td><span className="badge bg-secondary font-monospace">{item.type}</span></td>
                             <td>
                               <span className={`badge ${item.difficulty === 'easy' ? 'bg-success' : item.difficulty === 'hard' ? 'bg-danger' : 'bg-warning'}`}>

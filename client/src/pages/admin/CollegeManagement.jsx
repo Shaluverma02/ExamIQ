@@ -1,9 +1,12 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState, useContext } from 'react';
 import { toast } from 'react-toastify';
-import { Building2, CheckCircle2, Globe2, Mail, Phone, Plus, RefreshCw, Save, Search, XCircle } from 'lucide-react';
+import { Building2, CheckCircle2, Globe2, Mail, Phone, Plus, UserPlus, Trash2, RefreshCw, Save, Search, XCircle } from 'lucide-react';
 import API from '../../services/api';
 import PageHeader from '../../components/common/PageHeader';
 import StatCard from '../../components/common/StatCard';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
+import CollegeAdminForm from '../../components/CollegeAdminForm';
+import { AuthContext } from '../../context/AuthContext';
 
 const emptyForm = {
   name: '',
@@ -13,9 +16,6 @@ const emptyForm = {
   address: '',
   contactEmail: '',
   contactPhone: '',
-  adminName: '',
-  adminEmail: '',
-  adminPassword: '',
   isActive: true,
   settings: {
     allowSelfRegistration: true,
@@ -32,7 +32,11 @@ const CollegeManagement = () => {
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
-  const [createdAdmin, setCreatedAdmin] = useState(null);
+  const [adminTarget, setAdminTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(null);
+  const { activeCollege, fetchMe } = useContext(AuthContext);
 
   useEffect(() => {
     fetchColleges();
@@ -106,10 +110,7 @@ const CollegeManagement = () => {
       toast.warning('College name and code are required');
       return;
     }
-    if (!editingId && (!form.adminName.trim() || !form.adminEmail.trim() || form.adminPassword.length < 6)) {
-      toast.warning('College Admin name, email, and a 6+ character password are required');
-      return;
-    }
+
 
     try {
       setSaving(true);
@@ -117,8 +118,7 @@ const CollegeManagement = () => {
         await API.put(`/colleges/${editingId}`, form);
         toast.success('College updated successfully');
       } else {
-        const response = await API.post('/colleges', form);
-        setCreatedAdmin(response.data?.collegeAdmin || null);
+        await API.post('/colleges', form);
         toast.success('College created successfully');
       }
       resetForm();
@@ -132,25 +132,43 @@ const CollegeManagement = () => {
 
   const toggleStatus = async (college) => {
     try {
+      setStatusBusy(college._id);
       await API.put(`/colleges/${college._id}`, { isActive: college.isActive === false });
       toast.success('College status updated');
       fetchColleges();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Unable to update status');
-    }
+    } finally { setStatusBusy(null); }
+  };
+
+  const deleteCollege = async () => {
+    if (!deleteTarget) return;
+    try {
+      setDeleting(true);
+      await API.delete('/colleges/' + deleteTarget._id);
+      if (String(activeCollege?._id) === String(deleteTarget._id)) {
+        localStorage.removeItem('activeCollege');
+        await fetchMe();
+      }
+      if (editingId === deleteTarget._id) resetForm();
+      setDeleteTarget(null);
+      toast.success('College removed. Academic records are preserved.');
+      await fetchColleges();
+    } catch (error) { toast.error(error.response?.data?.message || 'Unable to delete college'); }
+    finally { setDeleting(false); }
   };
 
   return (
     <div className="college-management-page workspace-page management-page">
       <PageHeader icon={Building2} eyebrow="Institutions" title="College management"
         description="Manage institution workspaces, registration, and administrator access."
-        actions={<button className="btn btn-outline-secondary" onClick={fetchColleges} disabled={loading}><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh</button>} />
+        actions={<div className="d-flex flex-wrap gap-2"><button type="button" className="btn btn-primary" disabled={loading || !colleges.some(college => college.isActive !== false)} onClick={() => setAdminTarget({ _id: '' })}><UserPlus size={16}/> Add College Admin</button><button className="btn btn-outline-secondary" onClick={fetchColleges} disabled={loading}><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh</button></div>} />
 
       <div className="row g-3">
         {[
           ['Total Colleges', stats.total, 'All institutions registered in ExamIQ'],
           ['Active Colleges', stats.active, 'Can operate inside the platform'],
-          ['Open Registration', stats.publicRegistration, 'Visible on student/faculty signup'],
+          ['Open Registration', stats.publicRegistration, 'Visible on student signup'],
         ].map(([label, value, hint]) => (
           <div className="col-12 col-md-4" key={label}>
             <StatCard icon={label === 'Total Colleges' ? Building2 : label === 'Active Colleges' ? CheckCircle2 : Globe2} label={label} value={value} trend={hint} loading={loading} />
@@ -205,27 +223,6 @@ const CollegeManagement = () => {
                     <input className="form-control" type="tel" value={form.contactPhone} onChange={(e) => updateField('contactPhone', e.target.value)} placeholder="+91 98765 43210" autoComplete="tel" />
                   </div>
                 </div>
-
-                {!editingId && (
-                  <div className="border rounded-4 p-3 bg-primary-subtle college-form-wide-field">
-                    <div className="d-flex align-items-center gap-2 mb-1"><Mail size={17} /><div className="fw-bold">College Admin access</div></div>
-                    <div className="small text-muted mb-3">These credentials will be used by the college administrator to sign in.</div>
-                    <div className="row g-2">
-                      <div className="col-12 col-md-4">
-                        <label className="form-label small fw-semibold">Admin Name *</label>
-                        <input className="form-control" required value={form.adminName} onChange={(e) => updateField('adminName', e.target.value)} placeholder="Placement Head" autoComplete="name" />
-                      </div>
-                      <div className="col-12 col-md-4">
-                        <label className="form-label small fw-semibold">Admin Email *</label>
-                        <input className="form-control" type="email" required value={form.adminEmail} onChange={(e) => updateField('adminEmail', e.target.value)} placeholder="admin@college.edu" autoComplete="username" />
-                      </div>
-                      <div className="col-12 col-md-4">
-                        <label className="form-label small fw-semibold">Password *</label>
-                        <input className="form-control" type="password" minLength={6} required value={form.adminPassword} onChange={(e) => updateField('adminPassword', e.target.value)} placeholder="Minimum 6 characters" autoComplete="new-password" />
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 <div className="border rounded-4 p-3 bg-light-subtle">
                   <div className="form-check form-switch mb-2">
@@ -295,13 +292,16 @@ const CollegeManagement = () => {
                               {college.contactEmail && <span className="d-flex align-items-center gap-2"><Mail size={14} /> {college.contactEmail}</span>}
                               {college.contactPhone && <span className="d-flex align-items-center gap-2"><Phone size={14} /> {college.contactPhone}</span>}
                               {college.address && <span>{college.address}</span>}
+                              <span>{college.admins?.length ? college.admins.map(admin => admin.name + ' (' + admin.email + ')').join(', ') : 'No college admin assigned'}</span>
                             </div>
                           </div>
                         </div>
 
                         <div className="d-flex align-items-start gap-2 flex-shrink-0 college-actions">
+                          <button type="button" className="btn btn-sm btn-outline-primary" disabled={college.isActive === false} onClick={() => setAdminTarget(college)}><UserPlus size={14}/> Add College Admin</button>
+                          <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setDeleteTarget(college)}><Trash2 size={14}/> Delete</button>
                           <button className="btn btn-sm btn-outline-secondary rounded-pill" onClick={() => editCollege(college)}>Edit</button>
-                          <button className={`btn btn-sm rounded-pill d-flex align-items-center gap-1 ${college.isActive === false ? 'btn-outline-success' : 'btn-outline-danger'}`} onClick={() => toggleStatus(college)}>
+                          <button className={`btn btn-sm rounded-pill d-flex align-items-center gap-1 ${college.isActive === false ? 'btn-outline-success' : 'btn-outline-danger'}`} onClick={() => toggleStatus(college)} disabled={statusBusy === college._id}>
                             {college.isActive === false ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
                             {college.isActive === false ? 'Activate' : 'Disable'}
                           </button>
@@ -316,23 +316,9 @@ const CollegeManagement = () => {
         </div>
       </div>
 
-      {createdAdmin && (
-        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} role="dialog" aria-modal="true">
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header"><h5 className="modal-title fw-bold">College created</h5><button type="button" className="btn-close" onClick={() => setCreatedAdmin(null)} /></div>
-              <div className="modal-body">
-                <p className="text-muted small">Share these login credentials securely with the College Admin.</p>
-                <div className="border rounded-3 p-3 bg-light-subtle">
-                  <div><span className="text-muted small d-block">Email</span><strong>{createdAdmin.email}</strong></div>
-                  <div className="mt-3"><span className="text-muted small d-block">Temporary password</span><strong>{createdAdmin.password}</strong></div>
-                </div>
-              </div>
-              <div className="modal-footer"><button type="button" className="btn btn-primary" onClick={() => setCreatedAdmin(null)}>Done</button></div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog isOpen={Boolean(deleteTarget)} onClose={() => { if (!deleting) setDeleteTarget(null); }} onConfirm={deleteCollege} loading={deleting} title="Delete college?" confirmLabel="Delete college" description={deleteTarget ? 'Remove ' + deleteTarget.name + ' from College Management and stop access to its workspace? Student, faculty and exam records will be preserved. Ongoing exams must finish first.' : ''}/>
+      {adminTarget && <div className="modal fade show d-block" role="dialog" aria-modal="true" aria-labelledby="add-college-admin-title"><div className="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div className="modal-content"><div className="modal-header"><h2 className="modal-title h5" id="add-college-admin-title">Add College Admin</h2></div><div className="modal-body p-4"><CollegeAdminForm colleges={colleges} defaultCollegeId={adminTarget._id} onCancel={() => setAdminTarget(null)} onSuccess={() => { setAdminTarget(null); fetchColleges(); }}/></div></div></div></div>}
+
     </div>
   );
 };

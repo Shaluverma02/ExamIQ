@@ -20,6 +20,7 @@ const examAssignmentRoutes = require('./routes/examAssignmentRoutes');
 const publicRoutes = require('./routes/publicRoutes');
 const collegeRoutes = require('./routes/collegeRoutes');
 const recruiterRoutes = require('./routes/recruiterRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 
@@ -61,6 +62,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/proctor', proctorRoutes);
 app.use('/api/exam-assignments', examAssignmentRoutes);
 app.use('/api/recruiter', recruiterRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

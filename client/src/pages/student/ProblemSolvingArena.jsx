@@ -382,13 +382,12 @@ const ProblemSolvingArena = () => {
 
         <div className="card-body p-3">
 
-          <div className="d-flex flex-column flex-lg-row gap-3">
+          <div className="problem-filter-toolbar">
 
             {/* SEARCH */}
 
             <div
-              className="position-relative flex-grow-1"
-              style={{ maxWidth: 420 }}
+              className="problem-filter-search position-relative"
             >
 
               <Search
@@ -410,7 +409,7 @@ const ProblemSolvingArena = () => {
 
             {/* FILTERS */}
 
-            <div className="d-flex flex-column flex-sm-row gap-2">
+            <div className="problem-filter-controls">
 
               <select
                 className="form-select"
@@ -463,7 +462,7 @@ const ProblemSolvingArena = () => {
 
               <button
                 type="button"
-                className={`btn ${showSolvedOnly
+                className={`btn problem-filter-solved ${showSolvedOnly
                   ? 'btn-success'
                   : 'btn-outline-secondary'
                   } d-flex align-items-center justify-content-center gap-2`}
@@ -482,7 +481,7 @@ const ProblemSolvingArena = () => {
 
               <button
                 type="button"
-                className="btn btn-outline-secondary"
+                className="btn btn-outline-secondary problem-filter-reset"
                 onClick={resetFilters}
                 title="Reset filters"
               >

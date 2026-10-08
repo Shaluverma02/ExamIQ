@@ -3,6 +3,8 @@ const Exam = require('../models/Exam');
 const Group = require('../models/Group');
 const ExamAttempt = require('../models/ExamAttempt');
 const Student = require('../models/Student');
+const createNotifications = require('../utils/createNotifications');
+const getAssignmentStatus = require('../utils/assignmentStatus');
 
 const collegeFilter = (req, query = {}) => (req?.collegeId ? { ...query, collegeId: req.collegeId } : query);
 
@@ -108,7 +110,8 @@ exports.isStudentAuthorizedForExam = async (studentId, examId, collegeId = null)
     }
   }
 
-  const attemptsAllowed = assignment ? assignment.attemptsAllowed : 1;
+  const examSettings = await Exam.findOne({ _id: examId, ...scoped });
+  const attemptsAllowed = assignment ? assignment.attemptsAllowed : (examSettings?.allowRetake === false ? 1 : (examSettings?.maxAttempts || Infinity));
 
   const attemptCount = await ExamAttempt.countDocuments({
     studentId,
@@ -117,7 +120,8 @@ exports.isStudentAuthorizedForExam = async (studentId, examId, collegeId = null)
     status: { $in: ['submitted', 'auto-submitted', 'evaluated'] },
   });
 
-  if (attemptCount >= attemptsAllowed) {
+  const activeAttempt = await ExamAttempt.findOne({ studentId, examId, ...scoped, status: 'started' });
+  if (!activeAttempt && attemptCount >= attemptsAllowed) {
     return {
       authorized: false,
       assignment,
@@ -125,7 +129,7 @@ exports.isStudentAuthorizedForExam = async (studentId, examId, collegeId = null)
     };
   }
 
-  return { authorized: true, assignment };
+  return { authorized: true, assignment, attemptsAllowed: Number.isFinite(attemptsAllowed) ? attemptsAllowed : 0, attemptsUsed: attemptCount };
 };
 
 exports.createAssignment = async (req, res, next) => {
@@ -212,28 +216,9 @@ exports.createAssignment = async (req, res, next) => {
       .populate('groupIds', 'name code')
       .populate('studentIds', 'name email');
 
-    // Asynchronous background email notification to assigned students
-    resolveEligibleStudentIds(groupIds, studentIds, req).then(async (eligibleIds) => {
-      if (eligibleIds.length > 0) {
-        const User = require('../models/User');
-        const sendEmail = require('../utils/sendEmail');
-        const students = await User.find({ _id: { $in: eligibleIds } }).select('email name');
-        const examUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/student/assigned-exams`;
-        for (const s of students) {
-          if (s.email) {
-            sendEmail({
-              email: s.email,
-              subject: `📢 New Assessment Assigned: ${populated.title || exam.title}`,
-              message: `Hello ${s.name},\n\nA new assessment "${populated.title || exam.title}" has been assigned to your group.\n\nDeadline: ${new Date(endDate).toLocaleDateString()}\nDuration: ${duration || exam.duration} Mins\n\nClick to access your exam: ${examUrl}\n\nBest of Luck!`,
-            }).catch(() => {});
-          }
-        }
-      }
-    }).catch(() => {});
-
     res.status(201).json({
       success: true,
-      message: 'Exam assignment created and student email notifications dispatched',
+      message: 'Exam assignment created as a draft',
       assignment: populated,
     });
   } catch (err) {
@@ -320,6 +305,10 @@ exports.updateAssignment = async (req, res, next) => {
       notes,
     } = req.body;
 
+    const scheduleChanged = assignment.status === 'published' && (
+      (startDate !== undefined && new Date(startDate).getTime() !== new Date(assignment.startDate).getTime()) ||
+      (endDate !== undefined && new Date(endDate).getTime() !== new Date(assignment.endDate).getTime())
+    );
     const nextGroupIds = groupIds !== undefined ? groupIds : assignment.groupIds;
     const nextStudentIds = studentIds !== undefined ? studentIds : assignment.studentIds;
 
@@ -358,6 +347,22 @@ exports.updateAssignment = async (req, res, next) => {
 
     await assignment.save();
 
+    let notificationWarning = false;
+    if (scheduleChanged) {
+      try {
+        await createNotifications({
+          userIds: assignment.studentIds,
+          title: 'Assessment schedule updated',
+          message: `The schedule for "${title || assignment.title}" has changed. Check the updated opening and deadline times.`,
+          type: 'warning',
+          link: '/student/exams',
+        });
+      } catch (notificationError) {
+        notificationWarning = true;
+        console.error('Assignment updated but student notifications failed:', notificationError);
+      }
+    }
+
     assignment = await ExamAssignment.findOne({ _id: assignment._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
       .populate('examId', 'title duration status category')
       .populate('groupIds', 'name code')
@@ -366,6 +371,7 @@ exports.updateAssignment = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Assignment updated',
+      notificationWarning,
       assignment,
     });
   } catch (err) {
@@ -420,6 +426,20 @@ exports.publishAssignment = async (req, res, next) => {
     assignment.status = 'published';
     await assignment.save();
 
+    let notificationWarning = false;
+    try {
+      await createNotifications({
+        userIds: assignment.studentIds,
+        title: 'New assessment assigned',
+        message: `"${assignment.title || exam.title}" is now available. Deadline: ${new Date(assignment.endDate).toLocaleString()}.`,
+        type: 'info',
+        link: '/student/exams',
+      });
+    } catch (notificationError) {
+      notificationWarning = true;
+      console.error('Assignment published but student notifications failed:', notificationError);
+    }
+
     const populated = await ExamAssignment.findOne({ _id: assignment._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) })
       .populate('examId', 'title duration status category')
       .populate('groupIds', 'name code')
@@ -427,7 +447,10 @@ exports.publishAssignment = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: 'Assignment published',
+      message: notificationWarning
+        ? 'Assignment published, but in-app notifications could not be created'
+        : 'Assignment published',
+      notificationWarning,
       assignment: populated,
     });
   } catch (err) {
@@ -461,7 +484,7 @@ exports.getStudentAssignedExams = async (req, res, next) => {
     })
       .populate({
         path: 'examId',
-        select: 'title description category duration totalMarks passingMarks status questions codingProblems',
+        select: 'title description category duration totalMarks passingMarks status questions codingProblems allowRetake maxAttempts',
         populate: [
           { path: 'questions', select: 'questionText marks' },
           { path: 'codingProblems', select: 'title difficulty' },
@@ -479,7 +502,7 @@ exports.getStudentAssignedExams = async (req, res, next) => {
           studentId,
           examId: assignment.examId._id,
           ...(req.collegeId ? { collegeId: req.collegeId } : {}),
-        }).select('status startedAt submittedAt remainingTime');
+        }).sort({ attemptNumber: -1, startedAt: -1 }).select('status startedAt submittedAt remainingTime attemptNumber');
 
         const completedAttempts = await ExamAttempt.countDocuments({
           studentId,
@@ -488,21 +511,16 @@ exports.getStudentAssignedExams = async (req, res, next) => {
           status: { $in: ['submitted', 'auto-submitted', 'evaluated'] },
         });
 
-        const isExpired = assignment.endDate ? new Date(assignment.endDate) < now : false;
         const attemptsUsed = completedAttempts;
         const attemptsAllowed = assignment.attemptsAllowed || 1;
         const attemptsRemaining = Math.max(0, attemptsAllowed - completedAttempts);
-        const isCompleted = attemptsRemaining <= 0 || ['submitted', 'auto-submitted', 'evaluated'].includes(attempt?.status);
-        const isInProgress = attempt?.status === 'started' && !isExpired;
-
-        let computedStatus = 'available';
-        if (isCompleted) {
-          computedStatus = 'completed';
-        } else if (isExpired) {
-          computedStatus = 'expired';
-        } else if (isInProgress) {
-          computedStatus = 'in_progress';
-        }
+        const status = getAssignmentStatus({
+          now,
+          startDate: assignment.startDate,
+          endDate: assignment.endDate,
+          attemptStatus: attempt?.status,
+          attemptsRemaining,
+        });
 
         return {
           ...assignment.toObject(),
@@ -510,10 +528,7 @@ exports.getStudentAssignedExams = async (req, res, next) => {
           attemptsUsed,
           attemptsAllowed,
           attemptsRemaining,
-          isExpired,
-          isCompleted,
-          isInProgress,
-          computedStatus,
+          ...status,
         };
       })
     )).filter(Boolean);

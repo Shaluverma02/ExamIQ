@@ -1,7 +1,9 @@
 import '../../styles/faculty.css';
 import React, { useEffect, useMemo, useState } from 'react';
-import API from '../../services/api';
-import { useNavigate } from 'react-router-dom';
+import { inferSection, SECTION_LABELS } from '../../utils/examSections';
+import ResultReleaseControls from '../../components/ResultReleaseControls';
+import API, { questionAPI } from '../../services/api';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { AlertTriangle, Calendar, CheckSquare, ChevronDown, Clock, Code2, FileText, Save, Search, Send, Settings2 } from 'lucide-react';
 
@@ -18,17 +20,30 @@ const categoryOptions = [
   'Custom',
 ];
 
-const toLocalInput = (date) => date.toISOString().slice(0, 16);
+const toLocalInput = (date) => {
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+};
 
 const ExamBuilder = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const examBasePath = pathname.startsWith('/admin/') ? '/admin/exams' : '/faculty/exams';
+  const { id: examId } = useParams();
+  const isEditing = Boolean(examId);
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    testInstructions: '',
+    testInstructionsEnabled: false,
     category: 'Data Structures & Algorithms',
     customCategory: '',
     duration: 60,
+    allowRetake: true,
+    maxAttempts: 3,
+    resultReleaseMode: 'manual',
+    resultReleaseDelayHours: 24,
     startDate: toLocalInput(new Date()),
     endDate: toLocalInput(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)),
     totalMarks: 100,
@@ -37,6 +52,7 @@ const ExamBuilder = () => {
     status: 'published',
     questions: [],
     codingProblems: [],
+    sectionAssignments: [],
   });
 
   const [mcqBank, setMcqBank] = useState([]);
@@ -44,14 +60,46 @@ const ExamBuilder = () => {
   const [mcqSearch, setMcqSearch] = useState('');
   const [codingSearch, setCodingSearch] = useState('');
   const [loading, setLoading] = useState(false);
+  const [examLoading, setExamLoading] = useState(isEditing);
+  const [showPublishPreview, setShowPublishPreview] = useState(false);
 
   useEffect(() => {
     fetchBanks();
   }, []);
 
+  useEffect(() => {
+    if (!examId) return;
+    let active = true;
+    const fetchExam = async () => {
+      try {
+        setExamLoading(true);
+        const response = await API.get(`/exams/${examId}`);
+        const exam = response.data.exam;
+        if (!active) return;
+        setFormData((current) => ({
+          ...current,
+          ...exam,
+          customCategory: categoryOptions.includes(exam.category) ? '' : exam.category,
+          testInstructionsEnabled: Boolean(exam.testInstructions),
+          startDate: toLocalInput(new Date(exam.startDate)),
+          endDate: toLocalInput(new Date(exam.endDate)),
+          questions: (exam.questions || []).map((question) => question._id || question),
+          codingProblems: (exam.codingProblems || []).map((problem) => problem._id || problem),
+        }));
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Failed to load assessment for editing.');
+        navigate(examBasePath);
+      } finally {
+        if (active) setExamLoading(false);
+      }
+    };
+    fetchExam();
+    return () => { active = false; };
+  }, [examId, navigate]);
+
   const fetchBanks = async () => {
     try {
-      const [qRes, cRes] = await Promise.all([API.get('/questions'), API.get('/coding')]);
+      const [qRes, cRes] = await Promise.all([questionAPI.getAll(), API.get('/coding')]);
       setMcqBank(qRes.data.questions || []);
       setCodingBank(cRes.data.problems || []);
     } catch (err) {
@@ -100,7 +148,7 @@ const ExamBuilder = () => {
   const passingExceedsTotal = Number(formData.passingMarks) > Number(formData.totalMarks);
   const endBeforeStart = new Date(formData.endDate) <= new Date(formData.startDate);
 
-  const handleSubmit = async (e, statusOverride) => {
+  const handleSubmit = (e, statusOverride) => {
     e.preventDefault();
     const status = statusOverride || formData.status;
 
@@ -114,31 +162,71 @@ const ExamBuilder = () => {
     }
     if (endBeforeStart) return toast.error('End date must be after the start date');
 
+    if (status === 'published') {
+      setShowPublishPreview(true);
+      return;
+    }
+
+    saveExam(status);
+  };
+
+  const saveExam = async (status) => {
     const payload = {
-      ...formData,
+      title: formData.title.trim(),
+      description: formData.description,
+      testInstructions: formData.testInstructionsEnabled ? formData.testInstructions.trim() : '',
       category: formData.category === 'Custom' ? formData.customCategory || 'Custom' : formData.category,
+      duration: Number(formData.duration),
+      allowRetake: formData.allowRetake,
+      maxAttempts: Number(formData.maxAttempts),
+      resultReleaseMode: formData.resultReleaseMode,
+      resultReleaseDelayHours: Number(formData.resultReleaseDelayHours),
+      startDate: new Date(formData.startDate).toISOString(),
+      endDate: new Date(formData.endDate).toISOString(),
+      totalMarks: Number(formData.totalMarks),
+      passingMarks: Number(formData.passingMarks),
+      negativeMarking: formData.negativeMarking,
+      questions: formData.questions,
+      codingProblems: formData.codingProblems,
+      sectionAssignments: formData.questions.map(questionId => ({ questionId, section: formData.sectionAssignments?.find(a => String(a.questionId) === String(questionId))?.section || inferSection(mcqBank.find(q => q._id === questionId) || {}) })),
       status,
     };
-    delete payload.customCategory;
 
     try {
       setLoading(true);
-      await API.post('/exams', payload);
-      toast.success(status === 'published' ? 'Exam created and published successfully!' : 'Exam saved as draft.');
-      navigate('/faculty/dashboard');
+      if (isEditing) {
+        await API.put(`/exams/${examId}`, payload);
+      } else {
+        await API.post('/exams', payload);
+      }
+      toast.success(status === 'published'
+        ? `Exam ${isEditing ? 'updated and published' : 'created and published'} successfully!`
+        : 'Exam saved as draft.');
+      navigate(examBasePath);
     } catch (err) {
-      toast.error('Failed to create exam');
+      toast.error(err.response?.data?.message || `Failed to ${isEditing ? 'update' : 'create'} exam`);
     } finally {
       setLoading(false);
+      setShowPublishPreview(false);
     }
   };
+
+  if (examLoading) {
+    return <div className="loading-panel" role="status"><div className="spinner-border text-primary mb-3" /><p className="text-muted mb-0">Loading assessment…</p></div>;
+  }
 
   return (
     <div className="pb-5">
       <div className="mb-4">
-        <h3 className="fw-bold text-body m-0">Exam Builder</h3>
-        <p className="text-muted small m-0">Configure timing, scoring, and questions, then publish or save as a draft.</p>
+        <h3 className="fw-bold text-body m-0">{isEditing ? 'Edit assessment' : 'Exam Builder'}</h3>
+        <p className="text-muted small m-0">Configure timing, scoring, and questions, then preview before publishing.</p>
       </div>
+
+      {isEditing && formData.status === 'published' && (
+        <div className="alert alert-info mb-0" role="status">
+          Published assessment. If any student has attempted it, content, scoring, and schedule changes are locked to protect existing results.
+        </div>
+      )}
 
       <form>
         <div className="row g-4">
@@ -172,6 +260,36 @@ const ExamBuilder = () => {
                 />
               </div>
 
+              <div className="form-check form-switch mb-2">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="testInstructionsEnabled"
+                  checked={formData.testInstructionsEnabled}
+                  onChange={(e) => setFormData({ ...formData, testInstructionsEnabled: e.target.checked })}
+                />
+                <label className="form-check-label text-body small" htmlFor="testInstructionsEnabled">
+                  Add optional test-specific instructions
+                </label>
+              </div>
+              {formData.testInstructionsEnabled && (
+                <div className="mb-3">
+                  <label className="form-label text-muted small fw-semibold" htmlFor="testInstructions">
+                    Instructions shown to students before this test
+                  </label>
+                  <textarea
+                    id="testInstructions"
+                    className="form-control"
+                    rows="3"
+                    maxLength={3000}
+                    placeholder="Add any instructions specific to this assessment..."
+                    value={formData.testInstructions}
+                    onChange={(e) => setFormData({ ...formData, testInstructions: e.target.value })}
+                  />
+                  <div className="form-text text-end">{formData.testInstructions.length}/3000</div>
+                </div>
+              )}
+
               <div className="mb-1">
                 <label className="form-label text-muted small fw-semibold">Category</label>
                 <select
@@ -179,6 +297,9 @@ const ExamBuilder = () => {
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 >
+                  {!categoryOptions.includes(formData.category) && formData.category && (
+                    <option value={formData.category}>{formData.category}</option>
+                  )}
                   {categoryOptions.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
@@ -351,6 +472,24 @@ const ExamBuilder = () => {
                 )}
               </div>
 
+              <section className="border rounded-3 p-3 mt-3" aria-label="Test section mapping">
+                <h6 className="fw-bold mb-2">Test sections</h6>
+                <p className="small text-muted">Assign selected MCQs to their live exam section. Coding problems appear under Coding Test automatically.</p>
+                {formData.questions.length === 0 && <p className="small text-muted mb-0">Select MCQs to configure their sections.</p>}
+                {formData.questions.map((questionId, index) => {
+                  const question = mcqBank.find(q => q._id === questionId);
+                  const section = formData.sectionAssignments?.find(a => String(a.questionId) === String(questionId))?.section || inferSection(question || {});
+                  return <div key={questionId} className="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <label htmlFor={'section-' + questionId} className="small flex-grow-1" style={{ flexBasis: '55%' }}>{index + 1}. {question?.questionText || 'Selected question'}</label>
+                    <select id={'section-' + questionId} className="form-select form-select-sm" style={{ width: 160 }} value={section} onChange={event => setFormData(prev => ({ ...prev, sectionAssignments: [...(prev.sectionAssignments || []).filter(a => String(a.questionId) !== String(questionId)), { questionId, section: event.target.value }] }))}>
+                      {Object.entries(SECTION_LABELS).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
+                    </select>
+                  </div>;
+                })}
+              </section>
+
+              <ResultReleaseControls mode={formData.resultReleaseMode} delayHours={formData.resultReleaseDelayHours} onChange={changes => setFormData(prev => ({ ...prev, ...changes }))} />
+              <section className="border rounded-3 p-3 mt-3 mb-3"><h6 className="fw-bold">Retake settings</h6><label className="form-check mb-2"><input type="checkbox" className="form-check-input" checked={formData.allowRetake} onChange={event => setFormData(prev => ({ ...prev, allowRetake: event.target.checked }))} /><span className="form-check-label">Allow retakes for direct group exams</span></label><label className="form-label small" htmlFor="exam-max-attempts">Maximum attempts (0 = unlimited)</label><input id="exam-max-attempts" type="number" min="0" step="1" className="form-control" value={formData.maxAttempts} onChange={event => setFormData(prev => ({ ...prev, maxAttempts: Math.max(0, Math.floor(Number(event.target.value) || 0)) }))} /><p className="small text-muted mt-2 mb-0">For assigned exams, Attempts Allowed in the assignment controls student retakes.</p></section>
               {/* Coding Selection */}
               <h6 className="fw-semibold small mb-2 d-flex align-items-center gap-1" style={{ color: 'var(--app-primary)' }}>
                 <Code2 size={16} /> Coding problems selected ({formData.codingProblems.length})
@@ -413,9 +552,9 @@ const ExamBuilder = () => {
               type="button"
               className="btn btn-outline-secondary fw-semibold"
               disabled={loading}
-              onClick={(e) => handleSubmit(e, 'draft')}
+              onClick={(e) => handleSubmit(e, formData.status === 'published' ? 'published' : 'draft')}
             >
-              <Save size={16} /> Save as draft
+              <Save size={16} /> {isEditing ? 'Save changes' : 'Save as draft'}
             </button>
             <button
               type="button"
@@ -424,11 +563,40 @@ const ExamBuilder = () => {
               disabled={loading}
               onClick={(e) => handleSubmit(e, 'published')}
             >
-              <Send size={16} /> {loading ? 'Publishing...' : 'Publish exam'}
+              <Send size={16} /> {loading ? 'Saving...' : isEditing ? 'Preview & update' : 'Preview & publish'}
             </button>
           </div>
         </div>
       </form>
+
+      {showPublishPreview && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3" style={{ zIndex: 1080, background: 'rgba(10, 15, 30, .65)' }}>
+          <section className="card shadow-lg w-100" role="dialog" aria-modal="true" aria-labelledby="exam-publish-preview-title" style={{ maxWidth: 560, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="card-header d-flex justify-content-between align-items-center">
+              <h2 id="exam-publish-preview-title" className="h5 mb-0">Review before publishing</h2>
+              <button type="button" className="btn-close" aria-label="Close preview" onClick={() => setShowPublishPreview(false)} />
+            </div>
+            <div className="card-body">
+              <p className="text-muted">Check these details before candidates can see this assessment.</p>
+              <dl className="row mb-0 small">
+                <dt className="col-5">Title</dt><dd className="col-7">{formData.title}</dd>
+                <dt className="col-5">Availability</dt><dd className="col-7">{new Date(formData.startDate).toLocaleString()} – {new Date(formData.endDate).toLocaleString()}</dd>
+                <dt className="col-5">Duration</dt><dd className="col-7">{formData.duration} minutes</dd>
+                <dt className="col-5">Questions</dt><dd className="col-7">{formData.questions.length} MCQ, {formData.codingProblems.length} coding</dd>
+                <dt className="col-5">Marks</dt><dd className="col-7">{selectedMarks} selected / {formData.totalMarks} total · pass at {formData.passingMarks}</dd>
+              </dl>
+              {marksMismatch && <div className="alert alert-warning mt-3 mb-0">Selected question marks do not equal the configured total. Confirm this is intentional.</div>}
+              {isEditing && <div className="alert alert-info mt-3 mb-0">Existing student attempts and results are preserved. Content, scoring, or schedule changes are rejected once an attempt exists.</div>}
+            </div>
+            <div className="card-footer d-flex justify-content-end gap-2">
+              <button type="button" className="btn btn-outline-secondary" disabled={loading} onClick={() => setShowPublishPreview(false)}>Back to edit</button>
+              <button type="button" className="btn btn-primary" disabled={loading} onClick={() => saveExam('published')}>
+                <Send size={16} /> {loading ? 'Publishing…' : isEditing ? 'Confirm update' : 'Confirm publish'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 };

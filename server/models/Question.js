@@ -16,6 +16,7 @@ const questionSchema = new mongoose.Schema(
     },
     marks: { type: Number, required: true, default: 1 },
     negativeMarks: { type: Number, default: 0 },
+    section: { type: String, enum: ['', 'aptitude', 'reasoning', 'verbal', 'general'], default: '', index: true },
     category: { type: String, required: true, default: 'General' },
     topic: { type: String, default: 'General' },
     difficulty: {

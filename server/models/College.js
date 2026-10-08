@@ -10,6 +10,8 @@ const collegeSchema = new mongoose.Schema(
     contactEmail: { type: String, lowercase: true, trim: true, default: '' },
     contactPhone: { type: String, default: '' },
     isActive: { type: Boolean, default: true },
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null },
     settings: {
       allowSelfRegistration: { type: Boolean, default: true },
       requireInviteCode: { type: Boolean, default: false },

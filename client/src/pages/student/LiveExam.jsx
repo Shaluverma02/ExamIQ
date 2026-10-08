@@ -2,18 +2,22 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../../services/api';
 import Timer from '../../components/Timer';
-import QuestionPalette from '../../components/QuestionPalette';
+import PreExamSetup from '../../components/PreExamSetup';
+import { buildExamSections, sectionProgress } from '../../utils/examSections';
 import AntiCheatModal from '../../components/AntiCheatModal';
 import CodeEditor from '../../components/CodeEditor';
 import WebcamProctor from '../../components/WebcamProctor';
 import AudioProctor from '../../components/AudioProctor';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Button from '../../components/common/Button';
+import ThemeToggle from '../../components/common/ThemeToggle';
 import { toast } from 'react-toastify';
+import '../../styles/student.css';
 import {
   Shield,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   CheckCircle2,
   FileCode,
   HelpCircle,
@@ -41,6 +45,7 @@ const LiveExam = () => {
   const { id: examId } = useParams();
   const navigate = useNavigate();
 
+  const [submissionReceipt, setSubmissionReceipt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [exam, setExam] = useState(null);
   const [attempt, setAttempt] = useState(null);
@@ -50,10 +55,13 @@ const LiveExam = () => {
   const [cameraStatus, setCameraStatus] = useState('idle'); // 'idle', 'granted', 'denied', 'checking'
   const [screenShareStatus, setScreenShareStatus] = useState('idle'); // 'idle', 'granted', 'denied', 'checking', 'invalid'
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [preExamStep, setPreExamStep] = useState(0);
+  const [isTestInstructionsOpen, setIsTestInstructionsOpen] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const screenVideoRef = useRef(null);
   const screenStreamRef = useRef(null);
+  const mediaRequestRef = useRef({ camera: 0, screen: 0 });
 
   // Pre-Exam 40s Countdown State
   const [isCountingDown, setIsCountingDown] = useState(false);
@@ -62,12 +70,28 @@ const LiveExam = () => {
   const [activeTab, setActiveTab] = useState('mcq'); // 'mcq' or 'coding'
   const [currentMcqIdx, setCurrentMcqIdx] = useState(0);
   const [currentCodingIdx, setCurrentCodingIdx] = useState(0);
+  const [isCodingBusy, setIsCodingBusy] = useState(false);
+  const codingBusyRef = useRef({ promise: Promise.resolve(), resolve: null });
+  const handleCodingBusy = (busy) => {
+    setIsCodingBusy(busy);
+    if (busy && !codingBusyRef.current.resolve) codingBusyRef.current.promise = new Promise(resolve => { codingBusyRef.current.resolve = resolve; });
+    if (!busy && codingBusyRef.current.resolve) { codingBusyRef.current.resolve(); codingBusyRef.current.resolve = null; }
+  };
   const [selectedOptions, setSelectedOptions] = useState([]);
+  const [answerSaveState, setAnswerSaveState] = useState('idle');
   const [copiedInputIdx, setCopiedInputIdx] = useState(null);
+  const pendingAnswersRef = useRef(new Map());
+  const answerSaveQueueRef = useRef(Promise.resolve());
 
   // Submission Confirm Dialog state
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isSubmittingExam, setIsSubmittingExam] = useState(false);
+
+  useEffect(() => {
+    if (!submissionReceipt) return;
+    const timer = setTimeout(() => navigate('/student/dashboard', { replace: true, state: { assessmentSubmitted: true, releaseAt: submissionReceipt.releaseAt } }), 2500);
+    return () => clearTimeout(timer);
+  }, [submissionReceipt, navigate]);
 
   // Fullscreen enforcement state
   const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement));
@@ -89,6 +113,7 @@ const LiveExam = () => {
   }, [examId]);
 
   const stopCameraStream = () => {
+    mediaRequestRef.current.camera += 1;
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
@@ -96,6 +121,7 @@ const LiveExam = () => {
   };
 
   const stopScreenStream = () => {
+    mediaRequestRef.current.screen += 1;
     if (screenStreamRef.current) {
       screenStreamRef.current.getTracks().forEach((track) => track.stop());
       screenStreamRef.current = null;
@@ -103,33 +129,50 @@ const LiveExam = () => {
   };
 
   const verifyCameraAccess = async () => {
+    if (cameraStatus === 'checking') return;
+    stopCameraStream();
+    const requestId = mediaRequestRef.current.camera;
     setCameraStatus('checking');
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setCameraStatus('denied');
-        toast.error('Webcam access is not supported by your browser.');
+        toast.error('Camera and microphone access is not supported by your browser.');
         return;
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480 },
-        audio: false,
+        audio: true,
       });
+      if (requestId !== mediaRequestRef.current.camera) { stream.getTracks().forEach(track => track.stop()); return; }
+      if (!stream.getAudioTracks().some(track => track.readyState === 'live') || !stream.getVideoTracks().some(track => track.readyState === 'live')) {
+        stream.getTracks().forEach(track => track.stop());
+        throw new Error('Camera and microphone are both required.');
+      }
 
       streamRef.current = stream;
+      stream.getTracks().forEach(track => { track.onended = () => {
+        stopCameraStream();
+        setCameraStatus('idle');
+        toast.warning('Camera or microphone disconnected. Please verify both again.');
+      }; });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
       setCameraStatus('granted');
-      toast.success('Webcam verified and active!');
+      toast.success('Camera and microphone verified and active!');
     } catch (err) {
+      if (requestId !== mediaRequestRef.current.camera) return;
       console.error('Camera verification failed:', err);
       setCameraStatus('denied');
-      toast.error('Camera permission denied! Webcam is mandatory for proctored exams.');
+      toast.error('Camera and microphone access is required. Allow both permissions and try again.');
     }
   };
 
   const verifyScreenShare = async () => {
+    if (screenShareStatus === 'checking') return;
+    stopScreenStream();
+    const requestId = mediaRequestRef.current.screen;
     setScreenShareStatus('checking');
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
@@ -145,6 +188,7 @@ const LiveExam = () => {
         audio: false,
       });
 
+      if (requestId !== mediaRequestRef.current.screen) { displayStream.getTracks().forEach(track => track.stop()); return; }
       const videoTrack = displayStream.getVideoTracks()[0];
       const settings = videoTrack.getSettings ? videoTrack.getSettings() : {};
 
@@ -162,6 +206,7 @@ const LiveExam = () => {
       }
 
       videoTrack.onended = () => {
+        screenStreamRef.current = null;
         setScreenShareStatus('idle');
         toast.warning('Screen sharing has stopped. You must keep your screen shared.');
       };
@@ -169,6 +214,7 @@ const LiveExam = () => {
       setScreenShareStatus('granted');
       toast.success('Entire screen shared successfully!');
     } catch (err) {
+      if (requestId !== mediaRequestRef.current.screen) return;
       console.error('Screen share verification failed:', err);
       setScreenShareStatus('denied');
       toast.error('Screen share was cancelled or denied. Entire screen sharing is mandatory.');
@@ -180,17 +226,6 @@ const LiveExam = () => {
       setLoading(true);
       const res = await API.get(`/exams/${examId}`);
       setExam(res.data.exam);
-
-      // Pre-fetch active attempt metadata if available (without bypassing instructions screen)
-      try {
-        const attemptRes = await API.post(`/exams/${examId}/start`);
-        if (attemptRes.data.attempt) {
-          setAttempt(attemptRes.data.attempt);
-          initExamWorkspace(res.data.exam, attemptRes.data.attempt);
-        }
-      } catch (e) {
-        // First time starting attempt
-      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load exam information');
       navigate('/student/exams');
@@ -200,6 +235,8 @@ const LiveExam = () => {
   };
 
   const initExamWorkspace = (examData, attemptData) => {
+    pendingAnswersRef.current.clear();
+    setAnswerSaveState('idle');
     if ((!examData.questions || examData.questions.length === 0) && examData.codingProblems && examData.codingProblems.length > 0) {
       setActiveTab('coding');
     } else {
@@ -240,8 +277,8 @@ const LiveExam = () => {
   }, [isCountingDown, countdown]);
 
   const handleContinueClick = () => {
-    if (cameraStatus !== 'granted') {
-      toast.error('Webcam verification is required before continuing.');
+    if (cameraStatus !== 'granted' || !streamRef.current?.getAudioTracks().some(track => track.readyState === 'live')) {
+      toast.error('Camera and microphone verification is required before continuing.');
       return;
     }
     if (screenShareStatus !== 'granted') {
@@ -262,6 +299,16 @@ const LiveExam = () => {
   };
 
   const handleStartExamNow = async () => {
+    const cameraActive = cameraStatus === 'granted' && streamRef.current?.getVideoTracks().some(track => track.readyState === 'live') && streamRef.current?.getAudioTracks().some(track => track.readyState === 'live');
+    const screenActive = screenShareStatus === 'granted' && screenStreamRef.current?.getVideoTracks().some(track => track.readyState === 'live');
+    if (!cameraActive || !screenActive || !agreedToTerms) {
+      setIsCountingDown(false);
+      setPreExamStep(!cameraActive ? 1 : !screenActive ? 2 : 3);
+      if (!cameraActive) setCameraStatus('idle');
+      if (!screenActive) setScreenShareStatus('idle');
+      toast.error('Complete your camera, microphone, screen sharing and agreement checks before starting.');
+      return;
+    }
     try {
       setLoading(true);
       requestFullScreen();
@@ -282,82 +329,95 @@ const LiveExam = () => {
     }
   };
 
-  const handleSelectOption = async (optionText) => {
-    if (!exam || !exam.questions[currentMcqIdx]) return;
-    const currentQ = exam.questions[currentMcqIdx];
-    let newSelection = [];
-
-    if (currentQ.questionType === 'multiple') {
-      newSelection = selectedOptions.includes(optionText)
-        ? selectedOptions.filter((o) => o !== optionText)
-        : [...selectedOptions, optionText];
-    } else {
-      newSelection = [optionText];
-    }
-
-    setSelectedOptions(newSelection);
-
-    try {
-      await API.post(`/exams/${examId}/answer`, {
-        questionId: currentQ._id,
-        selectedOptions: newSelection,
-      });
-
-      setAttempt((prev) => {
-        const answers = [...(prev?.answers || [])];
-        const idx = answers.findIndex((a) => a.questionId.toString() === currentQ._id.toString());
-        if (idx > -1) {
-          answers[idx].selectedOptions = newSelection;
-          answers[idx].isVisited = true;
-        } else {
-          answers.push({ questionId: currentQ._id, selectedOptions: newSelection, isVisited: true });
-        }
-        return { ...prev, answers };
-      });
-    } catch (e) {
-      console.error('Save answer error:', e);
-    }
+  const saveAnswer = (questionId, selected, extra = {}) => {
+    const questionKey = extra.codingProblemId ? 'coding:' + extra.codingProblemId : String(questionId);
+    const previous = pendingAnswersRef.current.get(questionKey)?.payload || {};
+    const payload = { ...previous, ...(questionId ? { questionId } : {}), ...(selected !== undefined ? { selectedOptions: selected } : {}), ...extra };
+    const request = { payload, questionKey };
+    pendingAnswersRef.current.set(questionKey, request);
+    setAnswerSaveState('saving');
+    const queuedSave = answerSaveQueueRef.current.catch(() => {}).then(async () => {
+      if (pendingAnswersRef.current.get(questionKey) !== request) return;
+      await API.post('/exams/' + examId + '/answer', payload);
+      if (pendingAnswersRef.current.get(questionKey) === request) {
+        pendingAnswersRef.current.delete(questionKey);
+        setAnswerSaveState(pendingAnswersRef.current.size ? 'saving' : 'saved');
+      }
+    }).catch(error => {
+      if (pendingAnswersRef.current.get(questionKey) === request) { setAnswerSaveState('error'); console.error('Save progress error:', error); }
+    });
+    answerSaveQueueRef.current = queuedSave;
+    return queuedSave;
   };
-
+  const retryPendingAnswers = () => [...pendingAnswersRef.current.values()].forEach(({ payload }) => saveAnswer(payload.questionId, payload.selectedOptions, payload));
+  const updateLocalAnswer = (questionId, changes) => setAttempt(prev => {
+    const answers = [...(prev?.answers || [])];
+    const index = answers.findIndex(answer => String(answer.questionId) === String(questionId));
+    if (index >= 0) answers[index] = { ...answers[index], ...changes };
+    else answers.push({ questionId, selectedOptions: [], ...changes });
+    return { ...prev, answers };
+  });
+  const handleSelectOption = (optionText) => {
+    const question = exam?.questions?.[currentMcqIdx];
+    if (!question || isSubmittingExam) return;
+    const next = question.questionType === 'multiple' ? (selectedOptions.includes(optionText) ? selectedOptions.filter(value => value !== optionText) : [...selectedOptions, optionText]) : [optionText];
+    setSelectedOptions(next);
+    updateLocalAnswer(question._id, { selectedOptions: next, isVisited: true });
+    saveAnswer(question._id, next);
+  };
+  const markCurrentAsVisited = (index) => {
+    const question = exam?.questions?.[index];
+    if (!question) return;
+    updateLocalAnswer(question._id, { isVisited: true });
+    saveAnswer(question._id, undefined);
+  };
+  const markCodingVisited = (index) => {
+    const problem = exam?.codingProblems?.[index];
+    if (!problem) return;
+    setAttempt(prev => ({ ...prev, codingVisited: [...new Set([...(prev?.codingVisited || []).map(String), String(problem._id)])] }));
+    saveAnswer(null, undefined, { codingProblemId: problem._id });
+  };
+  const leaveCurrentItem = () => activeTab === 'mcq' ? markCurrentAsVisited(currentMcqIdx) : markCodingVisited(currentCodingIdx);
+  const selectMcq = (index) => {
+    if (isCodingBusy || isSubmittingExam) return;
+    if (activeTab !== 'mcq' || index !== currentMcqIdx) leaveCurrentItem();
+    setActiveTab('mcq'); setCurrentMcqIdx(index);
+    const answer = attempt?.answers?.find(item => String(item.questionId) === String(exam.questions[index]._id));
+    setSelectedOptions(answer?.selectedOptions || []);
+  };
+  const selectCoding = (index) => {
+    if (isCodingBusy || isSubmittingExam) return;
+    if (activeTab !== 'coding' || index !== currentCodingIdx) leaveCurrentItem();
+    setActiveTab('coding'); setCurrentCodingIdx(index);
+  };
+  const selectSection = (section) => section.kind === 'coding' ? selectCoding(section.items[0].index) : selectMcq(section.items[0].index);
+  const getCurrentSection = () => buildExamSections(exam || {}).find(section => section.kind === activeTab && section.items.some(item => item.index === (activeTab === 'coding' ? currentCodingIdx : currentMcqIdx)));
   const handleNextQuestion = () => {
-    if (currentMcqIdx < exam.questions.length - 1) {
-      const nextIdx = currentMcqIdx + 1;
-      setCurrentMcqIdx(nextIdx);
-      const nextQId = exam.questions[nextIdx]._id;
-      const savedAns = attempt?.answers?.find((a) => a.questionId.toString() === nextQId.toString());
-      setSelectedOptions(savedAns ? savedAns.selectedOptions || [] : []);
-    }
+    const section = getCurrentSection();
+    const position = section?.items.findIndex(item => item.index === currentMcqIdx) ?? -1;
+    if (position >= 0 && position < section.items.length - 1) selectMcq(section.items[position + 1].index);
   };
-
   const handlePrevQuestion = () => {
-    if (currentMcqIdx > 0) {
-      const prevIdx = currentMcqIdx - 1;
-      setCurrentMcqIdx(prevIdx);
-      const prevQId = exam.questions[prevIdx]._id;
-      const savedAns = attempt?.answers?.find((a) => a.questionId.toString() === prevQId.toString());
-      setSelectedOptions(savedAns ? savedAns.selectedOptions || [] : []);
+    const section = getCurrentSection();
+    const position = section?.items.findIndex(item => item.index === currentMcqIdx) ?? -1;
+    if (position > 0) selectMcq(section.items[position - 1].index);
+  };
+  const handleSkip = () => {
+    if (isCodingBusy || isSubmittingExam) return;
+    leaveCurrentItem();
+    const section = getCurrentSection();
+    const position = section?.items.findIndex(item => item.index === (activeTab === 'coding' ? currentCodingIdx : currentMcqIdx)) ?? -1;
+    if (position >= 0 && position < section.items.length - 1) {
+      if (activeTab === 'coding') selectCoding(section.items[position + 1].index); else selectMcq(section.items[position + 1].index);
     }
   };
-
-  const handleToggleReview = async () => {
-    if (!exam || !exam.questions[currentMcqIdx]) return;
-    const currentQ = exam.questions[currentMcqIdx];
-    const savedAns = attempt?.answers?.find((a) => a.questionId.toString() === currentQ._id.toString());
-    const newReviewState = !savedAns?.isMarkedForReview;
-
-    try {
-      await API.post(`/exams/${examId}/answer`, {
-        questionId: currentQ._id,
-        isMarkedForReview: newReviewState,
-      });
-
-      setAttempt((prev) => {
-        const answers = [...(prev?.answers || [])];
-        const idx = answers.findIndex((a) => a.questionId.toString() === currentQ._id.toString());
-        if (idx > -1) answers[idx].isMarkedForReview = newReviewState;
-        return { ...prev, answers };
-      });
-    } catch (e) {}
+  const handleToggleReview = () => {
+    const question = exam?.questions?.[currentMcqIdx];
+    if (!question || isSubmittingExam) return;
+    const answer = attempt?.answers?.find(item => String(item.questionId) === String(question._id));
+    const reviewed = !answer?.isMarkedForReview;
+    updateLocalAnswer(question._id, { isMarkedForReview: reviewed, isVisited: true });
+    saveAnswer(question._id, undefined, { isMarkedForReview: reviewed });
   };
 
   const handleCopyInput = (text, idx) => {
@@ -368,21 +428,39 @@ const LiveExam = () => {
   };
 
   const handleFinalSubmit = async () => {
+    let submitted = false;
     try {
       setIsSubmittingExam(true);
+      await codingBusyRef.current.promise;
+      await answerSaveQueueRef.current;
+      if (pendingAnswersRef.current.size > 0) {
+        setIsSubmittingExam(false);
+        toast.error('Some answers are not saved yet. Retry saving them before submitting.');
+        return;
+      }
       const res = await API.post(`/exams/${examId}/submit`);
-      toast.success('Exam submitted successfully!');
+      submitted = true;
+      toast.success('Assessment submitted. Locked for analysis.');
+      stopCameraStream();
+      stopScreenStream();
+      setCameraStatus('idle');
+      setScreenShareStatus('idle');
+      setAgreedToTerms(false);
       if (document.exitFullscreen) {
         document.exitFullscreen().catch(() => {});
       }
-      navigate(`/student/results/${res.data.result._id}`);
+      setSubmissionReceipt({ releaseAt: res.data.releaseAt || null });
     } catch (err) {
-      toast.error('Failed to submit exam');
+      toast.error(err.response?.data?.message || 'Failed to submit exam');
     } finally {
       setIsSubmittingExam(false);
-      setShowConfirmDialog(false);
+      if (submitted) setShowConfirmDialog(false);
     }
   };
+
+  if (submissionReceipt) return <div className="min-vh-100 d-flex align-items-center justify-content-center p-4 student-exam-start">
+    <section className="card p-5 text-center" role="status" style={{ maxWidth: 520 }}><Shield size={44} className="text-primary mx-auto mb-3" /><h1 className="h3">Locked for analysis</h1><p className="text-muted">Your assessment has been submitted. Results will be shown when your faculty releases them.</p><p className="small text-muted">Returning to your dashboard…</p><button type="button" className="btn btn-primary" onClick={() => navigate('/student/dashboard', { replace: true, state: { assessmentSubmitted: true, releaseAt: submissionReceipt.releaseAt } })}>Go to dashboard</button></section>
+  </div>;
 
   if (loading || !exam) {
     return (
@@ -407,18 +485,17 @@ const LiveExam = () => {
 
     return (
       <div
-        className="min-vh-100 d-flex flex-column align-items-center justify-content-center p-4 text-white position-relative"
-        style={{ background: 'radial-gradient(circle at center, #1e293b 0%, #090d16 100%)' }}
+        className="student-exam-start min-vh-100 d-flex flex-column align-items-center justify-content-center p-4 text-body position-relative"
       >
         <div
-          className="card p-4 p-md-5 border border-secondary border-opacity-25 rounded-4 shadow-lg text-center bg-dark bg-opacity-80 backdrop-blur"
+          className="card p-4 p-md-5 border border-secondary border-opacity-25 rounded-4 shadow-lg text-center"
           style={{ maxWidth: 660, width: '100%' }}
         >
           <div className="badge bg-primary bg-opacity-20 text-primary border border-primary border-opacity-30 px-3 py-1.5 rounded-pill mb-3 align-self-center font-monospace small">
             VERIFICATION COMPLETE · FULLSCREEN ACTIVE
           </div>
 
-          <h2 className="h4 fw-bold text-white mb-1">Assessment Starting In...</h2>
+          <h2 className="h4 fw-bold text-body mb-1">Assessment Starting In...</h2>
           <p className="text-secondary small mb-4">
             Locking secure proctoring environment. Please sit comfortably facing your screen.
           </p>
@@ -430,7 +507,7 @@ const LiveExam = () => {
                 cx="75"
                 cy="75"
                 r={radius}
-                stroke="rgba(255,255,255,0.1)"
+                stroke="var(--app-border)"
                 strokeWidth="8"
                 fill="transparent"
               />
@@ -438,7 +515,7 @@ const LiveExam = () => {
                 cx="75"
                 cy="75"
                 r={radius}
-                stroke="#3b82f6"
+                stroke="var(--app-blue)"
                 strokeWidth="8"
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
@@ -448,7 +525,7 @@ const LiveExam = () => {
               />
             </svg>
             <div className="position-absolute text-center">
-              <span className="display-4 fw-bold text-white font-monospace">{countdown}</span>
+              <span className="display-4 fw-bold text-body font-monospace">{countdown}</span>
               <span className="d-block text-secondary extra-small text-uppercase">seconds</span>
             </div>
           </div>
@@ -458,25 +535,25 @@ const LiveExam = () => {
             <div className="col-12 col-sm-6">
               <div className="p-2.5 rounded-3 bg-secondary bg-opacity-10 border border-secondary border-opacity-20 d-flex align-items-center gap-2">
                 <CheckCircle2 size={16} className="text-success flex-shrink-0" />
-                <span className="small text-light">Webcam Stream Active</span>
+                <span className="small text-body">Camera & Microphone Active</span>
               </div>
             </div>
             <div className="col-12 col-sm-6">
               <div className="p-2.5 rounded-3 bg-secondary bg-opacity-10 border border-secondary border-opacity-20 d-flex align-items-center gap-2">
                 <CheckCircle2 size={16} className="text-success flex-shrink-0" />
-                <span className="small text-light">Entire Screen Shared</span>
+                <span className="small text-body">Entire Screen Shared</span>
               </div>
             </div>
             <div className="col-12 col-sm-6">
               <div className="p-2.5 rounded-3 bg-secondary bg-opacity-10 border border-secondary border-opacity-20 d-flex align-items-center gap-2">
                 <CheckCircle2 size={16} className="text-success flex-shrink-0" />
-                <span className="small text-light">Fullscreen Mode Locked</span>
+                <span className="small text-body">Fullscreen Mode Locked</span>
               </div>
             </div>
             <div className="col-12 col-sm-6">
               <div className="p-2.5 rounded-3 bg-secondary bg-opacity-10 border border-secondary border-opacity-20 d-flex align-items-center gap-2">
                 <CheckCircle2 size={16} className="text-success flex-shrink-0" />
-                <span className="small text-light">Test Sandbox Ready</span>
+                <span className="small text-body">Test Sandbox Ready</span>
               </div>
             </div>
           </div>
@@ -502,294 +579,12 @@ const LiveExam = () => {
   // PRE-EXAM SCREEN: INSTRUCTIONS & VERIFICATION (WEBCAM & SCREEN)
   // ============================================================
   if (!isExamStarted) {
-    const totalMCQs = exam.questions?.length || 0;
-    const totalCoding = exam.codingProblems?.length || 0;
-    const allChecksCompleted = cameraStatus === 'granted' && screenShareStatus === 'granted' && agreedToTerms;
-
-    return (
-      <div
-        className="min-vh-100 bg-dark text-body p-3 p-md-4 d-flex align-items-center justify-content-center"
-        style={{ background: 'radial-gradient(circle at top, #1e293b 0%, #0f172a 100%)' }}
-      >
-        <div className="card p-4 p-md-5 border border-secondary border-opacity-25 rounded-4 shadow-lg w-100" style={{ maxWidth: 1060 }}>
-          {/* Header */}
-          <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 border-bottom border-secondary border-opacity-25 pb-4 mb-4">
-            <div>
-              <div className="d-flex align-items-center gap-2 mb-2">
-                <span className="badge bg-primary px-3 py-1 font-monospace">OFFICIAL ASSESSMENT</span>
-                {exam.category && (
-                  <span className="badge bg-secondary bg-opacity-20 text-light border border-secondary border-opacity-30">
-                    {exam.category}
-                  </span>
-                )}
-              </div>
-              <h2 className="h4 fw-bold text-white m-0">{exam.title}</h2>
-            </div>
-
-            <div className="d-flex align-items-center gap-2 flex-wrap font-monospace">
-              <span className="badge bg-secondary bg-opacity-25 border border-secondary border-opacity-30 p-2.5 d-flex align-items-center gap-1.5 text-light">
-                <Clock size={15} /> {exam.duration} Mins
-              </span>
-              <span className="badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 p-2.5 d-flex align-items-center gap-1.5">
-                <Award size={15} /> {exam.totalMarks ?? '—'} Total Marks
-              </span>
-              <span className="badge bg-info bg-opacity-20 text-info border border-info border-opacity-30 p-2.5 d-flex align-items-center gap-1.5">
-                <FileCode size={15} /> {totalMCQs} MCQ · {totalCoding} Coding
-              </span>
-            </div>
-          </div>
-
-          <div className="row g-4">
-            {/* Left Box: Exam Rules & Anti-Cheat Guidelines */}
-            <div className="col-12 col-lg-7">
-              <h6 className="fw-bold text-info mb-3 d-flex align-items-center gap-2">
-                <FileText size={18} /> Important Pre-Exam Instructions
-              </h6>
-
-              <div className="bg-dark bg-opacity-80 border border-secondary border-opacity-25 rounded-3 p-3.5 mb-4 text-light small shadow-sm">
-                <div className="d-flex flex-column gap-3">
-                  <div className="d-flex align-items-start gap-2.5">
-                    <Maximize2 size={18} className="text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="text-white d-block mb-0.5">Fullscreen Enforcement</strong>
-                      <span className="text-secondary">
-                        The assessment must be taken in Fullscreen Mode. Clicking Continue activates full screen. Exiting fullscreen or pressing Esc is recorded as a security violation.
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 d-flex align-items-start gap-2.5">
-                    <AlertOctagon size={18} className="text-danger flex-shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="text-danger d-block mb-0.5">3-Warning Violation Policy</strong>
-                      <span className="text-light">
-                        A maximum of <strong>3 security violations</strong> (tab-switching, alt-tabbing, focus loss, copy/paste) are permitted. Reaching <strong>3 violations triggers automatic submission</strong> immediately!
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="d-flex align-items-start gap-2.5">
-                    <Shield size={18} className="text-warning flex-shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="text-white d-block mb-0.5">Dual Proctoring (Webcam + Entire Screen)</strong>
-                      <span className="text-secondary">
-                        Real-time webcam monitoring and desktop screen sharing are active throughout the test. Ensure good room lighting and face visibility.
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="d-flex align-items-start gap-2.5">
-                    <CheckCircle2 size={18} className="text-success flex-shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="text-white d-block mb-0.5">Real-Time Auto-Save</strong>
-                      <span className="text-secondary">
-                        Objective answers and code editor solutions are continuously saved in the cloud. You can revisit marked questions anytime before final submission.
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Interactive Agreement Check Card */}
-              <div
-                onClick={() => setAgreedToTerms(!agreedToTerms)}
-                className={`p-3 rounded-3 border transition-all d-flex align-items-center gap-3 mb-3 ${
-                  agreedToTerms
-                    ? 'border-success bg-success bg-opacity-15 text-white shadow-sm'
-                    : 'border-secondary border-opacity-30 bg-dark bg-opacity-90 text-light'
-                }`}
-                style={{ cursor: 'pointer' }}
-              >
-                <div
-                  className={`rounded-2 border p-1 d-flex align-items-center justify-content-center flex-shrink-0 transition-all ${
-                    agreedToTerms
-                      ? 'border-success bg-success text-white'
-                      : 'border-secondary border-opacity-50 bg-dark text-warning'
-                  }`}
-                  style={{ width: 24, height: 24 }}
-                >
-                  {agreedToTerms ? <Check size={16} strokeWidth={3} /> : <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#64748b' }} />}
-                </div>
-                <span className="small fw-semibold leading-snug select-none">
-                  I declare that I have read all instructions, verified my camera, shared my entire screen, and agree to the 3-warning anti-cheat policy.
-                </span>
-              </div>
-            </div>
-
-            {/* Right Box: Hardware & Proctoring Verification (Webcam + Screen Sharing) */}
-            <div className="col-12 col-lg-5 d-flex flex-column justify-content-between">
-              <div>
-                <h6 className="fw-bold text-warning mb-3 d-flex align-items-center gap-2">
-                  <Shield size={18} /> System & Proctoring Verification
-                </h6>
-
-                {/* 1. Webcam Verification Sub-Card */}
-                <div className="p-3 rounded-3 border border-secondary border-opacity-25 bg-dark bg-opacity-60 mb-3">
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="small fw-bold text-white d-flex align-items-center gap-1.5">
-                      <Camera size={15} className="text-warning" /> 1. Webcam Feed
-                    </span>
-                    {cameraStatus === 'granted' && (
-                      <span className="badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 extra-small d-flex align-items-center gap-1">
-                        <Check size={12} /> Active
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="position-relative bg-black rounded-3 overflow-hidden border border-secondary border-opacity-30 mb-2.5 text-center d-flex align-items-center justify-content-center" style={{ height: 140 }}>
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-100 h-100"
-                      style={{ objectFit: 'cover', transform: 'scaleX(-1)' }}
-                    />
-                    {cameraStatus !== 'granted' && (
-                      <div className="position-absolute p-2 text-center">
-                        <Camera size={30} className="text-secondary mb-1 opacity-75" />
-                        <p className="extra-small text-secondary mb-0">Webcam Not Enabled</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {cameraStatus === 'idle' && (
-                    <button
-                      type="button"
-                      className="btn btn-outline-warning btn-sm w-100 fw-bold d-flex align-items-center justify-content-center gap-1.5"
-                      onClick={verifyCameraAccess}
-                    >
-                      <Camera size={14} /> Enable & Verify Webcam
-                    </button>
-                  )}
-
-                  {cameraStatus === 'checking' && (
-                    <div className="text-center text-info small py-1">
-                      <span className="spinner-border spinner-border-sm me-2" /> Requesting Camera Access...
-                    </div>
-                  )}
-
-                  {cameraStatus === 'granted' && (
-                    <div className="p-2 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-2 text-success extra-small text-center d-flex align-items-center justify-content-center gap-1.5">
-                      <CheckCircle2 size={14} /> Webcam Verified & Active
-                    </div>
-                  )}
-
-                  {cameraStatus === 'denied' && (
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-sm w-100 fw-bold d-flex align-items-center justify-content-center gap-1.5"
-                      onClick={verifyCameraAccess}
-                    >
-                      <Camera size={14} /> Retry Camera Permission
-                    </button>
-                  )}
-                </div>
-
-                {/* 2. Entire Screen Share Verification Sub-Card */}
-                <div className="p-3 rounded-3 border border-secondary border-opacity-25 bg-dark bg-opacity-60 mb-3">
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="small fw-bold text-white d-flex align-items-center gap-1.5">
-                      <Monitor size={15} className="text-info" /> 2. Entire Screen Share
-                    </span>
-                    {screenShareStatus === 'granted' && (
-                      <span className="badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 extra-small d-flex align-items-center gap-1">
-                        <Check size={12} /> Active
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="extra-small text-secondary mb-2">
-                    <strong>Instruction:</strong> You must choose <strong>"Entire Screen"</strong> in the browser prompt. Sharing only an app window or tab is not permitted.
-                  </p>
-
-                  {/* Screen Share Mini Preview or Placeholder */}
-                  <div className="position-relative bg-black rounded-3 overflow-hidden border border-secondary border-opacity-30 mb-2.5 text-center d-flex align-items-center justify-content-center" style={{ height: 120 }}>
-                    <video
-                      ref={screenVideoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-100 h-100"
-                      style={{ objectFit: 'contain' }}
-                    />
-                    {screenShareStatus !== 'granted' && (
-                      <div className="position-absolute p-2 text-center">
-                        <Monitor size={28} className="text-secondary mb-1 opacity-75" />
-                        <p className="extra-small text-secondary mb-0">Entire Screen Not Shared</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {screenShareStatus === 'idle' && (
-                    <button
-                      type="button"
-                      className="btn btn-outline-info btn-sm w-100 fw-bold d-flex align-items-center justify-content-center gap-1.5"
-                      onClick={verifyScreenShare}
-                    >
-                      <Monitor size={14} /> Share Entire Screen
-                    </button>
-                  )}
-
-                  {screenShareStatus === 'checking' && (
-                    <div className="text-center text-info small py-1">
-                      <span className="spinner-border spinner-border-sm me-2" /> Select "Entire Screen" in prompt...
-                    </div>
-                  )}
-
-                  {screenShareStatus === 'granted' && (
-                    <div className="p-2 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-2 text-success extra-small text-center d-flex align-items-center justify-content-center gap-1.5">
-                      <CheckCircle2 size={14} /> Entire Screen Verified & Streaming
-                    </div>
-                  )}
-
-                  {screenShareStatus === 'invalid' && (
-                    <div className="mb-2">
-                      <div className="p-2 bg-warning bg-opacity-15 border border-warning border-opacity-30 rounded-2 text-warning extra-small mb-2 text-start">
-                        <AlertTriangle size={13} className="me-1" />
-                        You shared a window or tab. You must select <strong>"Entire Screen"</strong> to proceed.
-                      </div>
-                      <button
-                        type="button"
-                        className="btn btn-warning btn-sm w-100 fw-bold d-flex align-items-center justify-content-center gap-1.5"
-                        onClick={verifyScreenShare}
-                      >
-                        <Monitor size={14} /> Re-Select Entire Screen
-                      </button>
-                    </div>
-                  )}
-
-                  {screenShareStatus === 'denied' && (
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-sm w-100 fw-bold d-flex align-items-center justify-content-center gap-1.5"
-                      onClick={verifyScreenShare}
-                    >
-                      <Monitor size={14} /> Retry Screen Sharing
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Continue to Fullscreen & Countdown Button */}
-              <div className="mt-2">
-                <button
-                  type="button"
-                  className="btn btn-primary btn-lg w-100 fw-bold rounded-pill py-3 d-flex align-items-center justify-content-center gap-2 shadow-lg"
-                  disabled={!allChecksCompleted}
-                  onClick={handleContinueClick}
-                >
-                  <Maximize2 size={19} /> Continue to Fullscreen (40s Countdown) <ArrowRight size={18} />
-                </button>
-                <div className="text-center mt-2 extra-small text-secondary">
-                  Requires Webcam, Entire Screen Share & Terms agreement. Fullscreen will activate on Continue.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <PreExamSetup exam={exam} step={preExamStep} onStepChange={setPreExamStep}
+      cameraStatus={cameraStatus} screenStatus={screenShareStatus} agreed={agreedToTerms} onAgreement={setAgreedToTerms}
+      instructionsOpen={isTestInstructionsOpen} onToggleInstructions={() => setIsTestInstructionsOpen(open => !open)}
+      cameraRef={node => { videoRef.current = node; if (node) node.srcObject = streamRef.current; }}
+      screenRef={node => { screenVideoRef.current = node; if (node) node.srcObject = screenStreamRef.current; }}
+      onCamera={verifyCameraAccess} onScreen={verifyScreenShare} onContinue={handleContinueClick}/>;
   }
 
   // ============================================================
@@ -807,12 +602,19 @@ const LiveExam = () => {
   const totalMcqs = hasQuestions ? exam.questions.length : 0;
   const totalCoding = hasCoding ? exam.codingProblems.length : 0;
   const unansweredCount = totalMcqs - answeredCount;
+  const sections = buildExamSections(exam);
+  const currentSection = getCurrentSection();
+  const currentPosition = currentSection?.items.findIndex(item => item.index === (activeTab === 'coding' ? currentCodingIdx : currentMcqIdx)) ?? 0;
+  const progress = sections.reduce((sum, section) => {
+    const value = sectionProgress(section, attempt || {});
+    Object.keys(sum).forEach(key => { sum[key] += value[key]; });
+    return sum;
+  }, { total: 0, attempted: 0, skipped: 0, remaining: 0, review: 0 });
 
   return (
-    <div className="exam-workspace min-vh-100 position-relative d-flex flex-column bg-dark text-body">
+    <div className="exam-workspace student-live-exam min-vh-100 position-relative d-flex flex-column text-body">
       <AntiCheatModal examId={examId} onMaxViolations={handleFinalSubmit} />
-      <WebcamProctor />
-      <AudioProctor />
+
 
       {/* Pre-Submission Confirmation Dialog */}
       <ConfirmDialog
@@ -820,7 +622,7 @@ const LiveExam = () => {
         onClose={() => setShowConfirmDialog(false)}
         onConfirm={handleFinalSubmit}
         title="Submit Exam?"
-        description={`Objective Answered: ${answeredCount} / ${totalMcqs} | Coding Problems: ${totalCoding} | Marked for Review: ${reviewCount}. Are you sure you want to finalize your submission?`}
+        description={`${progress.attempted} / ${progress.total} attempted · ${progress.skipped} skipped · ${progress.remaining} not visited · ${progress.review} marked for review. Submit all test sections?`}
         confirmLabel="Finalize & Submit"
         cancelLabel="Continue Exam"
         variant="danger"
@@ -847,7 +649,7 @@ const LiveExam = () => {
       )}
 
       {/* Exam Top Header Bar */}
-      <div className="px-4 py-2 bg-dark border-bottom border d-flex align-items-center justify-content-between shadow-sm sticky-top">
+      <div className="student-exam-topbar px-4 py-2 bg-dark border-bottom border d-flex align-items-center justify-content-between shadow-sm sticky-top">
         <div className="d-flex align-items-center gap-3">
           <span className="badge bg-primary fs-6 px-3 py-2 rounded-pill font-monospace shadow-sm">
             {exam.title}
@@ -858,50 +660,79 @@ const LiveExam = () => {
         </div>
 
         <div className="d-flex align-items-center gap-3">
-          <Timer initialSeconds={attempt?.remainingTime || exam.duration * 60} onTimeUp={handleFinalSubmit} />
-          <Button variant="danger" size="sm" onClick={() => setShowConfirmDialog(true)} disabled={isSubmittingExam} className="fw-bold px-3">
+          <div className="small d-flex align-items-center gap-2" role="status" aria-live="polite">
+            {answerSaveState === 'saving' && <><span className="spinner-border spinner-border-sm" aria-hidden="true" />Saving answers…</>}
+            {answerSaveState === 'saved' && <span className="text-success">All answers saved</span>}
+            {answerSaveState === 'error' && (
+              <>
+                <span className="text-danger">Answer save failed</span>
+                <button type="button" className="btn btn-outline-warning btn-sm" onClick={retryPendingAnswers}>Retry save</button>
+              </>
+            )}
+          </div>
+          <details className="exam-proctor-monitor">
+            <summary><Camera size={16}/><span>Camera & mic</span><ChevronDown size={14}/></summary>
+            <div className="exam-proctor-monitor-content">
+      <WebcamProctor mediaStream={streamRef.current} examId={examId} onViolation={(type, meta) => {
+        try { API.post(`/exams/${examId}/anticheat`, { eventType: type, metadata: meta }); } catch(e) {}
+      }} />
+      <AudioProctor mediaStream={streamRef.current} onAudioViolation={(type, meta) => {
+        try { API.post(`/exams/${examId}/anticheat`, { eventType: type, metadata: meta }); } catch(e) {}
+      }} />
+            </div>
+          </details>
+          <ThemeToggle />
+          <Timer initialSeconds={attempt?.remainingTime > 0 ? attempt.remainingTime : (exam.duration * 60)} onTimeUp={handleFinalSubmit} />
+          <Button variant="danger" size="sm" onClick={() => setShowConfirmDialog(true)} disabled={isSubmittingExam || isCodingBusy} className="fw-bold px-3">
             Submit Exam
           </Button>
         </div>
       </div>
 
       {/* Main Examination Workspace */}
-      <div className="flex-grow-1 p-3 d-flex flex-column flex-lg-row gap-3 overflow-hidden" style={{ height: 'calc(100vh - 60px)', minHeight: '650px' }}>
+      <div className="exam-workspace-layout flex-grow-1 p-3 d-flex flex-column overflow-hidden">
         {/* Left / Center Section Panel */}
         <div className="flex-grow-1 d-flex flex-column card p-3 rounded-3 border shadow-lg overflow-hidden h-100">
-          {/* Section Switcher Tabs */}
-          <div className="nav nav-pills gap-2 border-bottom border pb-3 mb-3 flex-shrink-0">
-            {hasQuestions && (
-              <button
-                className={`nav-link d-flex align-items-center gap-2 fw-bold px-4 py-2 rounded-pill transition-all ${
-                  activeTab === 'mcq' ? 'active bg-primary shadow-sm' : 'text-body bg-dark border'
-                }`}
-                onClick={() => setActiveTab('mcq')}
-              >
-                <HelpCircle size={16} /> Objective MCQs ({exam.questions.length})
-              </button>
-            )}
-            {hasCoding && (
-              <button
-                className={`nav-link d-flex align-items-center gap-2 fw-bold px-4 py-2 rounded-pill transition-all ${
-                  activeTab === 'coding' ? 'active bg-primary shadow-sm' : 'text-body bg-dark border'
-                }`}
-                onClick={() => setActiveTab('coding')}
-              >
-                <FileCode size={16} /> Coding Arena ({exam.codingProblems.length})
-              </button>
-            )}
+          <div className="exam-section-toolbar border-bottom pb-3 mb-3 flex-shrink-0">
+            <div className="exam-section-navigation">
+              <div className="exam-section-picker">
+                <label htmlFor="live-exam-section" className="small text-muted fw-semibold">Test section</label>
+                <select id="live-exam-section" className="form-select" value={currentSection?.id || ''} disabled={isCodingBusy || isSubmittingExam || !sections.length} onChange={event => { const section = sections.find(item => item.id === event.target.value); if (section) selectSection(section); }}>
+                  {!sections.length && <option value="">No sections</option>}
+                  {sections.map(section => <option key={section.id} value={section.id}>{section.label}</option>)}
+                </select>
+              </div>
+              <nav className="exam-number-navigation" aria-label={activeTab === 'coding' ? 'Coding problems' : 'Section questions'}>
+                {currentSection?.items.map(({ item, index }, position) => {
+                  const answer = activeTab === 'mcq' ? attempt?.answers?.find(record => String(record.questionId) === String(item._id)) : null;
+                  const submitted = activeTab === 'coding' ? attempt?.codingSubmissions?.some(record => String(record.problemId) === String(item._id)) : Boolean(answer?.selectedOptions?.length);
+                  const visited = activeTab === 'coding' ? attempt?.codingVisited?.some(id => String(id) === String(item._id)) : answer?.isVisited;
+                  const status = answer?.isMarkedForReview ? 'review' : submitted ? 'attempted' : visited ? 'skipped' : 'unvisited';
+                  const isCurrent = position === currentPosition;
+                  const label = (activeTab === 'coding' ? 'Problem ' : 'Question ') + (position + 1);
+                  return <button type="button" key={item._id} className={'exam-number-button is-' + status + (isCurrent ? ' is-current' : '')} aria-label={label + ', ' + status} title={label + ' · ' + status} aria-current={isCurrent ? 'step' : undefined} disabled={isCodingBusy || isSubmittingExam} onClick={() => activeTab === 'coding' ? selectCoding(index) : selectMcq(index)}>{position + 1}</button>;
+                })}
+              </nav>
+              {activeTab === 'coding' && <button type="button" className="btn btn-outline-secondary btn-sm exam-number-skip" onClick={handleSkip} disabled={isCodingBusy || isSubmittingExam}>Skip / Next <ChevronRight size={16}/></button>}
+            </div>
+            <div className="exam-inline-progress" aria-label="Attempt record" aria-live="polite">
+              <span><strong>{progress.total}</strong> Total</span>
+              <span className="text-success"><strong>{progress.attempted}</strong> Attempted</span>
+              <span className="text-danger"><strong>{progress.skipped}</strong> Skipped</span>
+              <span><strong>{progress.remaining}</strong> Not visited</span>
+              <span className="text-warning"><strong>{progress.review}</strong> For review</span>
+            </div>
           </div>
 
           {/* ============================================================ */}
           {/* TAB 1: MCQ QUESTION VIEW */}
           {/* ============================================================ */}
           {activeTab === 'mcq' && currentQ && (
-            <div className="d-flex flex-column flex-grow-1 justify-content-between overflow-auto pe-1 custom-ide-scrollbar">
-              <div>
+            <div className="exam-mcq-workspace d-flex flex-column flex-grow-1">
+              <div className="exam-mcq-content overflow-auto custom-ide-scrollbar">
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <span className="fw-bold text-muted small font-monospace">
-                    Question {currentMcqIdx + 1} of {exam.questions.length}
+                    Question {currentPosition + 1} of {currentSection?.items.length || 0}
                   </span>
                   <span className="badge bg-secondary px-3 py-1 font-monospace">{currentQ.marks} Mark(s)</span>
                 </div>
@@ -913,15 +744,18 @@ const LiveExam = () => {
                   {currentQ.options?.map((opt, oIdx) => {
                     const isSelected = selectedOptions.includes(opt.optionText);
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={oIdx}
                         onClick={() => handleSelectOption(opt.optionText)}
-                        className={`p-3 rounded-3 border transition-all d-flex align-items-center gap-3 style-cursor-pointer ${
+                        role={currentQ.questionType === 'multiple' ? 'checkbox' : 'radio'}
+                        aria-checked={isSelected}
+                        className={`student-exam-option p-3 rounded-3 border transition-all d-flex align-items-center gap-3 style-cursor-pointer ${
                           isSelected
-                            ? 'border-primary bg-primary bg-opacity-20 text-white shadow-sm'
+                            ? 'border-primary bg-primary bg-opacity-20 text-body shadow-sm'
                             : 'border bg-dark bg-opacity-50 text-body hover-bg-dark'
                         }`}
-                        style={{ cursor: 'pointer' }}
+                        style={{ cursor: 'pointer', width: '100%', textAlign: 'left' }}
                       >
                         <div
                           className={`rounded-circle border p-1 d-flex align-items-center justify-content-center flex-shrink-0 ${
@@ -932,25 +766,26 @@ const LiveExam = () => {
                           {isSelected && <CheckCircle2 size={14} />}
                         </div>
                         <span className="fw-medium">{opt.optionText}</span>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
               </div>
 
               {/* Navigation Controls Bar */}
-              <div className="d-flex justify-content-between border-top border pt-3 mt-auto">
+              <div className="exam-bottom-navigation d-flex justify-content-between border-top pt-3 mt-auto">
                 <div className="d-flex gap-2">
                   <Button
                     variant="secondary"
                     size="sm"
                     onClick={handlePrevQuestion}
-                    disabled={currentMcqIdx === 0}
+                    disabled={currentPosition === 0 || isSubmittingExam}
                     icon={ChevronLeft}
                   >
                     Previous
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={handleToggleReview} icon={Bookmark}>
+                  <Button variant="outline-secondary" size="sm" onClick={handleSkip} disabled={isSubmittingExam}>Skip / Next</Button>
+                  <Button variant="ghost" size="sm" onClick={handleToggleReview} disabled={isSubmittingExam} icon={Bookmark}>
                     Mark for Review
                   </Button>
                 </div>
@@ -958,7 +793,7 @@ const LiveExam = () => {
                   variant="primary"
                   size="sm"
                   onClick={handleNextQuestion}
-                  disabled={currentMcqIdx === exam.questions.length - 1}
+                  disabled={currentPosition === (currentSection?.items.length || 0) - 1 || isSubmittingExam}
                 >
                   Next <ChevronRight size={16} />
                 </Button>
@@ -970,80 +805,61 @@ const LiveExam = () => {
           {/* TAB 2: CODING ARENA VIEW */}
           {/* ============================================================ */}
           {activeTab === 'coding' && currentProblem && (
-            <div className="d-flex flex-column flex-grow-1 overflow-hidden h-100">
-              {/* Problem Selection Pills Bar */}
-              {exam.codingProblems.length > 1 && (
-                <div className="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border overflow-x-auto flex-shrink-0 custom-ide-scrollbar">
-                  <span className="text-muted small fw-semibold me-1 font-monospace">Problems:</span>
-                  {exam.codingProblems.map((prob, pIdx) => (
-                    <button
-                      key={prob._id}
-                      onClick={() => setCurrentCodingIdx(pIdx)}
-                      className={`btn btn-sm rounded-pill px-3 fw-bold font-monospace d-inline-flex align-items-center gap-1.5 transition-all ${
-                        currentCodingIdx === pIdx
-                          ? 'btn-info text-dark shadow-sm'
-                          : 'btn-outline-secondary text-body'
-                      }`}
-                    >
-                      <Code2 size={14} /> Problem {pIdx + 1}: {prob.title}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* 50-50 Split Arena Workspace */}
-              <div className="row g-3 flex-grow-1 overflow-hidden h-100">
-                {/* Left Column: Problem Statement & Examples */}
-                <div className="col-12 col-xl-5 d-flex flex-column h-100 overflow-auto pe-2 custom-ide-scrollbar">
+            <section className="exam-code-arena d-flex flex-column flex-grow-1 overflow-hidden h-100" aria-label="Coding problem workspace">
+              <div className="row g-3 flex-grow-1 overflow-hidden h-100 exam-coding-columns">
+                <div className="col-12 col-lg-6 d-flex flex-column h-100 overflow-auto custom-ide-scrollbar exam-problem-panel">
                   {/* Problem Metadata Header */}
-                  <div className="p-3 bg-dark border rounded-3 mb-3">
+                  <header className="exam-problem-summary p-3 border rounded-3 mb-3">
                     <div className="d-flex align-items-center justify-content-between mb-2">
-                      <div className="d-flex align-items-center gap-2">
+                      <div className="d-flex align-items-center flex-wrap gap-2">
                         <span className={`badge ${
                           currentProblem.difficulty === 'easy' ? 'bg-success' : currentProblem.difficulty === 'hard' ? 'bg-danger' : 'bg-warning text-dark'
                         } px-2.5 py-1 text-uppercase font-monospace`}>
-                          {currentProblem.difficulty}
+                          {currentProblem.difficulty || 'easy'}
                         </span>
                         <span className="badge bg-secondary px-2.5 py-1 font-monospace">
-                          {currentProblem.category || 'Data Structures'}
+                          {currentProblem.topic || currentProblem.category || 'General'}
                         </span>
                       </div>
-                      <span className="badge bg-primary px-3 py-1 fs-6 font-monospace fw-bold">
+                      <span className="badge bg-primary px-3 py-1 font-monospace fw-bold">
                         {currentProblem.marks} Marks
                       </span>
                     </div>
 
-                    <h4 className="fw-bold text-body m-0">{currentProblem.title}</h4>
-                  </div>
+                    <h2 className="h5 fw-bold text-body m-0">{currentProblem.title}</h2>
+                    {currentProblem.tags?.length > 0 && <div className="exam-problem-tags mt-2">{currentProblem.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
+                  </header>
 
-                  {/* Problem Description */}
-                  <div className="p-3 bg-dark bg-opacity-50 border rounded-3 mb-3">
-                    <h6 className="fw-bold text-info mb-2 d-flex align-items-center gap-1.5 small text-uppercase font-monospace">
-                      <Sparkles size={14} /> Problem Statement
-                    </h6>
+                  <section className="exam-problem-section p-3 border rounded-3 mb-3">
+                    <h3 className="exam-coding-section-title"><Sparkles size={15} /> Problem statement</h3>
                     <div className="text-body leading-relaxed small whitespace-pre-wrap">
                       {currentProblem.description}
                     </div>
-                  </div>
+                  </section>
 
-                  {/* Input / Output Format */}
-                  <div className="row g-2 mb-3">
+                  <section className="exam-problem-specs row g-2 mb-3" aria-label="Input and output format">
                     <div className="col-6">
-                      <div className="p-2.5 bg-dark border rounded-3 h-100">
-                        <div className="fw-bold text-warning small font-monospace mb-1">Input Format</div>
+                      <div className="exam-problem-section p-3 border rounded-3 h-100">
+                        <h3 className="exam-coding-section-title">Input format</h3>
                         <div className="text-muted small">{currentProblem.inputFormat || 'Standard Input (stdin)'}</div>
                       </div>
                     </div>
                     <div className="col-6">
-                      <div className="p-2.5 bg-dark border rounded-3 h-100">
-                        <div className="fw-bold text-success small font-monospace mb-1">Output Format</div>
+                      <div className="exam-problem-section p-3 border rounded-3 h-100">
+                        <h3 className="exam-coding-section-title">Output format</h3>
                         <div className="text-muted small">{currentProblem.outputFormat || 'Standard Output (stdout)'}</div>
                       </div>
                     </div>
-                  </div>
+                  </section>
 
-                  {/* Constraints & Limits */}
-                  <div className="p-2.5 bg-dark border rounded-3 mb-3 d-flex align-items-center justify-content-between small text-muted font-monospace">
+                  {currentProblem.constraints && (
+                    <section className="exam-problem-section p-3 border rounded-3 mb-3">
+                      <h3 className="exam-coding-section-title"><FileText size={15} /> Constraints</h3>
+                      <div className="small text-body whitespace-pre-wrap">{currentProblem.constraints}</div>
+                    </section>
+                  )}
+
+                  <div className="exam-problem-limits border rounded-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2 small text-muted">
                     <div className="d-flex align-items-center gap-1">
                       <Clock size={14} className="text-info" /> Time Limit: {currentProblem.timeLimit || 2}s
                     </div>
@@ -1052,18 +868,16 @@ const LiveExam = () => {
                     </div>
                   </div>
 
-                  {/* Public Test Case Examples */}
                   {currentProblem.examples && currentProblem.examples.length > 0 && (
-                    <div className="mb-3">
-                      <h6 className="fw-bold text-body mb-2 small text-uppercase font-monospace">
-                        Public Examples ({currentProblem.examples.length})
-                      </h6>
+                    <section className="exam-problem-section p-3 border rounded-3 mb-3">
+                      <h3 className="exam-coding-section-title">Examples <span className="text-muted">{currentProblem.examples.length}</span></h3>
 
                       {currentProblem.examples.map((ex, exIdx) => (
-                        <div key={exIdx} className="p-3 bg-dark border rounded-3 mb-2">
+                        <article key={exIdx} className="exam-example-card p-3 border rounded-3 mb-2">
                           <div className="d-flex justify-content-between align-items-center mb-1">
-                            <span className="fw-bold text-info small font-monospace">Example {exIdx + 1}</span>
+                            <span className="fw-semibold small">Example {exIdx + 1}</span>
                             <button
+                              type="button"
                               className="btn btn-link btn-sm text-muted p-0 text-decoration-none d-flex align-items-center gap-1 small"
                               onClick={() => handleCopyInput(ex.input, exIdx)}
                             >
@@ -1072,15 +886,15 @@ const LiveExam = () => {
                           </div>
 
                           <div className="mb-2">
-                            <div className="text-muted extra-small font-monospace mb-0.5">Input:</div>
-                            <pre className="bg-secondary bg-opacity-20 text-success p-2 rounded small m-0 font-monospace border">
+                            <div className="text-muted extra-small mb-0.5">Input</div>
+                            <pre className="exam-example-code p-2 rounded small m-0 font-monospace border">
                               {ex.input}
                             </pre>
                           </div>
 
                           <div className="mb-2">
-                            <div className="text-muted extra-small font-monospace mb-0.5">Expected Output:</div>
-                            <pre className="bg-secondary bg-opacity-20 text-info p-2 rounded small m-0 font-monospace border">
+                            <div className="text-muted extra-small mb-0.5">Expected output</div>
+                            <pre className="exam-example-code p-2 rounded small m-0 font-monospace border">
                               {ex.output}
                             </pre>
                           </div>
@@ -1090,18 +904,17 @@ const LiveExam = () => {
                               <strong>Explanation:</strong> {ex.explanation}
                             </div>
                           )}
-                        </div>
+                        </article>
                       ))}
-                    </div>
+                    </section>
                   )}
                 </div>
 
-                {/* Right Column: Monaco Sandboxed Code Editor */}
-                <div className="col-12 col-xl-7 h-100 d-flex flex-column">
-                  <CodeEditor problem={currentProblem} examId={examId} />
+                <div className="col-12 col-lg-6 h-100 d-flex flex-column exam-editor-panel">
+                  <CodeEditor problem={currentProblem} examId={examId} draftScope={attempt?._id} onBusyChange={handleCodingBusy} onSubmissionSuccess={submission => setAttempt(prev => ({ ...prev, codingSubmissions: [...(prev?.codingSubmissions || []).filter(item => String(item.problemId) !== String(currentProblem._id)), { problemId: currentProblem._id, submissionId: submission._id, status: submission.status, score: submission.score }] }))} />
                 </div>
               </div>
-            </div>
+            </section>
           )}
 
           {/* Empty Fallback state */}
@@ -1113,53 +926,10 @@ const LiveExam = () => {
           )}
         </div>
 
-        {/* Right Sidebar: Question Palette & Section Tracker */}
-        <div style={{ width: 290 }} className="d-none d-lg-block flex-shrink-0">
-          <QuestionPalette
-            questions={exam.questions || []}
-            currentIndex={currentMcqIdx}
-            answers={attempt?.answers || []}
-            onSelectQuestion={(idx) => {
-              setActiveTab('mcq');
-              setCurrentMcqIdx(idx);
-            }}
-          />
 
-          {/* Coding Problems Side Palette */}
-          {hasCoding && (
-            <div className="card p-3 rounded-3 border shadow-lg mt-3">
-              <div className="fw-bold text-body mb-2 small text-uppercase font-monospace d-flex align-items-center justify-content-between">
-                <span>Coding Problems</span>
-                <span className="badge bg-primary font-monospace">{exam.codingProblems.length}</span>
-              </div>
-              <div className="d-flex flex-column gap-2">
-                {exam.codingProblems.map((prob, pIdx) => (
-                  <button
-                    key={prob._id}
-                    onClick={() => {
-                      setActiveTab('coding');
-                      setCurrentCodingIdx(pIdx);
-                    }}
-                    className={`btn btn-sm text-start rounded-3 px-3 py-2 d-flex align-items-center justify-content-between transition-all ${
-                      activeTab === 'coding' && currentCodingIdx === pIdx
-                        ? 'btn-info text-dark fw-bold shadow-sm'
-                        : 'btn-dark text-body border'
-                    }`}
-                  >
-                    <span className="text-truncate font-monospace" style={{ maxWidth: 180 }}>
-                      P{pIdx + 1}. {prob.title}
-                    </span>
-                    <span className="badge bg-secondary font-monospace">{prob.marks}m</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
 };
 
 export default LiveExam;
-

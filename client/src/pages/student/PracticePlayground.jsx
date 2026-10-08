@@ -642,14 +642,14 @@ const PracticePlayground = () => {
       {/* =====================================================
           TOP CONTROL BAR & QUICK PROBLEM SELECTOR
       ====================================================== */}
-      <div className="card p-3 border rounded-3 mb-3 shadow-sm d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div className="card practice-ide-toolbar p-3 border rounded-3 mb-3 shadow-sm">
         {/* Left: Quick Problem Select Dropdown & Title */}
-        <div className="d-flex align-items-center gap-3 flex-grow-1" style={{ minWidth: '300px' }}>
+        <div className="practice-ide-problem d-flex align-items-center gap-3">
           <div className="p-2 bg-primary bg-opacity-20 text-primary rounded-3 flex-shrink-0">
             <Cpu size={22} />
           </div>
 
-          <div className="flex-grow-1 position-relative">
+          <div className="practice-ide-problem-picker position-relative">
             <label className="form-label extra-small text-muted mb-0 font-monospace d-flex align-items-center gap-1">
               <Layers size={12} className="text-primary" /> Active Problem ({problems.length})
             </label>
@@ -672,7 +672,7 @@ const PracticePlayground = () => {
         </div>
 
         {/* Right: Controls (Language, Reset, Run, Submit, Fullscreen) */}
-        <div className="d-flex align-items-center gap-2 flex-wrap ms-auto">
+        <div className="practice-ide-controls">
           {/* Language Selector */}
           <select
             className="form-select form-select-sm bg-body-tertiary text-body border font-monospace"
@@ -741,9 +741,9 @@ const PracticePlayground = () => {
         ==================================================== */}
         {!isEditorFullscreen && (
           <div className="col-12 col-lg-6 d-flex flex-column">
-            <div className="card border rounded-3 shadow-sm overflow-hidden d-flex flex-column h-100" style={{ minHeight: '680px' }}>
+            <div className="card practice-problem-panel border rounded-3 shadow-sm overflow-hidden d-flex flex-column">
               {/* Left Panel Tabs Header */}
-              <div className="d-flex bg-body-tertiary border-bottom border px-2 pt-2 gap-1">
+              <div className="d-flex flex-shrink-0 flex-wrap bg-body-tertiary border-bottom border px-2 pt-2 gap-1">
                 <button
                   type="button"
                   className={`btn btn-sm rounded-top-3 px-3 py-2 font-monospace fw-bold d-flex align-items-center gap-1.5 border-bottom-0 ${
@@ -771,7 +771,7 @@ const PracticePlayground = () => {
 
               {/* Tab 1: Description Panel */}
               {activeLeftTab === 'description' && (
-                <div className="p-4 overflow-auto flex-grow-1" style={{ maxHeight: 'calc(100vh - 250px)' }}>
+                <div className="practice-problem-scroll p-4" tabIndex={0} role="region" aria-label="Problem statement and test cases">
                   {loadingProblem ? (
                     <div className="text-center text-muted py-5">
                       <RefreshCw size={28} className="spinner-border text-info mb-2" />
@@ -876,7 +876,7 @@ const PracticePlayground = () => {
 
               {/* Tab 2: All Problems List */}
               {activeLeftTab === 'problems' && (
-                <div className="p-3 overflow-auto flex-grow-1 d-flex flex-column gap-2" style={{ maxHeight: 'calc(100vh - 250px)' }}>
+                <div className="practice-problem-scroll p-3 d-flex flex-column gap-2" tabIndex={0} role="region" aria-label="Problem bank">
                   <div className="position-relative mb-2">
                     <Search size={14} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" />
                     <input
@@ -888,7 +888,7 @@ const PracticePlayground = () => {
                     />
                   </div>
 
-                  <div className="d-flex flex-column gap-2 pe-1" style={{ overflowY: 'auto' }}>
+                  <div className="d-flex flex-column gap-2 pe-1">
                     {problems
                       .filter((p) => p.title?.toLowerCase().includes(searchQuery.toLowerCase()) || p.category?.toLowerCase().includes(searchQuery.toLowerCase()))
                       .map((problem) => {
@@ -934,10 +934,10 @@ const PracticePlayground = () => {
         {/* ===================================================
             RIGHT SIDE (MONACO CODE EDITOR & CONSOLE)
         ==================================================== */}
-        <div className={isEditorFullscreen ? 'col-12' : 'col-12 col-lg-6'}>
-          <div className="card overflow-hidden border rounded-3 shadow-sm">
+        <div className={isEditorFullscreen ? 'col-12 d-flex flex-column' : 'col-12 col-lg-6 d-flex flex-column'}>
+          <div className="card practice-editor-panel overflow-hidden border rounded-3 shadow-sm d-flex flex-column">
             {/* Editor Top Toolbar */}
-            <div className="d-flex justify-content-between align-items-center px-3 py-2 bg-body-tertiary border-bottom border">
+            <div className="d-flex flex-shrink-0 justify-content-between align-items-center px-3 py-2 bg-body-tertiary border-bottom border">
               <div className="d-flex align-items-center gap-2">
                 <Code2 size={16} className="text-info" />
                 <span className="text-body small fw-bold font-monospace">
@@ -948,7 +948,7 @@ const PracticePlayground = () => {
             </div>
 
             {/* Monaco Canvas */}
-            <div style={{ height: isEditorFullscreen ? 'calc(100vh - 280px)' : '450px' }}>
+            <div className="practice-editor-canvas">
               <Editor
                 height="100%"
                 language={currentLanguage?.monacoLang || 'javascript'}
@@ -974,7 +974,7 @@ const PracticePlayground = () => {
             {/* =================================================
                 INPUT / EXECUTION CONSOLE
             ================================================== */}
-            <div className="border-top border bg-body-tertiary p-3">
+            <div className="practice-editor-console border-top border bg-body-tertiary p-3">
               <div className="row g-3">
                 {/* Input Column */}
                 <div className="col-12 col-md-6 border-end border">

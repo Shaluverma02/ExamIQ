@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 const NOISE_THRESHOLD_DB = 68; // Decibel threshold for voice/noise detection
 const NOISE_COOLDOWN_MS = 8000; // Cooldown between noise warnings
 
-const AudioProctor = ({ onAudioViolation }) => {
+const AudioProctor = ({ onAudioViolation, mediaStream }) => {
   const [audioActive, setAudioActive] = useState(false);
   const [volumeLevel, setVolumeLevel] = useState(0);
   const audioContextRef = useRef(null);
@@ -15,19 +15,22 @@ const AudioProctor = ({ onAudioViolation }) => {
   const animFrameRef = useRef(null);
 
   useEffect(() => {
-    startAudioMonitoring();
+    let disposed = false;
+    startAudioMonitoring(() => disposed);
     return () => {
+      disposed = true;
       stopAudioMonitoring();
     };
-  }, []);
+  }, [mediaStream]);
 
-  const startAudioMonitoring = async () => {
+  const startAudioMonitoring = async (isDisposed) => {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         return;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      const stream = mediaStream || await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      if (isDisposed()) { if (!mediaStream) stream.getTracks().forEach(track => track.stop()); return; }
       streamRef.current = stream;
 
       const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -44,6 +47,7 @@ const AudioProctor = ({ onAudioViolation }) => {
       setAudioActive(true);
       monitorVolume();
     } catch (err) {
+      if (isDisposed()) return;
       console.warn('Audio proctoring permission skipped or denied:', err);
       setAudioActive(false);
     }
@@ -54,7 +58,7 @@ const AudioProctor = ({ onAudioViolation }) => {
       cancelAnimationFrame(animFrameRef.current);
     }
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      if (!mediaStream) streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
@@ -95,11 +99,11 @@ const AudioProctor = ({ onAudioViolation }) => {
 
   return (
     <div
-      className="position-fixed bottom-0 end-0 m-3 p-2 px-3 rounded-pill bg-body-tertiary bg-opacity-90 border text-body font-monospace extra-small d-flex align-items-center gap-2 shadow-lg"
+      className="audio-proctor-monitor position-fixed bottom-0 start-0 m-3 p-2 px-3 rounded-pill bg-body-tertiary bg-opacity-90 border text-body font-monospace extra-small d-flex align-items-center gap-2 shadow-lg"
       style={{ zIndex: 1050, backdropFilter: 'blur(6px)' }}
     >
       <Mic size={14} className="text-info animate-pulse" />
-      <span className="text-muted">Audio Monitored:</span>
+      <span className="text-muted">Audio:</span>
       <div className="progress flex-grow-1" style={{ width: 60, height: 6 }}>
         <div
           className={`progress-bar transition-all ${

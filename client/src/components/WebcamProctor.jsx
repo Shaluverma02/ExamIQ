@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Camera, Mic, AlertTriangle, ShieldCheck, Eye, Users, UserX } from 'lucide-react';
 import { detectFacesAndGaze } from '../utils/aiFaceDetector';
 
-const WebcamProctor = ({ examId, onViolation }) => {
+const WebcamProctor = ({ examId, onViolation, mediaStream }) => {
   const videoRef = useRef(null);
   const [stream, setStream] = useState(null);
   const [hasPermissions, setHasPermissions] = useState(false);
@@ -13,18 +13,25 @@ const WebcamProctor = ({ examId, onViolation }) => {
   const [gazeStatus, setGazeStatus] = useState('center');
   const lastViolationTime = useRef({ noFace: 0, multiFace: 0, gaze: 0, audio: 0 });
   const animationFrameRef = useRef(null);
+  const onViolationRef = useRef(onViolation);
+
+  useEffect(() => {
+    onViolationRef.current = onViolation;
+  }, [onViolation]);
 
   useEffect(() => {
     let activeStream = null;
+    let disposed = false;
     let audioCtx = null;
 
     const startMediaStream = async () => {
       try {
-        const userStream = await navigator.mediaDevices.getUserMedia({
+        const userStream = mediaStream || await navigator.mediaDevices.getUserMedia({
           video: { width: 320, height: 240, frameRate: 15 },
           audio: true,
         });
 
+        if (disposed) { if (!mediaStream) userStream.getTracks().forEach(track => track.stop()); return; }
         activeStream = userStream;
         setStream(userStream);
         setHasPermissions(true);
@@ -57,8 +64,8 @@ const WebcamProctor = ({ examId, onViolation }) => {
           const now = Date.now();
           if (normalized > 70 && now - lastViolationTime.current.audio > 5000) {
             lastViolationTime.current.audio = now;
-            if (onViolation) {
-              onViolation('audio_spike', `Noise level spiked to ${normalized}% — speaking detected`);
+            if (onViolationRef.current) {
+              onViolationRef.current('audio_spike', `Noise level spiked to ${normalized}% — speaking detected`);
             }
           }
 
@@ -66,10 +73,11 @@ const WebcamProctor = ({ examId, onViolation }) => {
         };
         checkAudio();
       } catch (err) {
+        if (disposed) return;
         console.error('Media stream access failed:', err);
         setHasPermissions(false);
-        if (onViolation) {
-          onViolation('proctor_denied', 'Webcam/Microphone permission was denied by candidate');
+        if (onViolationRef.current) {
+          onViolationRef.current('proctor_denied', 'Webcam/Microphone permission was denied by candidate');
         }
       }
     };
@@ -86,18 +94,18 @@ const WebcamProctor = ({ examId, onViolation }) => {
         const now = Date.now();
         if (analysis.faceCount === 0 && now - lastViolationTime.current.noFace > 6000) {
           lastViolationTime.current.noFace = now;
-          if (onViolation) {
-            onViolation('no_face_detected', 'No face detected in webcam frame for > 3 seconds');
+          if (onViolationRef.current) {
+            onViolationRef.current('no_face_detected', 'No face detected in webcam frame for > 3 seconds');
           }
         } else if (analysis.faceCount > 1 && now - lastViolationTime.current.multiFace > 6000) {
           lastViolationTime.current.multiFace = now;
-          if (onViolation) {
-            onViolation('multiple_faces_detected', 'Multiple faces detected in candidate webcam feed');
+          if (onViolationRef.current) {
+            onViolationRef.current('multiple_faces_detected', 'Multiple faces detected in candidate webcam feed');
           }
         } else if (analysis.gazeOrientation !== 'center' && now - lastViolationTime.current.gaze > 8000) {
           lastViolationTime.current.gaze = now;
-          if (onViolation) {
-            onViolation('gaze_deviation', `Gaze deviation detected: candidate ${analysis.gazeOrientation.replace('_', ' ')}`);
+          if (onViolationRef.current) {
+            onViolationRef.current('gaze_deviation', `Gaze deviation detected: candidate ${analysis.gazeOrientation.replace('_', ' ')}`);
           }
         }
       }
@@ -105,18 +113,19 @@ const WebcamProctor = ({ examId, onViolation }) => {
 
     // Cleanup tracks and intervals on unmount
     return () => {
+      disposed = true;
       clearInterval(aiInterval);
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      if (activeStream) {
+      if (activeStream && !mediaStream) {
         activeStream.getTracks().forEach((track) => track.stop());
       }
       if (audioCtx && audioCtx.state !== 'closed') {
         audioCtx.close();
       }
     };
-  }, [examId, onViolation]);
+  }, [mediaStream]);
 
   return (
     <div
@@ -135,7 +144,7 @@ const WebcamProctor = ({ examId, onViolation }) => {
       <div className="position-relative bg-black" style={{ height: 135 }}>
         {hasPermissions ? (
           <video
-            ref={videoRef}
+            ref={node => { videoRef.current = node; if (node) node.srcObject = stream; }}
             autoPlay
             playsInline
             muted

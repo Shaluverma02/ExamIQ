@@ -2,7 +2,8 @@ import axios from 'axios';
 
 export const SESSION_EXPIRED_EVENT = 'examiq:session-expired';
 
-const publicAuthRequest = (url = '') => /^\/auth\/(login|register|forgot-password|reset-password|magic-login|verify-phone|resend)(\/|\?|$)/.test(url);
+const publicAuthRequest = (url = '') => /^\/auth\/(login|register|forgot-password|reset-password|magic-login|verify-phone|resend|phone\/(request-code|verify))(\/|\?|$)/.test(url);
+const getStoredToken = () => sessionStorage.getItem('token') || localStorage.getItem('token');
 
 export const getApiErrorMessage = (error, fallback = 'The request could not be completed. Please try again.') => {
   const serverMessage = error?.response?.data?.message;
@@ -25,7 +26,7 @@ const API = axios.create({
 // Interceptor to attach Authorization Token
 API.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = getStoredToken();
     if (token && !publicAuthRequest(config.url)) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -48,12 +49,13 @@ API.interceptors.request.use(
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    const token = localStorage.getItem('token');
+    const token = getStoredToken();
     // A late response from a previous session must not sign out a newly logged-in user.
     if (error.response?.status === 401 && token &&
         error.config?.headers?.Authorization === `Bearer ${token}` &&
         !publicAuthRequest(error.config?.url)) {
       localStorage.removeItem('token');
+      sessionStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('activeCollege');
       window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
@@ -88,6 +90,15 @@ export const examAssignmentAPI = {
 };
 
 export const questionAPI = {
+  getAll: async () => {
+    const first = await API.get('/questions', { params: { page: 1, limit: 100 } });
+    const questions = [...(first.data.questions || [])];
+    for (let page = 2; page <= (first.data.totalPages || 1); page++) {
+      const response = await API.get('/questions', { params: { page, limit: 100 } });
+      questions.push(...(response.data.questions || []));
+    }
+    return { ...first, data: { ...first.data, questions } };
+  },
   importJson: (formData) => API.post('/questions/import-json', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),

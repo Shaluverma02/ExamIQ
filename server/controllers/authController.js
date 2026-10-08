@@ -156,13 +156,16 @@ const ensureDemoAccount = async (email, password) => {
 const ensureExistingUserMemberships = async (user) => {
   let memberships = await getUserMemberships(user);
   if (memberships.length > 0) return memberships;
+  if (await Membership.exists({ userId: user._id })) return [];
 
   const studentProfile = await Student.findOne({ userId: user._id });
   const facultyProfile = await Faculty.findOne({ userId: user._id });
-  const collegeDoc = await getOrCreateCollege({
+  const mappedCollegeId = studentProfile?.collegeId || facultyProfile?.collegeId || user.activeCollegeId || user.collegeIds?.[0];
+  const collegeDoc = mappedCollegeId ? await College.findById(mappedCollegeId) : await getOrCreateCollege({
     collegeName: studentProfile?.college || process.env.DEFAULT_COLLEGE_NAME || 'Primary Institution',
     createdBy: user._id,
   });
+  if (!collegeDoc || !collegeDoc.isActive) return [];
 
   memberships = await ensureUserCollegeMembership({
     user,
@@ -480,7 +483,7 @@ exports.updateProfile = async (req, res, next) => {
         { userId: user._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) },
         {
           collegeId: req.collegeId || undefined,
-          college,
+          college: req.college?.name || '',
           course,
           branch,
           semester,

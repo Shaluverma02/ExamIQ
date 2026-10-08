@@ -12,6 +12,7 @@ const MagicLogin = lazy(() => import('./pages/auth/MagicLogin'));
 const VerifyCertificate = lazy(() => import('./pages/VerifyCertificate'));
 
 const MainLayout = lazy(() => import('./layouts/MainLayout'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard'));
 const ExamList = lazy(() => import('./pages/student/ExamList'));
 const LiveExam = lazy(() => import('./pages/student/LiveExam'));
@@ -125,6 +126,7 @@ const facultyRoutes = [
   ['/faculty/dashboard', <FacultyDashboard />],
   ['/faculty/exams', <FacultyExamList />],
   ['/faculty/exams/create', <ExamBuilder />],
+  ['/faculty/exams/edit/:id', <ExamBuilder />],
   ['/faculty/questions', <QuestionBank defaultTab="mcq" />],
   ['/faculty/coding', <QuestionBank defaultTab="coding" />],
   ['/faculty/proctor', <LiveProctorDashboard />],
@@ -145,6 +147,9 @@ const sharedFacultyAdminRoutes = [
 ];
 
 const adminRoutes = [
+  ['/admin/exams', <FacultyExamList />],
+  ['/admin/exams/create', <ExamBuilder />],
+  ['/admin/exams/edit/:id', <ExamBuilder />],
   ['/admin/dashboard', <AdminDashboard />],
   ['/admin/colleges', <CollegeManagement />],
   ['/admin/users', <UserManagement />],
@@ -188,6 +193,7 @@ const App = () => (
       <Route path="/student/exam/:id/attempt" element={protectedRoute(<LiveExam />, ['student'])} />
 
       <Route element={protectedRoute(<MainLayout />, ['student', 'faculty', 'admin', 'college_admin', 'recruiter'])}>
+        <Route path="/profile" element={protectedRoute(<ProfilePage />, ['student', 'faculty', 'admin', 'college_admin', 'recruiter'])} />
         {studentRoutes.map(([path, element]) => (
           <Route key={path} path={path} element={protectedRoute(element, ['student'])} />
         ))}
