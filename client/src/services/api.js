@@ -28,8 +28,15 @@ export const getApiErrorMessage = (error, fallback = 'The request could not be c
   return fallback;
 };
 
+const getBaseURL = () => {
+  const envUrl = (import.meta.env.VITE_API_URL || '').trim();
+  if (!envUrl) return '/api';
+  const cleanUrl = envUrl.replace(/\/+$/, '');
+  return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
+};
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: getBaseURL(),
   timeout: 120000,
   headers: {
     'Content-Type': 'application/json',
