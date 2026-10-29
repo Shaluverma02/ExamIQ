@@ -15,6 +15,7 @@ const {
   importQuestionsJson,
 } = require('../controllers/questionController');
 const { protect, authorize } = require('../middleware/auth');
+const validateQuestion = require('../middleware/validateQuestion');
 
 router.use(protect);
 
@@ -27,11 +28,11 @@ router.post(
 
 router.route('/')
   .get(authorize('faculty', 'admin'), getQuestions)
-  .post(authorize('faculty', 'admin'), createQuestion);
+  .post(authorize('faculty', 'admin'), validateQuestion(true), createQuestion);
 
 router.route('/:id')
-  .get(getQuestionById)
-  .put(authorize('faculty', 'admin'), updateQuestion)
+  .get(authorize('faculty', 'admin'), getQuestionById)
+  .put(authorize('faculty', 'admin'), validateQuestion(), updateQuestion)
   .delete(authorize('faculty', 'admin'), deleteQuestion);
 
 module.exports = router;

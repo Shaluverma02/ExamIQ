@@ -13,14 +13,6 @@ const isPhoneVerificationRequired = () => process.env.REQUIRE_PHONE_VERIFICATION
 
 const buildClientUrl = (path) => `${process.env.CLIENT_URL || 'http://localhost:5173'}${path}`;
 
-const DEMO_ACCOUNTS = {
-  admin: { email: 'admin@examiq.com', password: 'Admin@123', role: 'admin', name: 'Demo Super Admin' },
-  college_admin: { email: 'collegeadmin@examiq.com', password: 'College@123', role: 'college_admin', name: 'Demo College Admin' },
-  faculty: { email: 'faculty@examiq.com', password: 'Faculty@123', role: 'faculty', name: 'Demo Faculty' },
-  student: { email: 'student@examiq.com', password: 'Student@123', role: 'student', name: 'Demo Student' },
-  recruiter: { email: 'recruiter@examiq.com', password: 'Recruiter@123', role: 'recruiter', name: 'Demo Recruiter' },
-};
-
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const makeCollegeCode = (name) => String(name || 'COLLEGE')
@@ -88,71 +80,6 @@ const getUserMemberships = async (user) => (
   Membership.find({ userId: user._id, status: 'active' }).populate('collegeId', 'name code logoUrl isActive')
 );
 
-const ensureDemoAccount = async (email, password) => {
-  const normalizedEmail = String(email || '').trim().toLowerCase();
-  const match = Object.values(DEMO_ACCOUNTS).find((demo) => demo.email === normalizedEmail && demo.password === password);
-
-  if (!match) return null;
-
-  let user = await User.findOne({ email: normalizedEmail }).select('+password');
-  if (!user) {
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(match.password, salt);
-
-    user = await User.create({
-      name: match.name,
-      email: normalizedEmail,
-      password: hashedPassword,
-      role: match.role,
-      isEmailVerified: true,
-      isPhoneVerified: true,
-      isActive: true,
-    });
-
-    const collegeDoc = await getOrCreateCollege({
-      collegeName: 'Demo Institute',
-      createdBy: user._id,
-    });
-
-    await ensureUserCollegeMembership({
-      user,
-      collegeDoc,
-      membershipRole: match.role,
-      createdBy: user._id,
-    });
-
-    if (match.role === 'student') {
-      await Student.findOneAndUpdate(
-        { userId: user._id },
-        {
-          userId: user._id,
-          collegeId: collegeDoc._id,
-          college: collegeDoc.name,
-          course: 'Demo Course',
-          branch: 'General',
-          semester: '1',
-          rollNumber: 'DEMO-001',
-        },
-        { upsert: true, new: true }
-      );
-    } else if (match.role === 'faculty') {
-      await Faculty.findOneAndUpdate(
-        { userId: user._id },
-        {
-          userId: user._id,
-          collegeId: collegeDoc._id,
-          department: 'Demo Department',
-          designation: 'Instructor',
-          employeeId: 'FAC-DEMO-001',
-        },
-        { upsert: true, new: true }
-      );
-    }
-  }
-
-  return user;
-};
-
 const ensureExistingUserMemberships = async (user) => {
   let memberships = await getUserMemberships(user);
   if (memberships.length > 0) return memberships;
@@ -193,13 +120,13 @@ const sendTokenResponse = async (user, statusCode, res, message = 'Success', mem
   const memberships = membershipsArg || await getUserMemberships(user);
   const activeCollegeId = user.activeCollegeId || memberships[0]?.collegeId?._id || null;
   const token = jwt.sign(
-    { id: user._id, role: user.role, activeCollegeId },
+    { id: user._id, role: user.role, activeCollegeId, tokenVersion: user.tokenVersion || 0 },
     process.env.JWT_SECRET || 'super_secret_jwt_key_exam_platform_2026_secure',
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 
   const userObj = user.toObject();
-  delete userObj.password;
+  for (const field of ['password', 'resetPasswordToken', 'resetPasswordExpire', 'magicToken', 'magicTokenExpire', 'verificationToken', 'phoneVerificationCodeHash', 'phoneVerificationExpire']) delete userObj[field];
 
   res.status(statusCode).json({
     success: true,
@@ -254,6 +181,16 @@ exports.register = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Mobile number is required for registration' });
     }
 
+    const collegeDoc = await College.findById(collegeId);
+    if (!collegeDoc || collegeDoc.isDeleted || !collegeDoc.isActive || !collegeDoc.settings?.allowSelfRegistration || collegeDoc.settings?.requireInviteCode) {
+      return res.status(400).json({ success: false, message: 'This college is not available for self registration' });
+    }
+    let targetGroup = null;
+    if (groupId) {
+      const Group = require('../models/Group');
+      targetGroup = await Group.findOne({ _id: groupId, collegeId: collegeDoc._id });
+      if (!targetGroup) return res.status(400).json({ success: false, message: 'Group must belong to the selected college' });
+    }
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -273,13 +210,6 @@ exports.register = async (req, res, next) => {
       phone: phone || '',
       isPhoneVerified: !isPhoneVerificationRequired(),
       isEmailVerified: true,
-    });
-
-    const collegeDoc = await getOrCreateCollege({
-      collegeId,
-      collegeName: collegeName || college,
-      collegeCode,
-      createdBy: user._id,
     });
 
     const memberships = await ensureUserCollegeMembership({
@@ -302,18 +232,9 @@ exports.register = async (req, res, next) => {
     if (role === 'student') {
       let assignedGroupId = groupId || null;
 
-      // If groupId is provided, verify group exists
-      if (assignedGroupId) {
-        const Group = require('../models/Group');
-        const targetGroup = await Group.findOne({ _id: assignedGroupId, collegeId: collegeDoc._id });
-        if (targetGroup) {
-          if (!targetGroup.students.includes(user._id)) {
-            targetGroup.students.push(user._id);
-            await targetGroup.save();
-          }
-        } else {
-          assignedGroupId = null;
-        }
+      if (targetGroup && !targetGroup.students.includes(user._id)) {
+        targetGroup.students.push(user._id);
+        await targetGroup.save();
       }
 
       await Student.create({
@@ -337,7 +258,7 @@ exports.register = async (req, res, next) => {
     }
     if (isPhoneVerificationRequired()) {
       const userObj = user.toObject();
-      delete userObj.password;
+      for (const field of ['password', 'resetPasswordToken', 'resetPasswordExpire', 'magicToken', 'magicTokenExpire', 'verificationToken', 'phoneVerificationCodeHash', 'phoneVerificationExpire']) delete userObj[field];
       return res.status(201).json({
         success: true,
         message: 'Registration successful. Please verify your mobile number before logging in.',
@@ -371,11 +292,7 @@ exports.login = async (req, res, next) => {
     }
 
     const user = await User.findOne({ email }).select('+password');
-    let resolvedUser = user;
-
-    if (!resolvedUser) {
-      resolvedUser = await ensureDemoAccount(email, password);
-    }
+    const resolvedUser = user;
 
     if (!resolvedUser) {
       return res.status(401).json({
@@ -411,6 +328,31 @@ exports.login = async (req, res, next) => {
     await sendTokenResponse(resolvedUser, 200, res, 'Login successful', memberships);
   } catch (err) {
     next(err);
+  }
+};
+
+// Change only the authenticated user's password after verifying the old password.
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user._id).select('+password');
+    if (!user || !user.isActive) return res.status(403).json({ success: false, message: 'Your account is unavailable' });
+    if (!await bcrypt.compare(currentPassword, user.password)) return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+    if (await bcrypt.compare(newPassword, user.password)) return res.status(400).json({ success: false, message: 'New password must be different from your current password' });
+
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: user._id, password: user.password },
+      {
+        $set: { password: await bcrypt.hash(newPassword, 10) },
+        $inc: { tokenVersion: 1 },
+        $unset: { resetPasswordToken: '', resetPasswordExpire: '', magicToken: '', magicTokenExpire: '' },
+      },
+      { new: true, runValidators: true }
+    );
+    if (!updatedUser) return res.status(409).json({ success: false, message: 'Your password changed during this request. Please sign in again.' });
+    await sendTokenResponse(updatedUser, 200, res, 'Password changed successfully. Other sessions have been signed out.', req.memberships);
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -466,16 +408,17 @@ exports.updateProfile = async (req, res, next) => {
       designation,
     } = req.body;
 
+    const phoneChanged = phone !== undefined && phone !== req.user.phone;
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { name, phone },
+      { name, phone, ...(phoneChanged && isPhoneVerificationRequired() ? { isPhoneVerified: false } : {}) },
       { new: true, runValidators: true }
     );
 
     let updatedProfile = null;
 
     if (user.role === 'student') {
-      const parsedSkills = Array.isArray(skills)
+      const parsedSkills = skills === undefined ? undefined : Array.isArray(skills)
         ? skills
         : (skills || '').split(',').map((s) => s.trim()).filter(Boolean);
 
@@ -490,14 +433,14 @@ exports.updateProfile = async (req, res, next) => {
           rollNumber,
           cgpa,
           skills: parsedSkills,
-          projects: projects || [],
-          experience: experience || [],
+          projects,
+          experience,
           resumeUrl,
           linkedinUrl,
           githubUrl,
           portfolioUrl,
         },
-        { upsert: true, new: true }
+        { upsert: true, new: true, runValidators: true }
       ).populate('groupId', 'name code college course department semester section');
     } else if (user.role === 'faculty') {
       updatedProfile = await Faculty.findOneAndUpdate(
@@ -580,7 +523,7 @@ exports.resetPassword = async (req, res, next) => {
     user.resetPasswordExpire = undefined;
     await user.save();
 
-    await sendTokenResponse(user, 200, res, 'Password reset successful');
+    res.status(200).json({ success: true, message: 'Password reset successful. Please sign in with your new password.' });
   } catch (err) {
     next(err);
   }
@@ -759,6 +702,9 @@ exports.magicLogin = async (req, res, next) => {
     if (!user) {
       return res.status(400).json({ success: false, message: 'Invalid or expired magic login link' });
     }
+
+    if (!user.isActive) return res.status(403).json({ success: false, message: 'Your account has been deactivated by administrator' });
+    if (isPhoneVerificationRequired() && user.phone && !user.isPhoneVerified) return res.status(403).json({ success: false, message: 'Please verify your mobile number before logging in' });
 
     user.magicToken = undefined;
     user.magicTokenExpire = undefined;

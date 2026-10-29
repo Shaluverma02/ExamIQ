@@ -4,6 +4,9 @@ const errorHandler = (err, req, res, next) => {
 
   console.error('API Error:', err);
 
+  if (err.type === 'entity.parse.failed') return res.status(400).json({ success: false, message: 'Invalid JSON request body', error: 'INVALID_JSON' });
+  if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ success: false, message: 'File must be no larger than 5 MB', error: 'FILE_TOO_LARGE' });
+
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
     const message = `Resource not found with id of ${err.value}`;
@@ -22,7 +25,7 @@ const errorHandler = (err, req, res, next) => {
     return res.status(400).json({ success: false, message, error: 'VALIDATION_ERROR' });
   }
 
-  res.status(error.statusCode || 500).json({
+  res.status(error.statusCode || err.status || 500).json({
     success: false,
     message: error.message || 'Server Error',
     error: error.code || 'SERVER_ERROR',

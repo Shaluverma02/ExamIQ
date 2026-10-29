@@ -20,7 +20,8 @@ import {
 } from 'lucide-react';
 
 const GroupManagement = () => {
-  const { activeCollege } = useContext(AuthContext);
+  const { activeCollege, role } = useContext(AuthContext);
+  const groupBase = role === 'college_admin' ? '/college-admin/groups' : role === 'faculty' ? '/faculty/groups' : '/admin/groups';
   const [groups, setGroups] = useState([]);
   const [courses, setCourses] = useState([]);
   const [allStudents, setAllStudents] = useState([]);
@@ -56,7 +57,7 @@ const GroupManagement = () => {
 
   useEffect(() => {
     fetchInitialData();
-  }, [collegeFilter, courseFilter, semesterFilter, statusFilter]);
+  }, [collegeFilter, courseFilter, semesterFilter, statusFilter, activeCollege?._id]);
 
   const fetchInitialData = async () => {
     try {
@@ -306,7 +307,7 @@ const GroupManagement = () => {
         <div className="row g-4">
           {filteredGroups.map((group) => (
             <div key={group._id} className="col-12 col-md-6 col-lg-4">
-              <div className="card p-4 rounded-3 h-100 d-flex flex-column justify-content-between border">
+              <div className="card ca-group-card p-4 rounded-3 h-100 d-flex flex-column justify-content-between border">
                 <div>
                   <div className="d-flex justify-content-between align-items-start mb-2">
                     <span className="badge bg-primary font-monospace px-3 py-1 fw-bold">{group.code}</span>
@@ -364,7 +365,7 @@ const GroupManagement = () => {
 
                 <div className="d-flex gap-2">
                   <Link
-                    to={`/college-admin/groups/${group._id}`}
+                    to={`${groupBase}/${group._id}`}
                     className="btn btn-outline-info btn-sm w-50 fw-bold rounded-pill d-flex align-items-center justify-content-center gap-1"
                   >
                     <Eye size={14} /> Details
@@ -574,9 +575,11 @@ const GroupManagement = () => {
                             <td>
                               <input
                                 type="checkbox"
-                                className="form-check-input bg-secondary border-0"
+                                className="form-check-input roster-student-checkbox"
+                                aria-label={`Add ${student.name} to the group roster`}
                                 checked={isSelected}
-                                onChange={() => {}}
+                                onClick={(event) => event.stopPropagation()}
+                                onChange={() => handleToggleStudentSelection(student._id)}
                               />
                             </td>
                             <td className="fw-bold text-body">{student.name}</td>
@@ -611,7 +614,6 @@ const GroupManagement = () => {
 };
 
 export default GroupManagement;
-
 
 
 

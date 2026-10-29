@@ -1,5 +1,5 @@
 ﻿const mongoose = require('mongoose');
-require('dotenv').config({ path: '../.env' });
+require('../config/env');
 
 const College = require('../models/College');
 const Membership = require('../models/Membership');

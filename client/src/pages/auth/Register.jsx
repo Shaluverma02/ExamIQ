@@ -1,13 +1,13 @@
-﻿import React, { useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, UserRound, Mail, Phone, Lock } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../../context/AuthContext';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import AuthLayout from '../../components/common/AuthLayout';
 import DynamicFormRenderer from '../../components/DynamicFormRenderer';
-import API from '../../services/api';
+import API, { getApiErrorMessage } from '../../services/api';
 
 const CollegeField = ({ formData, setFormData, publicColleges, error }) => (
   <div className="mb-3">
@@ -61,6 +61,8 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [availableGroups, setAvailableGroups] = useState([]);
   const [publicColleges, setPublicColleges] = useState([]);
+  const [publicCollegesLoading, setPublicCollegesLoading] = useState(true);
+  const [publicCollegesError, setPublicCollegesError] = useState('');
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -85,17 +87,23 @@ const Register = () => {
     fetchPublicGroups(formData.college, formData.collegeId);
   }, [formData.college, formData.collegeId]);
 
-  useEffect(() => {
-    const fetchPublicColleges = async () => {
-      try {
-        const res = await API.get('/colleges/public');
-        setPublicColleges(res.data?.colleges || []);
-      } catch (err) {
-        setPublicColleges([]);
-      }
-    };
-    fetchPublicColleges();
+  const fetchPublicColleges = useCallback(async () => {
+    setPublicCollegesLoading(true);
+    setPublicCollegesError('');
+    try {
+      const res = await API.get('/colleges/public');
+      setPublicColleges(res.data?.colleges || []);
+    } catch (err) {
+      setPublicColleges([]);
+      setPublicCollegesError(getApiErrorMessage(err));
+    } finally {
+      setPublicCollegesLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchPublicColleges();
+  }, [fetchPublicColleges]);
 
   const fetchPublicGroups = async (collegeName, collegeId) => {
     try {
@@ -219,14 +227,53 @@ const Register = () => {
     && (!formData.semester || group.semester === formData.semester)
   ));
 
+  if (publicCollegesLoading) {
+    return (
+      <AuthLayout mode="register" title="Checking registration." description="Please wait while we check whether student registration is available." maxWidth={560} eyebrow="Get started with ExamiQ">
+        <div className="text-center py-4" role="status">
+          <span className="spinner-border spinner-border-sm text-primary me-2" />
+          Checking registration availability...
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  if (publicCollegesError) {
+    return (
+      <AuthLayout mode="register" title="Registration unavailable." description="We could not check registration availability right now." maxWidth={560} eyebrow="Get started with ExamiQ">
+        <div className="alert alert-danger d-flex align-items-center gap-2" role="alert">
+          <AlertCircle size={18} />
+          <span>{publicCollegesError}</span>
+        </div>
+        <Button type="button" variant="outline-secondary" className="w-100" onClick={fetchPublicColleges}>
+          Try again
+        </Button>
+      </AuthLayout>
+    );
+  }
+
+  if (publicColleges.length === 0) {
+    return (
+      <AuthLayout mode="register" title="Registration is closed." description="Student registration is currently disabled by your institution administrator." maxWidth={560} eyebrow="Get started with ExamiQ">
+        <div className="alert alert-info" role="status">
+          No institutions are currently accepting student registrations. Please contact your administrator for access.
+        </div>
+        <p className="text-center mt-4 mb-0 small text-secondary">
+          Already have an account? <Link to="/login" className="text-primary text-decoration-none fw-semibold">Sign in</Link>
+        </p>
+      </AuthLayout>
+    );
+  }
+
   return (
-    <AuthLayout title="Create your account" description="Your learning workspace starts here. Let's get you connected to your institution." maxWidth={560} eyebrow="Get started with ExamiQ">
+    <AuthLayout mode="register" title="Start your next chapter." description="Your learning workspace starts here. Let's get you connected to your institution." maxWidth={560} eyebrow="Get started with ExamiQ">
           <StepIndicator step={step} />
 
           {step === 1 && (
             <form onSubmit={handleNextStep1} className="auth-form-stack">
               <Input
                 label="Full Name"
+                icon={UserRound}
                 autoComplete="name"
                 required
                 placeholder="Your full name"
@@ -237,6 +284,7 @@ const Register = () => {
               />
               <Input
                 label="Email Address"
+                icon={Mail}
                 autoComplete="email"
                 type="email"
                 required
@@ -247,6 +295,7 @@ const Register = () => {
               />
               <Input
                 label="Mobile Number"
+                icon={Phone}
                 autoComplete="tel"
                 type="tel"
                 required
@@ -258,6 +307,7 @@ const Register = () => {
                 <div className="col-12 col-sm-6">
                   <Input
                     label="Password"
+                    icon={Lock}
                     type="password"
                     autoComplete="new-password"
                     required
@@ -270,6 +320,7 @@ const Register = () => {
                 <div className="col-12 col-sm-6">
                   <Input
                     label="Confirm Password"
+                    icon={Lock}
                     type="password"
                     autoComplete="new-password"
                     required

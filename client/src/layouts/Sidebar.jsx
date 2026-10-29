@@ -59,8 +59,8 @@ const facultySections = [
       { label: 'Create Exam', path: '/faculty/exams/create', icon: PlusCircle, end: true },
       { label: 'Manage Exams', path: '/faculty/exams', icon: BookOpen, end: true },
       { label: 'Assign Exam', path: '/faculty/exam-assignments', icon: ClipboardList, end: true },
-      { label: 'Groups & Batches', path: '/faculty/groups', icon: Layers, end: true },
       { label: 'Results', path: '/faculty/results', icon: FileCheck, end: true },
+      { label: 'Groups & Batches', path: '/faculty/groups', icon: Layers, end: true },
     ],
   },
   {
@@ -78,20 +78,14 @@ const facultySections = [
 ];
 
 const adminSections = [
-  { title: 'Assessments', items: [
-    { label: 'Manage Exams', path: '/admin/exams', icon: BookOpen },
-    { label: 'Create Exam', path: '/admin/exams/create', icon: PlusCircle },
-  ] },
   {
     title: 'Administration',
     items: [
       { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
       { label: 'Colleges', path: '/admin/colleges', icon: Building },
-      { label: 'Users & Forms', path: '/admin/users', icon: Users },
-      { label: 'Groups & Batches', path: '/admin/groups', icon: Layers },
+      { label: 'College Administrators', path: '/admin/college-admins', icon: Users },
       { label: 'Audit Logs', path: '/admin/audit-logs', icon: ShieldCheck },
       { label: 'System Analytics', path: '/admin/analytics', icon: BarChart3 },
-      { label: 'Live Monitoring', path: '/faculty/live-monitor', icon: Camera },
     ],
   },
 ];
@@ -105,7 +99,8 @@ const collegeAdminSections = [
       { label: 'Groups & Batches', path: '/college-admin/groups', icon: Layers },
       { label: 'Courses & Categories', path: '/college-admin/categories', icon: Settings },
       { label: 'Analytics', path: '/college-admin/analytics', icon: BarChart3 },
-      { label: 'Live Monitoring', path: '/faculty/live-monitor', icon: Camera },
+      { label: 'Institution Settings', path: '/college-admin/settings', icon: Building2 },
+      { label: 'College Activity', path: '/college-admin/audit-logs', icon: ShieldCheck },
     ],
   },
 ];

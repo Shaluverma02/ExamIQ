@@ -1,4 +1,4 @@
-﻿const jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const College = require('../models/College');
 const Membership = require('../models/Membership');
@@ -88,6 +88,8 @@ exports.protect = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'User no longer exists.' });
     }
 
+    if ((decoded.tokenVersion || 0) !== (user.tokenVersion || 0)) return res.status(401).json({ success: false, message: 'Password changed. Please sign in again.' });
+
     if (!user.isActive) {
       return res.status(403).json({
         success: false,
@@ -99,7 +101,7 @@ exports.protect = async (req, res, next) => {
     const activeMemberships = memberships.filter(item => item.collegeId?.isActive);
     const requestedCollegeId = req.headers['x-college-id'] || user.activeCollegeId || decoded.activeCollegeId;
     const selectedMembership = activeMemberships.find(item => item.collegeId?._id?.toString() === requestedCollegeId?.toString()) || (!req.headers['x-college-id'] ? activeMemberships[0] : null);
-    const isSystemManagement = user.role === 'admin' && (req.baseUrl === '/api/colleges' || (req.baseUrl === '/api/admin' && req.path === '/college-admins') || (req.baseUrl === '/api/auth' && req.path === '/me'));
+    const isSystemManagement = user.role === 'admin' && (req.baseUrl === '/api/colleges' || (req.baseUrl === '/api/admin' && (req.path.startsWith('/college-admins') || req.method === 'GET' && ['/analytics', '/users', '/audit-logs'].includes(req.path))) || (req.baseUrl === '/api/auth' && ['/me', '/profile', '/change-password'].includes(req.path)));
     if (!selectedMembership && !isSystemManagement) return res.status(403).json({ success: false, message: 'No active membership for the selected college. Contact your college administrator.' });
 
     req.user = user;

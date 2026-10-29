@@ -377,13 +377,13 @@ const QuestionBank = ({ defaultTab = 'mcq' }) => {
   });
 
   return (
-    <div>
+    <div className="workspace-page faculty-workspace">
       {/* Header Bar */}
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-          <h3 className="fw-bold text-body m-0 d-flex align-items-center gap-2">
+          <h1 className="page-title fw-bold text-body m-0 d-flex align-items-center gap-2">
             <BookOpen size={28} className="text-primary" /> Question Bank
-          </h3>
+          </h1>
           <p className="text-muted small m-0">Manage and organize your assessment questions</p>
         </div>
 

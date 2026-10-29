@@ -89,3 +89,16 @@ test('Super Admin can manage colleges after deleting the last active workspace',
   await f.api.protect({ headers: { authorization: 'Bearer token' }, baseUrl: '/api/colleges', path: '/' }, response(), () => { proceeded = true; }); assert(proceeded);
   const res = response(); await f.api.protect({ headers: { authorization: 'Bearer token' }, baseUrl: '/api/exams', path: '/' }, res, () => { throw Error('College data needs a context'); }); assert.equal(res.code, 403);
 });
+
+test('Super Admin overview works without an active college, while faculty still needs membership', async () => {
+  for (const route of ['/analytics', '/users', '/audit-logs']) {
+    const admin = authFixture([], { suspended: true }); admin.user.role = 'admin';
+    const req = { method: 'GET', headers: { authorization: 'Bearer token', 'x-college-id': 'deleted-college' }, baseUrl: '/api/admin', path: route };
+    let allowed = false;
+    await admin.api.protect(req, response(), () => { allowed = true; });
+    assert(allowed); assert.equal(req.collegeId, null);
+    const faculty = authFixture([], { suspended: true }); const res = response();
+    await faculty.api.protect(req, res, () => { throw Error('Faculty must have an active membership'); });
+    assert.equal(res.code, 403);
+  }
+});

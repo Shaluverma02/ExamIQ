@@ -205,14 +205,14 @@ const FacultyAssessmentResults = () => {
   });
 
   return (
-    <div className="container-fluid py-4 min-vh-100 bg-body-tertiary text-body">
+    <div className="workspace-page faculty-workspace text-body">
       {/* Top Header & Assessment Selection Bar */}
       <div className="card p-4 rounded-3 border mb-4 ">
         <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
           <div>
-            <h3 className="fw-bold text-body m-0 d-flex align-items-center gap-2">
-              <Award className="text-primary" size={28} /> Faculty Assessment Results Manager
-            </h3>
+            <h1 className="page-title fw-bold text-body m-0 d-flex align-items-center gap-2">
+              <Award className="text-primary" size={28} /> Assessment results
+            </h1>
             <p className="text-secondary small m-0 mt-1">
               Select an assessment to view student multi-attempt performances, best vs latest scores, and manage attempt records.
             </p>

@@ -13,6 +13,7 @@ import Button from '../../components/common/Button';
 import ThemeToggle from '../../components/common/ThemeToggle';
 import { toast } from 'react-toastify';
 import '../../styles/student.css';
+import '../../styles/live-exam.css';
 import {
   Shield,
   ChevronLeft,
@@ -611,8 +612,12 @@ const LiveExam = () => {
     return sum;
   }, { total: 0, attempted: 0, skipped: 0, remaining: 0, review: 0 });
 
+  const currentAnswer = attempt?.answers?.find(answer => String(answer.questionId) === String(currentQ?._id));
+  const nextSection = sections[sections.findIndex(section => section.id === currentSection?.id) + 1];
+  const atLastItem = currentPosition === (currentSection?.items.length || 0) - 1;
+
   return (
-    <div className="exam-workspace student-live-exam min-vh-100 position-relative d-flex flex-column text-body">
+    <div className="exam-workspace exam-focus student-live-exam min-vh-100 position-relative d-flex flex-column text-body">
       <AntiCheatModal examId={examId} onMaxViolations={handleFinalSubmit} />
 
 
@@ -649,20 +654,16 @@ const LiveExam = () => {
       )}
 
       {/* Exam Top Header Bar */}
-      <div className="student-exam-topbar px-4 py-2 bg-dark border-bottom border d-flex align-items-center justify-content-between shadow-sm sticky-top">
-        <div className="d-flex align-items-center gap-3">
-          <span className="badge bg-primary fs-6 px-3 py-2 rounded-pill font-monospace shadow-sm">
-            {exam.title}
-          </span>
-          <span className="badge bg-success bg-opacity-10 text-success border-success border-opacity-25 px-3 py-1.5 rounded-pill d-none d-md-inline-flex align-items-center gap-1.5 small">
-            <Shield size={14} /> AI Anti-Cheat Active
-          </span>
+      <header className="student-exam-topbar exam-focus-header">
+        <div className="exam-heading">
+          <span className="exam-heading-icon"><Shield size={23} aria-hidden="true" /></span>
+          <div className="min-width-0"><span className="exam-eyebrow">ASSESSMENT IN PROGRESS</span><h1>{exam.title}</h1><span className="exam-security"><span /> Proctoring active</span></div>
         </div>
 
-        <div className="d-flex align-items-center gap-3">
-          <div className="small d-flex align-items-center gap-2" role="status" aria-live="polite">
+        <div className="exam-header-controls">
+          <div className="exam-save-status small d-flex align-items-center gap-2" role="status" aria-live="polite">
             {answerSaveState === 'saving' && <><span className="spinner-border spinner-border-sm" aria-hidden="true" />Saving answers…</>}
-            {answerSaveState === 'saved' && <span className="text-success">All answers saved</span>}
+            {answerSaveState === 'saved' && <span className="text-success d-inline-flex align-items-center gap-1"><CheckCircle2 size={15} /> All answers saved</span>}
             {answerSaveState === 'error' && (
               <>
                 <span className="text-danger">Answer save failed</span>
@@ -671,7 +672,7 @@ const LiveExam = () => {
             )}
           </div>
           <details className="exam-proctor-monitor">
-            <summary><Camera size={16}/><span>Camera & mic</span><ChevronDown size={14}/></summary>
+            <summary aria-label="Camera and microphone monitor"><Camera size={16}/><span>Camera & mic</span><ChevronDown size={14}/></summary>
             <div className="exam-proctor-monitor-content">
       <WebcamProctor mediaStream={streamRef.current} examId={examId} onViolation={(type, meta) => {
         try { API.post(`/exams/${examId}/anticheat`, { eventType: type, metadata: meta }); } catch(e) {}
@@ -682,21 +683,21 @@ const LiveExam = () => {
             </div>
           </details>
           <ThemeToggle />
-          <Timer initialSeconds={attempt?.remainingTime > 0 ? attempt.remainingTime : (exam.duration * 60)} onTimeUp={handleFinalSubmit} />
+          <div className="exam-time-remaining"><span>Time remaining</span><Timer initialSeconds={attempt?.remainingTime > 0 ? attempt.remainingTime : (exam.duration * 60)} onTimeUp={handleFinalSubmit} /></div>
           <Button variant="danger" size="sm" onClick={() => setShowConfirmDialog(true)} disabled={isSubmittingExam || isCodingBusy} className="fw-bold px-3">
             Submit Exam
           </Button>
         </div>
-      </div>
+      </header>
 
       {/* Main Examination Workspace */}
       <div className="exam-workspace-layout flex-grow-1 p-3 d-flex flex-column overflow-hidden">
         {/* Left / Center Section Panel */}
-        <div className="flex-grow-1 d-flex flex-column card p-3 rounded-3 border shadow-lg overflow-hidden h-100">
-          <div className="exam-section-toolbar border-bottom pb-3 mb-3 flex-shrink-0">
+        <div className="exam-focus-surface flex-grow-1 d-flex flex-column card p-3 rounded-3 border overflow-hidden h-100">
+          <div className="exam-section-toolbar flex-shrink-0">
             <div className="exam-section-navigation">
               <div className="exam-section-picker">
-                <label htmlFor="live-exam-section" className="small text-muted fw-semibold">Test section</label>
+                <label htmlFor="live-exam-section" className="small text-muted fw-semibold">Test section <span className="exam-section-count">{sections.findIndex(section => section.id === currentSection?.id) + 1} / {sections.length}</span></label>
                 <select id="live-exam-section" className="form-select" value={currentSection?.id || ''} disabled={isCodingBusy || isSubmittingExam || !sections.length} onChange={event => { const section = sections.find(item => item.id === event.target.value); if (section) selectSection(section); }}>
                   {!sections.length && <option value="">No sections</option>}
                   {sections.map(section => <option key={section.id} value={section.id}>{section.label}</option>)}
@@ -713,14 +714,14 @@ const LiveExam = () => {
                   return <button type="button" key={item._id} className={'exam-number-button is-' + status + (isCurrent ? ' is-current' : '')} aria-label={label + ', ' + status} title={label + ' · ' + status} aria-current={isCurrent ? 'step' : undefined} disabled={isCodingBusy || isSubmittingExam} onClick={() => activeTab === 'coding' ? selectCoding(index) : selectMcq(index)}>{position + 1}</button>;
                 })}
               </nav>
-              {activeTab === 'coding' && <button type="button" className="btn btn-outline-secondary btn-sm exam-number-skip" onClick={handleSkip} disabled={isCodingBusy || isSubmittingExam}>Skip / Next <ChevronRight size={16}/></button>}
+              {activeTab === 'coding' && <button type="button" className="btn btn-outline-secondary btn-sm exam-number-skip" onClick={() => atLastItem && nextSection ? selectSection(nextSection) : handleSkip()} disabled={isCodingBusy || isSubmittingExam || (atLastItem && !nextSection)}>{atLastItem && nextSection ? 'Next section' : 'Skip / Next'} <ChevronRight size={16}/></button>}
             </div>
             <div className="exam-inline-progress" aria-label="Attempt record" aria-live="polite">
-              <span><strong>{progress.total}</strong> Total</span>
-              <span className="text-success"><strong>{progress.attempted}</strong> Attempted</span>
-              <span className="text-danger"><strong>{progress.skipped}</strong> Skipped</span>
-              <span><strong>{progress.remaining}</strong> Not visited</span>
-              <span className="text-warning"><strong>{progress.review}</strong> For review</span>
+              <span className="exam-progress-summary"><strong>{progress.attempted} / {progress.total}</strong> attempted</span>
+              <span className="exam-status-key is-attempted"><i aria-hidden="true" /><strong>{progress.attempted}</strong> Answered / submitted</span>
+              <span className="exam-status-key is-skipped"><i aria-hidden="true" /><strong>{progress.skipped}</strong> Skipped</span>
+              <span className="exam-status-key"><i aria-hidden="true" /><strong>{progress.remaining}</strong> Not visited</span>
+              <span className="exam-status-key is-review"><i aria-hidden="true" /><strong>{progress.review}</strong> For review</span>
             </div>
           </div>
 
@@ -730,17 +731,18 @@ const LiveExam = () => {
           {activeTab === 'mcq' && currentQ && (
             <div className="exam-mcq-workspace d-flex flex-column flex-grow-1">
               <div className="exam-mcq-content overflow-auto custom-ide-scrollbar">
-                <div className="d-flex justify-content-between align-items-center mb-3">
+                <div className="exam-question-meta d-flex justify-content-between align-items-center mb-3">
                   <span className="fw-bold text-muted small font-monospace">
                     Question {currentPosition + 1} of {currentSection?.items.length || 0}
                   </span>
                   <span className="badge bg-secondary px-3 py-1 font-monospace">{currentQ.marks} Mark(s)</span>
                 </div>
 
-                <h5 className="fw-bold text-body mb-4 leading-relaxed">{currentQ.questionText}</h5>
+                <h2 id="live-question-title" className="exam-question-title">{currentQ.questionText}</h2>
+                <p className="exam-answer-hint">{currentQ.questionType === 'multiple' ? 'Select all correct answers.' : 'Select one correct answer.'}</p>
 
                 {/* Options List */}
-                <div className="d-flex flex-column gap-2.5 mb-4">
+                <div className="student-exam-options mb-4" role="group" aria-labelledby="live-question-title">
                   {currentQ.options?.map((opt, oIdx) => {
                     const isSelected = selectedOptions.includes(opt.optionText);
                     return (
@@ -748,6 +750,7 @@ const LiveExam = () => {
                         type="button"
                         key={oIdx}
                         onClick={() => handleSelectOption(opt.optionText)}
+                        disabled={isSubmittingExam}
                         role={currentQ.questionType === 'multiple' ? 'checkbox' : 'radio'}
                         aria-checked={isSelected}
                         className={`student-exam-option p-3 rounded-3 border transition-all d-flex align-items-center gap-3 style-cursor-pointer ${
@@ -757,15 +760,9 @@ const LiveExam = () => {
                         }`}
                         style={{ cursor: 'pointer', width: '100%', textAlign: 'left' }}
                       >
-                        <div
-                          className={`rounded-circle border p-1 d-flex align-items-center justify-content-center flex-shrink-0 ${
-                            isSelected ? 'border-primary bg-primary text-white' : 'border text-muted'
-                          }`}
-                          style={{ width: 22, height: 22 }}
-                        >
-                          {isSelected && <CheckCircle2 size={14} />}
-                        </div>
-                        <span className="fw-medium">{opt.optionText}</span>
+                        <span className="exam-option-letter" aria-hidden="true">{String.fromCharCode(65 + oIdx)}</span>
+                        <span className="exam-option-copy">{opt.optionText}</span>
+                        <span className={`exam-option-check ${currentQ.questionType === 'multiple' ? 'is-multiple' : ''}`} aria-hidden="true">{isSelected && <Check size={15} />}</span>
                       </button>
                     );
                   })}
@@ -785,17 +782,17 @@ const LiveExam = () => {
                     Previous
                   </Button>
                   <Button variant="outline-secondary" size="sm" onClick={handleSkip} disabled={isSubmittingExam}>Skip / Next</Button>
-                  <Button variant="ghost" size="sm" onClick={handleToggleReview} disabled={isSubmittingExam} icon={Bookmark}>
-                    Mark for Review
+                  <Button variant={currentAnswer?.isMarkedForReview ? "warning" : "outline-secondary"} size="sm" onClick={handleToggleReview} disabled={isSubmittingExam} icon={Bookmark} aria-pressed={Boolean(currentAnswer?.isMarkedForReview)}>
+                    {currentAnswer?.isMarkedForReview ? 'Marked for review' : 'Mark for review'}
                   </Button>
                 </div>
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={handleNextQuestion}
-                  disabled={currentPosition === (currentSection?.items.length || 0) - 1 || isSubmittingExam}
+                  onClick={() => atLastItem && nextSection ? selectSection(nextSection) : handleNextQuestion()}
+                  disabled={(atLastItem && !nextSection) || isSubmittingExam}
                 >
-                  Next <ChevronRight size={16} />
+                  {atLastItem && nextSection ? 'Next section' : 'Next question'} <ChevronRight size={16} />
                 </Button>
               </div>
             </div>

@@ -101,7 +101,7 @@ const ExamList = () => {
       />
 
       {/* Filter Tabs and Search Toolbar */}
-      <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+      <div className="student-toolbar d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
         {/* Status Filter Tabs */}
         <div className="btn-group flex-wrap p-1 bg-body-tertiary rounded-3 border" role="group" aria-label="Assessment status filter">
           <button

@@ -9,7 +9,7 @@ import API, { examAssignmentAPI } from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
 import StudentProfileModal from '../../components/StudentProfileModal';
 import ResumePdfGenerator from '../../components/ResumePdfGenerator';
-import PageHeader from '../../components/common/PageHeader';
+import StudentWelcome from '../../components/student/StudentWelcome';
 import StatCard from '../../components/common/StatCard';
 import EmptyState from '../../components/common/EmptyState';
 
@@ -87,15 +87,15 @@ const StudentDashboard = () => {
   ];
   const completedSectionsCount = profileSections.filter((section) => section.complete).length;
   const profilePercentage = completedSectionsCount * 20;
-  const hour = new Date().getHours();
+  const hour = Number(new Intl.DateTimeFormat('en-IN', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Asia/Kolkata' }).format(new Date()));
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const getCount = (section, count) => unavailable.includes(section) ? 'Unavailable' : count;
 
   const practiceCards = [
-    { title: 'Practice tests', description: 'Strengthen your fundamentals with focused assessment practice.', href: '/student/practice', icon: BookOpen, detail: 'Practice at your own pace', action: 'Start practicing', accent: 'var(--app-blue)' },
-    { title: 'Coding practice', description: 'Solve problems and build confidence for your next coding round.', href: '/student/problem-solving', icon: Code2, detail: unavailable.includes('coding') ? 'Problem count unavailable' : `${practiceStats.codingProblems} problems available`, action: 'Explore problems', accent: 'var(--app-blue)' },
-    { title: 'AI interview', description: 'Rehearse your answers and get feedback before the real conversation.', href: '/student/ai-interview', icon: Sparkles, detail: unavailable.includes('interviews') ? 'Recent activity unavailable' : `${practiceStats.interviews} recent attempts`, action: 'Prepare for interviews', accent: 'var(--app-warning)' },
-    { title: 'Versant practice', description: 'Work on your speaking, listening, and communication skills.', href: '/student/versant', icon: Mic, detail: unavailable.includes('versant') ? 'Recent activity unavailable' : `${practiceStats.versant} recent submissions`, action: 'Practice communication', accent: 'var(--app-success)' },
+    { title: 'Practice tests', description: 'Strengthen your fundamentals with focused assessment practice.', href: '/student/practice', icon: BookOpen, detail: 'Practice at your own pace', action: 'Start practicing', accent: 'var(--app-blue)', tone: 'indigo' },
+    { title: 'Coding practice', description: 'Solve problems and build confidence for your next coding round.', href: '/student/problem-solving', icon: Code2, detail: unavailable.includes('coding') ? 'Problem count unavailable' : `${practiceStats.codingProblems} problems available`, action: 'Explore problems', accent: 'var(--app-blue)', tone: 'indigo' },
+    { title: 'AI interview', description: 'Rehearse your answers and get feedback before the real conversation.', href: '/student/ai-interview', icon: Sparkles, detail: unavailable.includes('interviews') ? 'Recent activity unavailable' : `${practiceStats.interviews} recent attempts`, action: 'Prepare for interviews', accent: 'var(--app-warning)', tone: 'peach' },
+    { title: 'Versant practice', description: 'Work on your speaking, listening, and communication skills.', href: '/student/versant', icon: Mic, detail: unavailable.includes('versant') ? 'Recent activity unavailable' : `${practiceStats.versant} recent submissions`, action: 'Practice communication', accent: 'var(--app-success)', tone: 'mint' },
   ];
 
   // Keep the next-up action aligned with the assignment's actual availability window.
@@ -147,22 +147,7 @@ const StudentDashboard = () => {
           if (updatedProfile) setProfile(updatedProfile);
         }}
       />
-      <PageHeader
-        className="dashboard-welcome"
-        eyebrow="Your learning workspace"
-        title={`${greeting}, ${user?.name?.split(' ')[0] || 'Student'}.`}
-        description="A little progress today. More confidence for what comes next."
-        actions={(
-          <Link to="/student/exams" className="btn btn-primary">
-            <ClipboardList size={17} /> My assessments <ArrowRight size={16} />
-          </Link>
-        )}
-      >
-        <div className="small text-secondary d-flex align-items-center gap-2 mt-3">
-          <CalendarDays size={15} aria-hidden="true" />
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </div>
-      </PageHeader>
+      <StudentWelcome greeting={greeting} name={user?.name?.split(' ')[0] || 'Student'} />
 
       {unavailable.length > 0 && (
         <div className="alert alert-warning d-flex flex-column flex-sm-row align-items-sm-center gap-3 mb-0" role="alert">
@@ -299,9 +284,9 @@ const StudentDashboard = () => {
           </Link>
         </div>
         <div className="row g-3">
-          {practiceCards.map(({ title, description, href, icon: Icon, detail, action, accent }) => (
+          {practiceCards.map(({ title, description, href, icon: Icon, detail, action, accent, tone }) => (
             <div key={href} className="col-12 col-md-6 col-xxl-3">
-              <Link to={href} className="card dashboard-practice-card h-100 text-decoration-none">
+              <Link to={href} className={`card dashboard-practice-card is-${tone} h-100 text-decoration-none`}>
                 <div className="card-body p-4 d-flex flex-column">
                   <div className="d-flex justify-content-between align-items-center mb-4">
                     <span className="icon-box" style={{ background: `color-mix(in srgb, ${accent} 12%, var(--app-surface))`, color: accent }}>

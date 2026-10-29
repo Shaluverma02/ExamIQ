@@ -45,12 +45,12 @@ const PlagiarismDetector = () => {
   };
 
   return (
-    <div>
+    <div className="workspace-page faculty-workspace">
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-          <h3 className="fw-bold text-body m-0 d-flex align-items-center gap-2">
+          <h1 className="page-title fw-bold text-body m-0 d-flex align-items-center gap-2">
             <ShieldAlert size={26} className="text-danger" /> Code Plagiarism & Similarity Detector
-          </h3>
+          </h1>
           <p className="text-secondary small m-0">AST & Tokenized similarity analysis engine across student coding submissions.</p>
         </div>
       </div>

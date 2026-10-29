@@ -1,35 +1,27 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, ArrowUpRight, BarChart3, BookOpenCheck, Code2, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Code2, Sparkles, ShieldCheck } from 'lucide-react';
 import Brand from './Brand';
 import ThemeToggle from './ThemeToggle';
 import '../../styles/public.css';
+import '../../styles/auth-refresh.css';
 
-const AuthLayout = ({ title, description, children, maxWidth = 460, eyebrow = 'Welcome to ExamiQ' }) => {
+const AuthLayout = ({ title, description, children, maxWidth = 460, eyebrow = 'Welcome to ExamiQ', mode }) => {
   return (
-    <main className="auth-shell eq-auth">
+    <main className={`auth-shell eq-auth ${mode ? 'auth-refresh' : ''}`}>
       <aside className="auth-story">
         <Link to="/" className="text-decoration-none" aria-label="ExamiQ home">
           <Brand inverted />
         </Link>
         <div className="auth-story-content">
-          <div className="auth-story-kicker"><span /> A connected assessment platform</div>
-          <h2 className="auth-story-title">Your potential.<br />One platform.<br /><span>Every next step.</span></h2>
-          <p className="auth-story-description">A focused place to learn, deliver assessments, and turn results into progress.</p>
-          <div className="eq-auth-journey">
-            <div className="eq-auth-journey-heading"><span>Your assessment journey</span><ArrowUpRight size={16} /></div>
-            {[
-              [Code2, '01', 'Prepare with purpose', 'Build skills through coding practice.'],
-              [BookOpenCheck, '02', 'Assess with confidence', 'Keep exams and assignments together.'],
-              [BarChart3, '03', 'Understand your progress', 'Explore results and earned credentials.'],
-            ].map(([Icon, number, heading, text]) => (
-              <div className="eq-auth-journey-item" key={number}>
-                <span className="eq-auth-journey-icon"><Icon size={20} /></span>
-                <div><h3>{heading}</h3><p>{text}</p></div>
-                <span className="eq-auth-journey-number">{number}</span>
-              </div>
-            ))}
-          </div>
+          <div className="auth-story-kicker"><span /> LEARN TODAY. LEAD TOMORROW.</div>
+          <h2 className="auth-story-title">Big dreams.<br />Small steps.<br /><span>Start here.</span></h2>
+          <p className="auth-story-description">Build your skills, take on new challenges, and turn your potential into progress.</p>
+          {mode && <div className="auth-learning-art" aria-hidden="true">
+            <img className="auth-learning-image" src="/auth-study.svg" alt="" />
+            <span className="auth-art-code"><Code2 size={22} /> Build your skills</span>
+            <span className="auth-art-spark"><Sparkles size={20} /> Ready for more</span>
+          </div>}
         </div>
         <div className="auth-story-footer"><ShieldCheck size={16} /><span>One workspace. Every role. Shared progress.</span></div>
       </aside>
@@ -42,6 +34,10 @@ const AuthLayout = ({ title, description, children, maxWidth = 460, eyebrow = 'W
         </div>
         <div className="auth-form-container" style={{ '--auth-form-width': `${maxWidth}px` }}>
           <section className="auth-card" aria-labelledby="auth-title">
+            {mode && <nav className="auth-mode-tabs" aria-label="Account access">
+              <Link to="/login" className={mode === 'login' ? 'is-active' : ''} aria-current={mode === 'login' ? 'page' : undefined}>Sign in</Link>
+              <Link to="/register" className={mode === 'register' ? 'is-active' : ''} aria-current={mode === 'register' ? 'page' : undefined}>Create account</Link>
+            </nav>}
             <div className="auth-form-heading">
               <div className="page-eyebrow mb-2">{eyebrow}</div>
               <h1 id="auth-title">{title}</h1>

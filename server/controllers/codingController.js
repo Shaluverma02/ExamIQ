@@ -721,6 +721,10 @@ exports.updateCodingProblem = async (
       });
     }
 
+    if (req.user.role !== 'admin' && String(problem.createdBy) !== String(req.user._id)) return res.status(403).json({ success: false, message: 'Not authorized to update this coding problem' });
+    problemData.createdBy = problem.createdBy;
+    problemData.collegeId = req.collegeId || problem.collegeId;
+
     /**
      * Tags.
      */
@@ -918,6 +922,7 @@ exports.deleteCodingProblem = async (
     /**
      * Delete test cases.
      */
+    if (req.user.role !== 'admin' && String(problem.createdBy) !== String(req.user._id)) return res.status(403).json({ success: false, message: 'Not authorized to delete this coding problem' });
     await TestCase.deleteMany({
       codingProblemId:
         problem._id,

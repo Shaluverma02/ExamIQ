@@ -152,37 +152,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const loginDemo = useCallback((role) => {
-    const demoUsers = {
-      admin: { name: 'Demo Super Admin', email: 'admin@examiq.com', role: 'admin' },
-      college_admin: { name: 'Demo College Admin', email: 'collegeadmin@examiq.com', role: 'college_admin' },
-      faculty: { name: 'Demo Faculty', email: 'faculty@examiq.com', role: 'faculty' },
-      student: { name: 'Demo Student', email: 'student@examiq.com', role: 'student' },
-      recruiter: { name: 'Demo Recruiter', email: 'recruiter@examiq.com', role: 'recruiter' },
-    };
-
-    const selected = demoUsers[role] || demoUsers.student;
-    const demoCollege = { _id: 'demo-college', name: 'Demo Institute' };
-    const nextUser = {
-      ...selected,
-      _id: `demo-${role}`,
-      isActive: true,
-      activeCollegeId: demoCollege._id,
-    };
-
-    const demoToken = `demo-${role}-token`;
-    setToken(demoToken);
-    setUser(nextUser);
-    setProfile(nextUser);
-    setMemberships([{ collegeId: demoCollege, role: selected.role, status: 'active' }]);
-    persistCollege(demoCollege);
-    localStorage.setItem('token', demoToken);
-    sessionStorage.removeItem('token');
-    localStorage.setItem('user', JSON.stringify(nextUser));
-
-    toast.success(`Demo login successful for ${selected.name}.`);
-    return nextUser;
-  }, []);
+  const changePassword = async (formData) => {
+    const rememberMe = !sessionStorage.getItem('token');
+    const response = await API.put('/auth/change-password', formData);
+    applyAuthPayload(response.data, rememberMe);
+    return response.data.message;
+  };
 
   const switchCollege = async (collegeId) => {
     const res = await API.post('/colleges/switch', { collegeId });
@@ -208,13 +183,13 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated,
     login,
-    loginDemo,
     register,
+    changePassword,
     logout,
     fetchMe,
     switchCollege,
     setUser,
-  }), [user, profile, memberships, activeCollege, token, role, loading, isAuthenticated, fetchMe, logout, loginDemo]);
+  }), [user, profile, memberships, activeCollege, token, role, loading, isAuthenticated, fetchMe, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

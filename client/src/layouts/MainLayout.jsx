@@ -3,6 +3,9 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from '../layouts/Navbar';
 import Sidebar from '../layouts/Sidebar';
 import { AuthContext } from '../context/AuthContext';
+import '../styles/college-admin.css';
+import '../styles/faculty.css';
+import '../styles/student.css';
 
 const MainLayout = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);

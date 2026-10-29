@@ -1,17 +1,27 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import API from '../../services/api';
+import { AuthContext } from '../../context/AuthContext';
 import { Search, User, Edit2, FormInput, Users } from 'lucide-react';
 import PageHeader from '../../components/common/PageHeader';
 import { toast } from 'react-toastify';
 import DynamicFormBuilder from '../../components/DynamicFormBuilder';
+import AddFaculty from '../../components/AddFaculty';
+import AddStudent from '../../components/AddStudent';
+import BulkImportStudents from '../../components/BulkImportStudents';
 
 const UserManagement = () => {
+  const { user: viewer, activeCollege } = useContext(AuthContext);
+  const isCollegeAdmin = viewer?.role === 'college_admin';
   const [activeTab, setActiveTab] = useState('users'); // 'users' | 'form_builder'
   const [users, setUsers] = useState([]);
   const [groups, setGroups] = useState([]);
   const [roleFilter, setRoleFilter] = useState('');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const usersRequest = useRef(0);
 
   // Edit Student Profile Modal State
   const [editingStudent, setEditingStudent] = useState(null);
@@ -25,23 +35,36 @@ const UserManagement = () => {
   });
 
   useEffect(() => {
-    if (activeTab === 'users') {
-      fetchUsers();
-      fetchGroups();
-    }
-  }, [roleFilter, activeTab]);
+    if (activeTab !== 'users') return undefined;
+    const timer = setTimeout(() => fetchUsers(), search ? 250 : 0);
+    return () => {
+      clearTimeout(timer);
+      usersRequest.current += 1;
+    };
+  }, [roleFilter, search, page, activeTab, activeCollege?._id]);
+
+  useEffect(() => {
+    if (activeTab === 'users') fetchGroups();
+  }, [activeTab, activeCollege?._id]);
 
   const fetchUsers = async () => {
+    const requestId = ++usersRequest.current;
     try {
       setLoading(true);
-      const url = roleFilter ? `/admin/users?role=${roleFilter}` : '/admin/users';
-      const res = await API.get(url);
+      const params = new URLSearchParams({ page: String(page), limit: '50' });
+      if (roleFilter) params.set('role', roleFilter);
+      if (search.trim()) params.set('search', search.trim());
+      const res = await API.get(`/admin/users?${params.toString()}`);
+      if (requestId !== usersRequest.current) return;
       setUsers(res.data.users || []);
+      setTotalUsers(res.data.count || 0);
+      setTotalPages(Math.max(1, res.data.totalPages || 1));
     } catch (e) {
+      if (requestId !== usersRequest.current) return;
       console.error(e);
       toast.error('Failed to load user directory');
     } finally {
-      setLoading(false);
+      if (requestId === usersRequest.current) setLoading(false);
     }
   };
 
@@ -60,7 +83,7 @@ const UserManagement = () => {
       toast.success(res.data.message);
       fetchUsers();
     } catch (e) {
-      toast.error('Failed to update status');
+      toast.error(e.response?.data?.message || 'Failed to update status');
     }
   };
 
@@ -70,7 +93,7 @@ const UserManagement = () => {
       toast.success(res.data.message);
       fetchUsers();
     } catch (e) {
-      toast.error('Failed to update role');
+      toast.error(e.response?.data?.message || 'Failed to update role');
     }
   };
 
@@ -98,13 +121,9 @@ const UserManagement = () => {
     }
   };
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
-      (u.studentProfile?.college || '').toLowerCase().includes(search.toLowerCase()) ||
-      (u.studentProfile?.groupId?.name || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredUsers = users;
+  const firstVisibleUser = totalUsers ? (page - 1) * 50 + 1 : 0;
+  const lastVisibleUser = Math.min(page * 50, totalUsers);
 
   return (
     <div className="workspace-page management-page">
@@ -112,7 +131,7 @@ const UserManagement = () => {
         eyebrow="People"
         title="People & access"
         description="Manage user accounts, student roll numbers, academic profiles, and assigned groups."
-        actions={(<div className="nav nav-pills gap-2 bg-body-tertiary p-1 rounded-pill border">
+        actions={isCollegeAdmin ? <><AddFaculty onCreated={fetchUsers} /><AddStudent onCreated={fetchUsers} /><BulkImportStudents onImported={fetchUsers} /><button className="btn btn-outline-primary" onClick={fetchUsers} disabled={loading}>Refresh directory</button></> : (<div className="nav nav-pills gap-2 bg-body-tertiary p-1 rounded-pill border">
           <button
             className={`nav-link fw-semibold px-4 py-2 rounded-pill small ${
               activeTab === 'users' ? 'active bg-primary text-white shadow-sm' : 'text-secondary bg-transparent'
@@ -134,6 +153,8 @@ const UserManagement = () => {
         </div>)}
       />
 
+      {isCollegeAdmin && <div className="ca-people-summary"><span><Users size={17} /><strong>{users.length}</strong> loaded members</span><span><strong>{users.filter(person => person.role === 'student').length}</strong> students</span><span><strong>{users.filter(person => person.role === 'faculty').length}</strong> faculty</span><span><strong>{users.filter(person => person.isActive).length}</strong> active accounts</span></div>}
+
       {activeTab === 'form_builder' ? (
         <DynamicFormBuilder />
       ) : (
@@ -144,12 +165,12 @@ const UserManagement = () => {
                 aria-label="Filter users by role"
                 className="form-select fw-semibold"
                 value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
+                onChange={(e) => { setPage(1); setRoleFilter(e.target.value); }}
               >
                 <option value="">All Roles</option>
                 <option value="student">Student</option>
                 <option value="faculty">Faculty</option>
-                <option value="admin">Admin</option>
+                {!isCollegeAdmin && <option value="admin">Admin</option>}
               </select>
 
               <div className="input-group">
@@ -162,7 +183,7 @@ const UserManagement = () => {
                   placeholder="Search by name, email, college or group..."
                   aria-label="Search people by name, email, college or group"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => { setPage(1); setSearch(e.target.value); }}
                 />
               </div>
             </div>
@@ -258,12 +279,16 @@ const UserManagement = () => {
                               <select
                                 className="form-select form-select-sm fw-semibold"
                                 value={u.role}
+                                aria-label={`Role for ${u.name}`}
+                                disabled={u._id === viewer?._id || isCollegeAdmin && ['admin', 'college_admin'].includes(u.role)}
                                 onChange={(e) => handleRoleChange(u._id, e.target.value)}
                                 style={{ width: '110px' }}
                               >
+                                {!['student', 'faculty', 'admin'].includes(u.role) && <option value={u.role}>{u.role.replace('_', ' ')}</option>}
+                                {isCollegeAdmin && u.role === 'admin' && <option value="admin">Super Admin</option>}
                                 <option value="student">Student</option>
                                 <option value="faculty">Faculty</option>
-                                <option value="admin">Admin</option>
+                                {!isCollegeAdmin && <option value="admin">Admin</option>}
                               </select>
                             </td>
 
@@ -289,6 +314,7 @@ const UserManagement = () => {
                                   className={`btn btn-sm ${
                                     u.isActive ? 'btn-outline-danger' : 'btn-outline-success'
                                   } fw-semibold px-2 py-1`}
+                                  disabled={u._id === viewer?._id || isCollegeAdmin && ['admin', 'college_admin'].includes(u.role)}
                                   onClick={() => handleToggleStatus(u._id)}
                                 >
                                   {u.isActive ? 'Deactivate' : 'Activate'}
@@ -301,6 +327,18 @@ const UserManagement = () => {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+          {!loading && (
+            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 px-3 py-3 border-top">
+              <span className="small text-secondary" aria-live="polite">
+                Showing {firstVisibleUser}–{lastVisibleUser} of {totalUsers} users
+              </span>
+              <div className="d-flex align-items-center gap-2">
+                <button type="button" className="btn btn-outline-secondary btn-sm" disabled={page <= 1} onClick={() => setPage(current => Math.max(1, current - 1))}>Previous</button>
+                <span className="small text-secondary" aria-label={`Page ${page} of ${totalPages}`}>Page {page} of {totalPages}</span>
+                <button type="button" className="btn btn-outline-secondary btn-sm" disabled={page >= totalPages} onClick={() => setPage(current => Math.min(totalPages, current + 1))}>Next</button>
               </div>
             </div>
           )}
@@ -405,5 +443,3 @@ const UserManagement = () => {
 };
 
 export default UserManagement;
-
-

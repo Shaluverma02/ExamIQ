@@ -67,12 +67,12 @@ const LiveExamMonitorRoom = () => {
   };
 
   return (
-    <div>
+    <div className="workspace-page faculty-workspace">
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-          <h3 className="fw-bold text-body m-0 d-flex align-items-center gap-2">
-            <Camera className="text-warning animate-pulse" size={26} /> Faculty Live Monitoring Room
-          </h3>
+          <h1 className="page-title fw-bold text-body m-0 d-flex align-items-center gap-2">
+            <Camera className="text-warning animate-pulse" size={26} /> Live monitoring
+          </h1>
           <p className="text-secondary small m-0">Real-time classroom proctoring grid showing active student timers, violations, and live feeds.</p>
         </div>
 

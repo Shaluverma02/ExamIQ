@@ -44,6 +44,8 @@ const routeTitles = [
   ['/college-admin/groups', 'College Groups'],
   ['/college-admin/categories', 'Courses & Categories'],
   ['/college-admin/analytics', 'College Analytics'],
+  ['/college-admin/settings', 'Institution Settings'],
+  ['/college-admin/audit-logs', 'College Activity'],
 ];
 
 // One accent per role so people can tell workspaces apart at a glance

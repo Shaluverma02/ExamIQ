@@ -216,9 +216,9 @@ const ExamBuilder = () => {
   }
 
   return (
-    <div className="pb-5">
+    <div className="workspace-page faculty-workspace pb-5">
       <div className="mb-4">
-        <h3 className="fw-bold text-body m-0">{isEditing ? 'Edit assessment' : 'Exam Builder'}</h3>
+        <h1 className="page-title fw-bold text-body m-0">{isEditing ? 'Edit assessment' : 'Exam Builder'}</h1>
         <p className="text-muted small m-0">Configure timing, scoring, and questions, then preview before publishing.</p>
       </div>
 

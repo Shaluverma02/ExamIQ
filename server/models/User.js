@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Password is required'],
       select: false, // Never return password in queries by default
     },
+    tokenVersion: { type: Number, default: 0 },
     role: {
       type: String,
       enum: ['student', 'faculty', 'college_admin', 'admin', 'recruiter'],
@@ -51,13 +52,13 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    phoneVerificationCodeHash: String,
-    phoneVerificationExpire: Date,
-    verificationToken: String,
-    resetPasswordToken: String,
-    resetPasswordExpire: Date,
-    magicToken: String,
-    magicTokenExpire: Date,
+    phoneVerificationCodeHash: { type: String, select: false },
+    phoneVerificationExpire: { type: Date, select: false },
+    verificationToken: { type: String, select: false },
+    resetPasswordToken: { type: String, select: false },
+    resetPasswordExpire: { type: Date, select: false },
+    magicToken: { type: String, select: false },
+    magicTokenExpire: { type: Date, select: false },
     isActive: {
       type: Boolean,
       default: true,

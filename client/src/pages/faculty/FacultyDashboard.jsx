@@ -62,6 +62,9 @@ const FacultyDashboard = () => {
   const tools = [
     { to: '/faculty/questions', icon: FileQuestion, title: 'Question Bank', description: 'Manage MCQ questions.', accent: 'var(--app-primary)' },
     { to: '/faculty/coding', icon: Code2, title: 'Coding Problems', description: 'Create code assessments.', accent: 'var(--app-primary)' },
+    { to: '/faculty/ai-generator', icon: FileQuestion, title: 'AI Question Studio', description: 'Turn a topic into new questions.', accent: 'var(--app-primary)' },
+    { to: '/faculty/live-monitor', icon: Eye, title: 'Live Monitoring', description: 'Follow assessments in progress.', accent: 'var(--app-primary)' },
+    { to: '/faculty/results', icon: CheckSquare, title: 'Assessment Results', description: 'Review scores and attempts.', accent: 'var(--app-primary)' },
     { to: '/faculty/analytics', icon: BarChart3, title: 'Analytics', description: 'Track outcomes by group.', accent: 'var(--app-warning)' },
   ];
 
@@ -69,8 +72,8 @@ const FacultyDashboard = () => {
     <div className="workspace-page faculty-workspace">
       <PageHeader
         eyebrow="Faculty Workspace"
-        title="Assessment Control Center"
-        description="Create exams, manage question banks, assign batches, and monitor candidate performance."
+        title="Your teaching workspace"
+        description="A clear view of your assessments, students, and what comes next."
         actions={(
           <>
             <button className="btn btn-outline-info" onClick={() => setShowEmailModal(true)}>
@@ -86,10 +89,10 @@ const FacultyDashboard = () => {
         )}
       />
 
-      {draftExams.length > 0 && (
+      {(
         <section
           aria-labelledby="drafts-heading"
-          className="rounded-4 p-4 text-white position-relative overflow-hidden"
+          className="faculty-dashboard-hero p-4 text-white position-relative overflow-hidden"
           style={{ background: `linear-gradient(135deg, #123C3D 0%, ${FACULTY_ACCENT} 60%, #3F9C8F 100%)` }}
         >
           <div
@@ -106,18 +109,18 @@ const FacultyDashboard = () => {
               </span>
               <div>
                 <div className="small" style={{ color: 'rgba(255,255,255,0.7)' }} id="drafts-heading">
-                  Needs your review
+                  Assessment overview
                 </div>
                 <h2 className="h5 fw-bold mb-1 mt-1">
-                  {draftExams.length} exam{draftExams.length > 1 ? 's' : ''} still in draft
+                  {draftExams.length > 0 ? `${draftExams.length} assessments ready for your next step` : 'Make room for better learning'}
                 </h2>
                 <p className="small mb-0" style={{ color: 'rgba(255,255,255,0.85)' }}>
-                  Students can't see these until you publish them.
+                  Build thoughtful assessments, bring your batches together, and follow their progress.
                 </p>
               </div>
             </div>
             <Link to="/faculty/exams" className="btn btn-light fw-semibold flex-shrink-0 align-self-start align-self-md-center">
-              Review drafts <ArrowRight size={15} />
+              Manage assessments <ArrowRight size={15} />
             </Link>
           </div>
         </section>
@@ -148,7 +151,7 @@ const FacultyDashboard = () => {
                   <h5 className="fw-bold mb-1">Managed batches</h5>
                   <p className="text-muted mb-0">Assign exams and review progress by group.</p>
                 </div>
-                <Link to="/admin/groups" className="btn btn-outline-primary btn-sm">
+                <Link to="/faculty/groups" className="btn btn-outline-primary btn-sm">
                   Manage Groups <ArrowRight size={15} />
                 </Link>
               </div>
@@ -171,7 +174,7 @@ const FacultyDashboard = () => {
                           <strong>{group.students?.length || 0}</strong>
                         </div>
                         <div className="d-flex flex-wrap gap-2">
-                          <Link to={`/admin/groups/${group._id}`} className="btn btn-outline-info btn-sm flex-fill"><Eye size={14} /> View</Link>
+                          <Link to={`/faculty/groups/${group._id}`} className="btn btn-outline-info btn-sm flex-fill"><Eye size={14} /> View</Link>
                           <Link to="/faculty/exam-assignments" className="btn btn-sm flex-fill text-white" style={{ backgroundColor: FACULTY_ACCENT, borderColor: FACULTY_ACCENT }}><CheckSquare size={14} /> Assign</Link>
                         </div>
                       </div>
@@ -191,7 +194,7 @@ const FacultyDashboard = () => {
               <div className="vstack gap-3">
                 {tools.map(({ to, icon: Icon, title, description, accent }) => (
                   <Link key={to} to={to} className="action-card text-decoration-none">
-                    <span className="icon-box" style={{ backgroundColor: `${accent}1A`, color: accent }}>
+                    <span className="icon-box" style={{ backgroundColor: 'var(--faculty-soft)', color: accent }}>
                       <Icon size={20} />
                     </span>
                     <span className="min-width-0">

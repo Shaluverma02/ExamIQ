@@ -12,11 +12,12 @@ const {
   recordViolation,
 } = require('../controllers/codingController');
 const { protect, authorize } = require('../middleware/auth');
+const validate = require('../middleware/validateCoding');
 
 router.use(protect);
 
-router.post('/run', runTrialCode);
-router.post('/submit', submitCode);
+router.post('/run', validate.execution, runTrialCode);
+router.post('/submit', validate.execution, submitCode);
 router.post('/assessment/start', startAssessmentSession);
 router.post('/assessment/violation', recordViolation);
 

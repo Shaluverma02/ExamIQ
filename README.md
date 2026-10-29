@@ -46,17 +46,11 @@ A full-stack, production-ready assessment and examination system built with Node
 
 ### 1. Installation
 ```bash
-# Install Server Dependencies
-cd server
-npm install
-
-# Install Client Dependencies
-cd ../client
-npm install
+npm run setup
 ```
 
 ### 2. Environment Configuration
-Create `.env` in the root and in `/server`:
+Use the single project-root `.env` for backend, frontend configuration, and database scripts:
 ```env
 PORT=5000
 NODE_ENV=development
@@ -75,26 +69,31 @@ When phone verification is enabled, new accounts receive a six-digit SMS code. C
 
 ### 3. Database Seeding (Demo Credentials)
 ```bash
-cd server
 npm run seed
 ```
-**Demo Login Credentials:**
-- **Admin**: `admin@examportal.edu` / `password123`
-- **Faculty**: `faculty@examportal.edu` / `password123`
-- **Student**: `student@examportal.edu` / `password123`
+Set `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, and optional `SEED_ADMIN_NAME` in the root `.env`, then run `npm run seed`. This creates the real Super Admin account; demo login is disabled.
 
 ### 4. Running the Platform
 ```bash
-# Terminal 1: Backend Server (Port 5000)
-cd server
-npm run dev
-
-# Terminal 2: React Frontend (Port 5173)
-cd client
+# From the project root: starts backend and frontend together
 npm run dev
 ```
 
-Visit `http://localhost:5173` in your browser. Quick demo login buttons are provided on the login page!
+Visit `http://localhost:5173` in your browser. Press Ctrl+C to stop both services.
+
+On Windows PowerShell, use `npm.cmd run dev` if script execution policy blocks `npm`.
+
+### Validation checks
+
+```bash
+npm test
+npm run test:flows
+npm run build
+```
+
+`test:flows` requires MongoDB and runs real HTTP tests against a separate temporary database, which it removes afterward. It covers role login, registration, profile updates, college administrators, groups, question validation, exam assignment/start/resume/submission, scoring, certificates, Excel export, notifications, JavaScript execution, recruiter data, and password reset. Normal tests also cover college isolation, result release rules, and retake limits.
+
+Email/SMS delivery, external AI responses, and browser camera/microphone/screen-sharing permissions require separate integration checks. Python, C, C++, and Java execution require their respective runtimes/compilers to be installed.
 
 ---
 

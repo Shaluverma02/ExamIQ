@@ -31,18 +31,7 @@ const ResetPassword = () => {
       const res = await API.post(`/auth/reset-password/${token}`, { password });
       toast.success(res.data.message || 'Password reset successful');
 
-      if (res.data.token) {
-        localStorage.setItem('token', res.data.token);
-        localStorage.setItem('user', JSON.stringify(res.data.user));
-      }
-
-      navigate(
-        res.data.user?.role === 'admin'
-          ? '/admin/dashboard'
-          : res.data.user?.role === 'faculty'
-            ? '/faculty/dashboard'
-            : '/student/dashboard'
-      );
+      navigate('/login', { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Invalid or expired password reset link');
     } finally {

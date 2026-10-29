@@ -169,7 +169,7 @@ const ProblemSolvingArena = () => {
   };
 
   return (
-    <div className="container-fluid px-0">
+    <div className="student-page student-problem-arena container-fluid px-0">
       <CodingBattleModal isOpen={showBattleModal} onClose={() => setShowBattleModal(false)} />
 
       {/* =================================================
@@ -191,9 +191,9 @@ const ProblemSolvingArena = () => {
                 <Brain size={24} />
               </div>
 
-              <h3 className="fw-bold mb-0">
+              <h1 className="page-title fw-bold mb-0">
                 Problem Solving Arena
-              </h3>
+              </h1>
             </div>
 
             <p className="text-muted small mb-0">

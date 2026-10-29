@@ -5,7 +5,12 @@ const ExamAttempt = require('../models/ExamAttempt');
 
 exports.getPublicColleges = async (req, res, next) => {
   try {
-    const colleges = await College.find({ isDeleted: { $ne: true }, isActive: true, 'settings.allowSelfRegistration': true })
+    const colleges = await College.find({
+      isDeleted: { $ne: true },
+      isActive: true,
+      'settings.allowSelfRegistration': true,
+      'settings.requireInviteCode': { $ne: true },
+    })
       .select('name code logoUrl domain')
       .sort({ name: 1 });
 
@@ -44,9 +49,10 @@ exports.getColleges = async (req, res, next) => {
 exports.createCollege = async (req, res, next) => {
   let createdCollegeId = null;
   try {
-    const { name, code, domain, logoUrl, address, contactEmail, contactPhone, settings } = req.body;
+    const { name, code, domain, logoUrl, address, contactEmail, contactPhone } = req.body;
+    if (req.body.settings !== undefined) return res.status(403).json({ success: false, message: 'Registration settings can only be managed by the institution administrator' });
     if (!String(name || '').trim() || !String(code || '').trim()) return res.status(400).json({ success: false, message: 'College name and code are required' });
-    const college = await College.create({ name: name.trim(), code: code.trim().toUpperCase(), domain, logoUrl, address, contactEmail, contactPhone, settings, isActive: req.body.isActive !== false, createdBy: req.user._id });
+    const college = await College.create({ name: name.trim(), code: code.trim().toUpperCase(), domain, logoUrl, address, contactEmail, contactPhone, isActive: req.body.isActive !== false, createdBy: req.user._id });
     createdCollegeId = college._id;
     await Membership.findOneAndUpdate(
       { userId: req.user._id, collegeId: college._id },
@@ -78,8 +84,19 @@ exports.deleteCollege = async (req, res, next) => {
     college.deletedAt = new Date();
     college.settings.allowSelfRegistration = false;
     await college.save();
+    if (typeof Membership.updateMany === 'function') {
+      await Membership.updateMany({ collegeId: college._id }, { $set: { status: 'suspended' } });
+    }
     res.status(200).json({ success: true, message: 'College removed. Academic records are preserved.' });
   } catch (err) { next(err); }
+};
+
+exports.getCurrentCollege = async (req, res, next) => {
+  try {
+    const college = await College.findById(req.collegeId);
+    if (!college || college.isDeleted) return res.status(404).json({ success: false, message: 'College not found' });
+    res.json({ success: true, college });
+  } catch (error) { next(error); }
 };
 
 exports.updateCollege = async (req, res, next) => {
@@ -88,11 +105,15 @@ exports.updateCollege = async (req, res, next) => {
     if (!college || college.isDeleted) return res.status(404).json({ success: false, message: 'College not found' });
 
     const isMember = (req.memberships || []).some((item) => item.collegeId?._id?.toString() === college._id.toString());
+    if (req.user.role === 'college_admin' && (req.membershipRole !== 'college_admin' || String(req.collegeId) !== String(college._id))) return res.status(403).json({ success: false, message: 'Select the assigned college administrator workspace to update settings' });
     if (req.user.role !== 'admin' && !isMember) {
       return res.status(403).json({ success: false, message: 'Not authorized for this college' });
     }
+    if (req.user.role === 'admin' && req.body.settings !== undefined) return res.status(403).json({ success: false, message: 'Registration settings can only be managed by the institution administrator' });
 
-    const allowed = ['name', 'domain', 'logoUrl', 'address', 'contactEmail', 'contactPhone', 'isActive', 'settings'];
+    const allowed = ['name', 'domain', 'logoUrl', 'address', 'contactEmail', 'contactPhone', 'isActive'];
+    if (req.user.role === 'college_admin') allowed.push('settings');
+    if (req.user.role === 'college_admin' && ['name', 'code', 'isActive'].some(field => req.body[field] !== undefined)) return res.status(403).json({ success: false, message: 'Only Super Admin can change college identity or active status' });
     allowed.forEach((field) => {
       if (req.body[field] !== undefined) college[field] = req.body[field];
     });

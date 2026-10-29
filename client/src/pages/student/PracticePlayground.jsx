@@ -1,3 +1,4 @@
+import PageHeader from '../../components/common/PageHeader';
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import API from '../../services/api';
@@ -638,7 +639,8 @@ const PracticePlayground = () => {
    */
 
   return (
-    <div className="practice-ide-playground pb-5">
+    <div className="student-page student-ide practice-ide-playground pb-5">
+      <PageHeader eyebrow="Your coding workspace" title="Think it through. Code it out." description="Explore a problem, try your approach, and learn from every run." />
       {/* =====================================================
           TOP CONTROL BAR & QUICK PROBLEM SELECTOR
       ====================================================== */}

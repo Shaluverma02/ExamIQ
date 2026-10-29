@@ -2,13 +2,9 @@
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
-  Building2,
-  ChevronDown,
-  GraduationCap,
   Lock,
   Mail,
   ShieldCheck,
-  UserRound,
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import Button from '../../components/common/Button';
@@ -24,14 +20,6 @@ const getDashboardPath = (role) => {
   return '/student/dashboard';
 };
 
-const demoAccounts = [
-  { role: 'admin', email: 'admin@examiq.com', password: 'Admin@123', label: 'Super Admin', icon: ShieldCheck },
-  { role: 'college_admin', email: 'collegeadmin@examiq.com', password: 'College@123', label: 'College Admin', icon: Building2 },
-  { role: 'faculty', email: 'faculty@examiq.com', password: 'Faculty@123', label: 'Faculty', icon: GraduationCap },
-  { role: 'student', email: 'student@examiq.com', password: 'Student@123', label: 'Student', icon: UserRound },
-  { role: 'recruiter', email: 'recruiter@examiq.com', password: 'Recruiter@123', label: 'Recruiter', icon: Building2 },
-];
-
 const Login = () => {
   const { login, user, loading: authLoading } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -41,7 +29,6 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [showDemoAccounts, setShowDemoAccounts] = useState(false);
 
   useEffect(() => {
     if (!authLoading && user && user.role) {
@@ -59,7 +46,7 @@ const Login = () => {
 
     try {
       setIsSubmitting(true);
-      const userData = await login(email, password, rememberMe);
+      const userData = await login(email.trim().toLowerCase(), password, rememberMe);
       navigate(getDashboardPath(userData?.role), { replace: true });
     } catch (err) {
       const message = err.message || 'Invalid credentials or account issue. Please try again.';
@@ -71,15 +58,9 @@ const Login = () => {
     }
   };
 
-  const fillDemoAccount = (account) => {
-    setEmail(account.email);
-    setPassword(account.password);
-    setError('');
-  };
-
   return (
-    <AuthLayout title="Welcome back" description="Sign in to your workspace and pick up where you left off.">
-      <div className="eq-auth-context"><ShieldCheck size={16} /><span>One sign in for your institution and role</span></div>
+    <AuthLayout mode="login" eyebrow="YOUR LEARNING JOURNEY CONTINUES" title="Welcome back." description="Sign in to your workspace and pick up where you left off.">
+      <div className="eq-auth-context"><ShieldCheck size={16} /><span>Your institution. Your workspace. Your next step.</span></div>
       {error && <div className="alert alert-danger small mb-3" role="alert">{error}</div>}
       <form onSubmit={handleSubmit} className="auth-form-stack" aria-busy={isSubmitting}>
         <Input label="Email address" type="email" required placeholder="name@institute.edu" value={email} onChange={(e) => setEmail(e.target.value)} icon={Mail} autoComplete="username" autoFocus />
@@ -94,26 +75,6 @@ const Login = () => {
         <Button type="submit" variant="primary" loading={isSubmitting} className="w-100 mt-2">Sign in <ArrowRight size={18} /></Button>
       </form>
       <p className="eq-auth-switch">New to ExamiQ? <Link to="/register">Create an account</Link></p>
-      <div className="eq-demo-section">
-        <button type="button" className="eq-demo-toggle" onClick={() => setShowDemoAccounts((prev) => !prev)} aria-expanded={showDemoAccounts} aria-controls="demo-accounts-panel">
-          <span><span className="eq-demo-label">EXPLORE THE PLATFORM</span><strong>Try a demo workspace</strong></span>
-          <ChevronDown size={18} className={showDemoAccounts ? 'eq-rotate' : ''} />
-        </button>
-        {showDemoAccounts && (
-          <div id="demo-accounts-panel" className="eq-demo-grid">
-            {demoAccounts.map((account) => {
-              const { role, email: demoEmail, label, icon: Icon } = account;
-              return (
-                <button key={role} type="button" className="eq-demo-account" onClick={() => fillDemoAccount(account)}>
-                  <span className="eq-demo-account-icon"><Icon size={17} /></span>
-                  <span><strong>{label}</strong><small>{demoEmail}</small></span>
-                  <ArrowRight size={15} />
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
     </AuthLayout>
   );
 };

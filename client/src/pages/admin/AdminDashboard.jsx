@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react';
-import API from '../../services/api';
+import API, { getApiErrorMessage } from '../../services/api';
 import { Link } from 'react-router-dom';
 import { Activity, AlertCircle, ArrowRight, BarChart3, BookOpen, Building2, Shield, ShieldCheck, Users } from 'lucide-react';
 import PageHeader from '../../components/common/PageHeader';
@@ -51,7 +51,7 @@ const AdminDashboard = () => {
       setAnalytics(aRes.data.analytics);
     } catch (e) {
       console.error(e);
-      setError('We could not load the platform overview. Please try again.');
+      setError(getApiErrorMessage(e, 'We could not load the platform overview. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -72,8 +72,8 @@ const AdminDashboard = () => {
   const activeUsers = users.filter((user) => user.isActive !== false).length;
   const pendingUsersList = users.filter((user) => user.isEmailVerified === false || user.isActive === false);
   const pendingUsers = pendingUsersList.length;
-  const passRate = Math.round(analytics?.passRate || 0);
-  const avgScore = Math.round(analytics?.averageScore || 0);
+  const passRate = Math.round(analytics?.passPercentage || 0);
+  const avgScore = Math.round(analytics?.averagePercentage || 0);
 
   return (
     <div className="workspace-page management-page">

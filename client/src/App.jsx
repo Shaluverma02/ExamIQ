@@ -38,15 +38,17 @@ const AiQuestionGenerator = lazy(() => import('./pages/faculty/AiQuestionGenerat
 const PlagiarismDetector = lazy(() => import('./pages/faculty/PlagiarismDetector'));
 const LiveExamMonitorRoom = lazy(() => import('./pages/faculty/LiveExamMonitorRoom'));
 
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminDashboard = lazy(() => import('./pages/admin/SuperAdminOverview'));
 const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'));
 const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
 const CollegeManagement = lazy(() => import('./pages/admin/CollegeManagement'));
 const GroupManagement = lazy(() => import('./pages/admin/GroupManagement'));
 const GroupDetails = lazy(() => import('./pages/admin/GroupDetails'));
 const CategoryCourseManager = lazy(() => import('./pages/admin/CategoryCourseManager'));
-const AuditLogViewer = lazy(() => import('./pages/admin/AuditLogViewer'));
-const CollegeAdminDashboard = lazy(() => import('./pages/admin/CollegeAdminDashboard'));
+const AuditLogViewer = lazy(() => import('./pages/admin/SystemAudit'));
+const CollegeOverview = lazy(() => import('./pages/admin/CollegeOverview'));
+const CollegeAnalytics = lazy(() => import('./pages/admin/CollegeAnalytics'));
+const CollegeSettings = lazy(() => import('./pages/admin/CollegeSettings'));
 const RecruiterDashboard = lazy(() => import('./pages/recruiter/RecruiterDashboard'));
 const RecruiterWorkspace = lazy(() => import('./pages/recruiter/RecruiterWorkspace'));
 
@@ -67,7 +69,7 @@ const getDashboardPath = (role) => {
       return '/login';
   }
 };
-const CollegeAdminManagement = lazy(() => import('./pages/admin/CollegeAdminManagement'));
+const CollegeAdminManagement = lazy(() => import('./pages/admin/AdministratorDirectory'));
 
 const LoadingScreen = () => (
   <div className="min-vh-100 d-flex align-items-center justify-content-center bg-body px-3">
@@ -156,17 +158,19 @@ const adminRoutes = [
   ['/admin/groups', <GroupManagement />],
   ['/admin/groups/:id', <GroupDetails />],
   ['/admin/audit-logs', <AuditLogViewer />],
-  ['/admin/analytics', <AdminAnalytics />],
+  ['/admin/analytics', <CollegeAnalytics platform />],
   ['/admin/college-admins', <CollegeAdminManagement />],
 ];
 
 const collegeAdminRoutes = [
-  ['/college-admin/dashboard', <CollegeAdminDashboard />],
+  ['/college-admin/dashboard', <CollegeOverview />],
   ['/college-admin/users', <UserManagement />],
   ['/college-admin/groups', <GroupManagement />],
   ['/college-admin/groups/:id', <GroupDetails />],
   ['/college-admin/categories', <CategoryCourseManager />],
-  ['/college-admin/analytics', <AdminAnalytics />],
+  ['/college-admin/settings', <CollegeSettings />],
+  ['/college-admin/audit-logs', <AuditLogViewer />],
+  ['/college-admin/analytics', <CollegeAnalytics />],
 ];
 
 const recruiterRoutes = [

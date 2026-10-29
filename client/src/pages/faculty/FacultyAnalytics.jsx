@@ -113,12 +113,12 @@ const FacultyAnalytics = () => {
   ];
 
   return (
-    <div>
+    <div className="workspace-page faculty-workspace">
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-          <h3 className="fw-bold text-body m-0 d-flex align-items-center gap-2">
-            <BarChart3 className="text-primary" size={28} /> Faculty Assessment Analytics
-          </h3>
+          <h1 className="page-title fw-bold text-body m-0 d-flex align-items-center gap-2">
+            <BarChart3 className="text-primary" size={28} /> Assessment analytics
+          </h1>
           <p className="text-muted small m-0">Performance analytics across objective MCQs and programming challenges</p>
         </div>
 

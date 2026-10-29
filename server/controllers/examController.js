@@ -249,6 +249,9 @@ exports.updateExam = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
+    if ((req.body.startDate !== undefined || req.body.endDate !== undefined) && new Date(req.body.endDate || exam.endDate) <= new Date(req.body.startDate || exam.startDate)) return res.status(400).json({ success: false, message: 'End date must be after start date' });
+    if ((req.body.passingMarks !== undefined || req.body.totalMarks !== undefined) && Number(req.body.passingMarks ?? exam.passingMarks) > Number(req.body.totalMarks ?? exam.totalMarks)) return res.status(400).json({ success: false, message: 'Passing marks cannot exceed total marks' });
+
     if (req.body.sectionAssignments !== undefined) {
       const error = validateSectionAssignments(req.body.sectionAssignments, req.body.questions || exam.questions);
       if (error) return res.status(400).json({ success: false, message: error });
@@ -323,6 +326,8 @@ exports.deleteExam = async (req, res, next) => {
     if (!exam) {
       return res.status(404).json({ success: false, message: 'Exam not found' });
     }
+
+    if (req.user.role !== 'admin' && String(exam.facultyId) !== String(req.user._id)) return res.status(403).json({ success: false, message: 'Not authorized to delete this assessment' });
 
     const attemptsExist = await ExamAttempt.exists({
       examId: exam._id,

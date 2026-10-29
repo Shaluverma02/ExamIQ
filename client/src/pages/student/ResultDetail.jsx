@@ -1,3 +1,4 @@
+import PageHeader from '../../components/common/PageHeader';
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import API from '../../services/api';
@@ -124,6 +125,7 @@ const ResultDetail = () => {
 
   return (
     <div className="student-page student-result-detail">
+      <PageHeader eyebrow="Understand your progress" title={result.examId?.title || 'Assessment performance'} description="See what went well, review your answers, and discover where to improve." />
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <Link to="/student/results" className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
           <ArrowLeft size={16} /> Back to Results

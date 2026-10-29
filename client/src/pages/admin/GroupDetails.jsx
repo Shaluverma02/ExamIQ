@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import API from '../../services/api';
+import { AuthContext } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import {
   Users,
@@ -19,6 +20,8 @@ import {
 import { downloadResultsExcel } from '../../utils/downloadExcel';
 
 const GroupDetails = () => {
+  const { role } = useContext(AuthContext);
+  const groupBase = role === 'college_admin' ? '/college-admin/groups' : role === 'faculty' ? '/faculty/groups' : '/admin/groups';
   const { id } = useParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -79,7 +82,7 @@ const GroupDetails = () => {
     return (
       <div className="card text-center py-5 text-muted">
         <h4>Group Not Found</h4>
-        <Link to="/admin/groups" className="btn btn-outline-primary btn-sm rounded-pill mt-3">
+        <Link to={groupBase} className="btn btn-outline-primary btn-sm rounded-pill mt-3">
           Back to Groups
         </Link>
       </div>
@@ -93,7 +96,7 @@ const GroupDetails = () => {
       {/* Header */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-          <Link to="/admin/groups" className="text-primary text-decoration-none small d-flex align-items-center gap-1 mb-2">
+          <Link to={groupBase} className="text-primary text-decoration-none small d-flex align-items-center gap-1 mb-2">
             <ArrowLeft size={16} /> Back to All Groups
           </Link>
 
@@ -141,12 +144,12 @@ const GroupDetails = () => {
             <Download size={16} /> Export CSV
           </button>
 
-          <Link
+          {role === 'faculty' && <Link
             to="/faculty/exam-assignments"
             className="btn btn-primary fw-bold btn-sm px-4 rounded-pill d-flex align-items-center gap-2 shadow-sm"
           >
             <BookOpen size={16} /> Assign Exam To Group
-          </Link>
+          </Link>}
         </div>
       </div>
 

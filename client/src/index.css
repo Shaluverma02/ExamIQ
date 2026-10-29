@@ -215,6 +215,8 @@ small, .small { font-size: .875rem; }
 .form-check-input { border-color: var(--app-border); background-color: var(--app-surface); }
 .form-check-input:checked { background-color: var(--app-primary-fill); border-color: var(--app-primary-fill); }
 .form-check-input:focus { border-color: var(--app-blue); box-shadow: 0 0 0 3px var(--app-blue-soft); }
+.roster-student-checkbox { width: 1.15rem; height: 1.15rem; margin: 0; border: 2px solid var(--app-muted); background-color: var(--app-surface); cursor: pointer; }
+.roster-student-checkbox:checked { background-color: var(--app-primary-fill); border-color: var(--app-primary-fill); }
 .form-switch .form-check-input { width: 2.25em; min-height: 1.25em; }
 .table { --bs-table-bg: var(--app-surface); --bs-table-color: var(--app-text); --bs-table-border-color: var(--app-border); --bs-table-hover-bg: var(--app-subtle); --bs-table-hover-color: var(--app-text); --bs-table-striped-bg: var(--app-bg); --bs-table-striped-color: var(--app-text); vertical-align: middle; font-size: .875rem; }
 .table th { background: var(--app-bg); color: var(--app-muted); font-size: .75rem; font-weight: 600; letter-spacing: .04em; white-space: nowrap; }

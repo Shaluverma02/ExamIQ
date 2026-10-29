@@ -1,9 +1,11 @@
-﻿import React, { useEffect, useMemo, useState, useContext } from 'react';
+﻿import React, { useEffect, useMemo, useState, useContext, useRef } from 'react';
 import { toast } from 'react-toastify';
-import { Building2, CheckCircle2, Globe2, Mail, Phone, Plus, UserPlus, Trash2, RefreshCw, Save, Search, XCircle } from 'lucide-react';
+import { Building2, CheckCircle2, Globe2, Mail, Phone, Plus, UserPlus, Trash2, RefreshCw, Save, Search, XCircle, Pencil, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import API from '../../services/api';
 import PageHeader from '../../components/common/PageHeader';
-import StatCard from '../../components/common/StatCard';
+import { CollegeMetric, CollegeError } from '../../components/college/CollegeUI';
+import '../../styles/super-admin.css';
+import '../../styles/college-management-modern.css';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import CollegeAdminForm from '../../components/CollegeAdminForm';
 import { AuthContext } from '../../context/AuthContext';
@@ -17,15 +19,15 @@ const emptyForm = {
   contactEmail: '',
   contactPhone: '',
   isActive: true,
-  settings: {
-    allowSelfRegistration: true,
-    requireInviteCode: false,
-  },
 };
 
 const normalizeCode = (value) => value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
 
 const CollegeManagement = () => {
+  const [showEditor, setShowEditor] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [error, setError] = useState('');
+  const editorRef = useRef(null);
   const [colleges, setColleges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,13 +44,20 @@ const CollegeManagement = () => {
     fetchColleges();
   }, []);
 
+  useEffect(() => {
+    const dialog = editorRef.current;
+    if (showEditor && !dialog.open) dialog.showModal();
+    else if (!showEditor && dialog.open) dialog.close();
+  }, [showEditor]);
+
   const fetchColleges = async () => {
     try {
       setLoading(true);
+      setError('');
       const res = await API.get('/colleges');
       setColleges(res.data.colleges || []);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to load colleges');
+      setError(err.response?.data?.message || 'Failed to load colleges');
     } finally {
       setLoading(false);
     }
@@ -56,26 +65,26 @@ const CollegeManagement = () => {
 
   const stats = useMemo(() => {
     const active = colleges.filter((college) => college.isActive !== false).length;
-    const publicRegistration = colleges.filter((college) => college.settings?.allowSelfRegistration !== false).length;
-    return { active, publicRegistration, total: colleges.length };
+    return { active, total: colleges.length };
   }, [colleges]);
 
   const filteredColleges = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return colleges;
-    return colleges.filter((college) =>
+    return colleges.filter(college => statusFilter === 'all' || (statusFilter === 'active' ? college.isActive !== false : statusFilter === 'inactive' ? college.isActive === false : !college.admins?.length)).filter((college) =>
       [college.name, college.code, college.domain, college.contactEmail]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(query))
     );
-  }, [colleges, search]);
+  }, [colleges, search, statusFilter]);
 
   const resetForm = () => {
+    setShowEditor(false);
     setEditingId(null);
     setForm(emptyForm);
   };
 
   const editCollege = (college) => {
+    setShowEditor(true);
     setEditingId(college._id);
     setForm({
       name: college.name || '',
@@ -86,10 +95,6 @@ const CollegeManagement = () => {
       contactEmail: college.contactEmail || '',
       contactPhone: college.contactPhone || '',
       isActive: college.isActive !== false,
-      settings: {
-        allowSelfRegistration: college.settings?.allowSelfRegistration !== false,
-        requireInviteCode: college.settings?.requireInviteCode === true,
-      },
     });
   };
 
@@ -97,15 +102,9 @@ const CollegeManagement = () => {
     setForm((prev) => ({ ...prev, [field]: field === 'code' ? normalizeCode(value) : value }));
   };
 
-  const updateSetting = (field, value) => {
-    setForm((prev) => ({
-      ...prev,
-      settings: { ...prev.settings, [field]: value },
-    }));
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (saving) return;
     if (!form.name.trim() || !form.code.trim()) {
       toast.warning('College name and code are required');
       return;
@@ -159,68 +158,62 @@ const CollegeManagement = () => {
   };
 
   return (
-    <div className="college-management-page workspace-page management-page">
-      <PageHeader icon={Building2} eyebrow="Institutions" title="College management"
-        description="Manage institution workspaces, registration, and administrator access."
-        actions={<div className="d-flex flex-wrap gap-2"><button type="button" className="btn btn-primary" disabled={loading || !colleges.some(college => college.isActive !== false)} onClick={() => setAdminTarget({ _id: '' })}><UserPlus size={16}/> Add College Admin</button><button className="btn btn-outline-secondary" onClick={fetchColleges} disabled={loading}><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh</button></div>} />
-
-      <div className="row g-3">
-        {[
-          ['Total Colleges', stats.total, 'All institutions registered in ExamIQ'],
-          ['Active Colleges', stats.active, 'Can operate inside the platform'],
-          ['Open Registration', stats.publicRegistration, 'Visible on student signup'],
-        ].map(([label, value, hint]) => (
-          <div className="col-12 col-md-4" key={label}>
-            <StatCard icon={label === 'Total Colleges' ? Building2 : label === 'Active Colleges' ? CheckCircle2 : Globe2} label={label} value={value} trend={hint} loading={loading} />
-          </div>
-        ))}
+    <div className="workspace-page sa-dashboard cm-page">
+      <PageHeader icon={Building2} eyebrow="INSTITUTION NETWORK" title="College management" description="A clear home for every institution, administrator and workspace." actions={<><button className="btn btn-outline-secondary" disabled={loading} onClick={fetchColleges} aria-label="Refresh colleges"><RefreshCw size={16} /></button><button className="btn btn-primary" onClick={() => { resetForm(); setShowEditor(true); }}><Plus size={16} /> Add college</button></>} />
+      {error && <CollegeError message={error} retry={fetchColleges} />}
+      <div className="ca-metric-grid" aria-busy={loading}>
+        <CollegeMetric icon={Building2} label="Registered colleges" note="Institution network" value={loading || error ? null : stats.total} tone="violet" />
+        <CollegeMetric icon={CheckCircle2} label="Active workspaces" note="Ready to operate" value={loading || error ? null : stats.active} />
+        <CollegeMetric icon={ShieldCheck} label="Needs an administrator" note="Complete workspace setup" value={loading || error ? null : colleges.filter(college => !college.admins?.length).length} tone="amber" />
       </div>
-
-      <div className="college-management-grid">
-        <div className="college-form-panel">
-          <div className="card border-0 shadow-sm college-form-card">
-            <div className="card-body p-4">
-              <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
-                <h5 className="fw-bold mb-0">{editingId ? 'Edit College' : 'Add College'}</h5>
-                {editingId && (
-                  <button type="button" className="btn btn-sm btn-light rounded-pill" onClick={resetForm}>Cancel</button>
-                )}
-              </div>
-
-              <form onSubmit={handleSubmit} className="college-form-grid">
+      <section className="cm-directory">
+        <div className="cm-directory-top"><div><h2>Your institutions <span>{loading ? '—' : colleges.length}</span></h2><p>Manage access and keep every college connected.</p></div><button className="btn btn-outline-primary" disabled={loading || !colleges.some(college => college.isActive !== false)} onClick={() => setAdminTarget({ _id: '' })}><UserPlus size={16} /> Add administrator</button></div>
+        <div className="cm-filter-bar"><div className="cm-search"><Search size={18} /><input aria-label="Search colleges" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search institutions, codes or contact emails…" /></div><label className="cm-status-filter"><SlidersHorizontal size={16} /><span className="visually-hidden">Filter colleges</span><select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="all">All institutions</option><option value="active">Active colleges</option><option value="inactive">Inactive colleges</option><option value="unassigned">Needs administrator</option></select></label></div>
+        {loading ? <div className="ca-loading" role="status"><span className="spinner-border spinner-border-sm" /> Loading your institutions…</div> : error ? <div className="ca-empty"><Building2 size={30} /><h3>Institution data is unavailable</h3><p>Use Try again above to reload your colleges.</p></div> : !filteredColleges.length ? <div className="cm-empty"><span className="cm-building-icon"><Building2 size={35} /></span><h3>{colleges.length ? 'No institutions match your filters' : 'Your network starts here.'}</h3><p>{colleges.length ? 'Try a different search or show all institutions.' : 'Add your first college, then connect its administrator.'}</p>{colleges.length ? <button className="btn btn-outline-primary" onClick={() => { setSearch(''); setStatusFilter('all'); }}>Clear filters</button> : <button className="btn btn-primary" onClick={() => { resetForm(); setShowEditor(true); }}><Plus size={16} /> Add your first college</button>}</div> : <><div className="cm-results-label">Showing {filteredColleges.length} of {colleges.length} institutions</div><div className="cm-card-grid">{filteredColleges.map(college => <article className="cm-college-card" key={college._id}>
+          <div className="cm-card-heading"><span className="cm-building-icon">{college.logoUrl ? <img src={college.logoUrl} alt="" onError={event => { event.currentTarget.style.display = 'none'; }} /> : <Building2 size={25} />}</span><span className={'sa-status ' + (college.isActive !== false ? 'is-active' : '')}><span />{college.isActive !== false ? 'Active' : 'Inactive'}</span></div>
+          <div className="cm-title"><h3>{college.name}</h3><span className="ca-tag">{college.code}</span></div>
+          <div className="cm-contacts">{college.domain && <span><Globe2 size={14} />{college.domain}</span>}{college.contactEmail && <a href={'mailto:' + college.contactEmail}><Mail size={14} />{college.contactEmail}</a>}{college.contactPhone && <a href={'tel:' + college.contactPhone}><Phone size={14} />{college.contactPhone}</a>}{!college.domain && !college.contactEmail && !college.contactPhone && <span>Contact details not added yet</span>}</div>
+          <div className="cm-admin-strip"><span className="cm-admin-icon"><ShieldCheck size={18} /></span><div><strong>{college.admins?.length ? college.admins.map(admin => admin.name).join(', ') : 'Administrator not assigned'}</strong><span>{college.admins?.length ? college.admins.length + ' college administrator' + (college.admins.length > 1 ? 's' : '') : 'Add an administrator to complete setup'}</span></div></div>
+          <div className="cm-card-actions"><button className="btn btn-outline-secondary" onClick={() => editCollege(college)}><Pencil size={14} /> Edit details</button><button className="btn btn-primary" disabled={college.isActive === false} onClick={() => setAdminTarget(college)}><UserPlus size={14} /> Add admin</button><div className="cm-secondary-actions"><button className="cm-icon-button" aria-label={(college.isActive === false ? 'Activate ' : 'Disable ') + college.name} title={college.isActive === false ? 'Activate college' : 'Disable college'} disabled={Boolean(statusBusy)} onClick={() => toggleStatus(college)}>{statusBusy === college._id ? <span className="spinner-border spinner-border-sm" /> : college.isActive === false ? <CheckCircle2 size={17} /> : <XCircle size={17} />}</button><button className="cm-icon-button is-danger" title="Delete college" aria-label={'Delete ' + college.name} onClick={() => setDeleteTarget(college)}><Trash2 size={17} /></button></div></div>
+        </article>)}</div></>}
+      </section>
+      <dialog ref={editorRef} className="cm-editor" aria-labelledby="cm-editor-title" onCancel={event => { if (saving) event.preventDefault(); else resetForm(); }}>
+        <div className="cm-editor-heading"><div><span className="ca-eyebrow">INSTITUTION DETAILS</span><h2 id="cm-editor-title">{editingId ? 'Edit college' : 'Add a new college'}</h2><p>{editingId ? 'Keep your institution details up to date.' : 'Create a workspace for your institution. Assign an administrator after saving.'}</p></div><button type="button" className="cm-icon-button" disabled={saving} aria-label="Close college form" onClick={resetForm}><XCircle size={21} /></button></div>
+        <fieldset disabled={saving} className="cm-form-fieldset">
+              <form onSubmit={handleSubmit} className="cm-form-grid">
                 <div className="college-form-section-title">
                   <Building2 size={17} />
                   <span>Institute details</span>
                 </div>
                 <div>
-                  <label className="form-label small fw-semibold">College Name <span className="text-danger">*</span></label>
-                  <input className="form-control" value={form.name} onChange={(e) => updateField('name', e.target.value)} placeholder="Example Institute of Technology" autoComplete="organization" required />
+                  <label className="form-label small fw-semibold" htmlFor="cm-name">College Name <span className="text-danger">*</span></label>
+                  <input className="form-control" id="cm-name" value={form.name} onChange={(e) => updateField('name', e.target.value)} placeholder="Example Institute of Technology" autoComplete="organization" required />
                 </div>
                 <div>
-                  <label className="form-label small fw-semibold">College Code <span className="text-danger">*</span></label>
-                  <input className="form-control text-uppercase" value={form.code} onChange={(e) => updateField('code', e.target.value)} placeholder="EIT" disabled={Boolean(editingId)} maxLength={12} required />
+                  <label className="form-label small fw-semibold" htmlFor="cm-code">College Code <span className="text-danger">*</span></label>
+                  <input className="form-control text-uppercase" id="cm-code" value={form.code} onChange={(e) => updateField('code', e.target.value)} placeholder="EIT" disabled={Boolean(editingId)} maxLength={12} required />
                   <div className="form-text">Short unique code used for college identity.</div>
                 </div>
                 <div>
-                  <label className="form-label small fw-semibold">Domain</label>
-                  <input className="form-control" value={form.domain} onChange={(e) => updateField('domain', e.target.value)} placeholder="college.edu" autoComplete="url" />
+                  <label className="form-label small fw-semibold" htmlFor="cm-domain">Domain</label>
+                  <input className="form-control" id="cm-domain" value={form.domain} onChange={(e) => updateField('domain', e.target.value)} placeholder="college.edu" autoComplete="url" />
                 </div>
                 <div>
-                  <label className="form-label small fw-semibold">Logo URL</label>
-                  <input className="form-control" type="url" value={form.logoUrl} onChange={(e) => updateField('logoUrl', e.target.value)} placeholder="https://..." />
+                  <label className="form-label small fw-semibold" htmlFor="cm-logoUrl">Logo URL</label>
+                  <input className="form-control" type="url" id="cm-logoUrl" value={form.logoUrl} onChange={(e) => updateField('logoUrl', e.target.value)} placeholder="https://..." />
                 </div>
-                <div className="college-form-wide-field">
-                  <label className="form-label small fw-semibold">Address</label>
-                  <textarea className="form-control" rows="2" value={form.address} onChange={(e) => updateField('address', e.target.value)} placeholder="Campus address" />
+                <div className="cm-wide">
+                  <label className="form-label small fw-semibold" htmlFor="cm-address">Address</label>
+                  <textarea className="form-control" rows="2" id="cm-address" value={form.address} onChange={(e) => updateField('address', e.target.value)} placeholder="Campus address" />
                 </div>
-                <div className="row g-2 college-form-wide-field">
+                <div className="row g-2 cm-wide">
                   <div className="col-12 col-md-6">
-                    <label className="form-label small fw-semibold">Email</label>
-                    <input className="form-control" type="email" value={form.contactEmail} onChange={(e) => updateField('contactEmail', e.target.value)} placeholder="office@college.edu" autoComplete="email" />
+                    <label className="form-label small fw-semibold" htmlFor="cm-contactEmail">Email</label>
+                    <input className="form-control" type="email" id="cm-contactEmail" value={form.contactEmail} onChange={(e) => updateField('contactEmail', e.target.value)} placeholder="office@college.edu" autoComplete="email" />
                   </div>
                   <div className="col-12 col-md-6">
-                    <label className="form-label small fw-semibold">Phone</label>
-                    <input className="form-control" type="tel" value={form.contactPhone} onChange={(e) => updateField('contactPhone', e.target.value)} placeholder="+91 98765 43210" autoComplete="tel" />
+                    <label className="form-label small fw-semibold" htmlFor="cm-contactPhone">Phone</label>
+                    <input className="form-control" type="tel" id="cm-contactPhone" value={form.contactPhone} onChange={(e) => updateField('contactPhone', e.target.value)} placeholder="+91 98765 43210" autoComplete="tel" />
                   </div>
                 </div>
 
@@ -229,14 +222,6 @@ const CollegeManagement = () => {
                     <input className="form-check-input" type="checkbox" checked={form.isActive} onChange={(e) => updateField('isActive', e.target.checked)} id="collegeActive" />
                     <label className="form-check-label fw-semibold" htmlFor="collegeActive">College active</label>
                   </div>
-                  <div className="form-check form-switch mb-2">
-                    <input className="form-check-input" type="checkbox" checked={form.settings.allowSelfRegistration} onChange={(e) => updateSetting('allowSelfRegistration', e.target.checked)} id="collegeSelfRegistration" />
-                    <label className="form-check-label fw-semibold" htmlFor="collegeSelfRegistration">Show on registration page</label>
-                  </div>
-                  <div className="form-check form-switch">
-                    <input className="form-check-input" type="checkbox" checked={form.settings.requireInviteCode} onChange={(e) => updateSetting('requireInviteCode', e.target.checked)} id="collegeInvite" />
-                    <label className="form-check-label fw-semibold" htmlFor="collegeInvite">Require invite code later</label>
-                  </div>
                 </div>
 
                 <button type="submit" className="btn btn-primary rounded-pill fw-bold d-flex justify-content-center align-items-center gap-2" disabled={saving}>
@@ -244,81 +229,10 @@ const CollegeManagement = () => {
                   {editingId ? 'Save Changes' : 'Create College'}
                 </button>
               </form>
-            </div>
-          </div>
-        </div>
-
-        <div className="college-list-panel">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body p-4">
-              <div className="input-group mb-3">
-                <span className="input-group-text bg-white"><Search size={16} /></span>
-                <input className="form-control" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, code, domain, or contact email" />
-              </div>
-
-              {loading ? (
-                <div className="text-center py-5">
-                  <div className="spinner-border text-primary mb-3" />
-                  <p className="text-muted mb-0">Loading colleges...</p>
-                </div>
-              ) : filteredColleges.length === 0 ? (
-                <div className="text-center py-5 border rounded-4 bg-light-subtle">
-                  <Building2 className="text-muted mb-3" size={42} />
-                  <h5 className="fw-bold">No colleges found</h5>
-                  <p className="text-muted mb-0">Create the first college from the form.</p>
-                </div>
-              ) : (
-                <div className="vstack gap-3">
-                  {filteredColleges.map((college) => (
-                    <div key={college._id} className="border rounded-4 p-3 p-md-4 bg-white college-list-item">
-                      <div className="d-flex flex-column flex-lg-row justify-content-between gap-3">
-                        <div className="d-flex gap-3 min-width-0 college-list-main">
-                          <div className="rounded-4 bg-primary-subtle text-primary d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 52, height: 52 }}>
-                            {college.logoUrl ? <img src={college.logoUrl} alt="" className="w-100 h-100 rounded-4 object-fit-cover" /> : <Building2 size={24} />}
-                          </div>
-                          <div className="min-width-0">
-                            <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
-                              <h5 className="fw-bold mb-0 text-truncate college-name">{college.name}</h5>
-                              <span className="badge text-bg-light border">{college.code}</span>
-                              <span className={`badge ${college.isActive === false ? 'text-bg-danger' : 'text-bg-success'}`}>
-                                {college.isActive === false ? 'Inactive' : 'Active'}
-                              </span>
-                              <span className={`badge ${college.settings?.allowSelfRegistration === false ? 'text-bg-secondary' : 'text-bg-info'}`}>
-                                {college.settings?.allowSelfRegistration === false ? 'Private Signup' : 'Public Signup'}
-                              </span>
-                            </div>
-                            <div className="small text-muted vstack gap-1">
-                              {college.domain && <span className="d-flex align-items-center gap-2"><Globe2 size={14} /> {college.domain}</span>}
-                              {college.contactEmail && <span className="d-flex align-items-center gap-2"><Mail size={14} /> {college.contactEmail}</span>}
-                              {college.contactPhone && <span className="d-flex align-items-center gap-2"><Phone size={14} /> {college.contactPhone}</span>}
-                              {college.address && <span>{college.address}</span>}
-                              <span>{college.admins?.length ? college.admins.map(admin => admin.name + ' (' + admin.email + ')').join(', ') : 'No college admin assigned'}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="d-flex align-items-start gap-2 flex-shrink-0 college-actions">
-                          <button type="button" className="btn btn-sm btn-outline-primary" disabled={college.isActive === false} onClick={() => setAdminTarget(college)}><UserPlus size={14}/> Add College Admin</button>
-                          <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setDeleteTarget(college)}><Trash2 size={14}/> Delete</button>
-                          <button className="btn btn-sm btn-outline-secondary rounded-pill" onClick={() => editCollege(college)}>Edit</button>
-                          <button className={`btn btn-sm rounded-pill d-flex align-items-center gap-1 ${college.isActive === false ? 'btn-outline-success' : 'btn-outline-danger'}`} onClick={() => toggleStatus(college)} disabled={statusBusy === college._id}>
-                            {college.isActive === false ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
-                            {college.isActive === false ? 'Activate' : 'Disable'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <ConfirmDialog isOpen={Boolean(deleteTarget)} onClose={() => { if (!deleting) setDeleteTarget(null); }} onConfirm={deleteCollege} loading={deleting} title="Delete college?" confirmLabel="Delete college" description={deleteTarget ? 'Remove ' + deleteTarget.name + ' from College Management and stop access to its workspace? Student, faculty and exam records will be preserved. Ongoing exams must finish first.' : ''}/>
-      {adminTarget && <div className="modal fade show d-block" role="dialog" aria-modal="true" aria-labelledby="add-college-admin-title"><div className="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div className="modal-content"><div className="modal-header"><h2 className="modal-title h5" id="add-college-admin-title">Add College Admin</h2></div><div className="modal-body p-4"><CollegeAdminForm colleges={colleges} defaultCollegeId={adminTarget._id} onCancel={() => setAdminTarget(null)} onSuccess={() => { setAdminTarget(null); fetchColleges(); }}/></div></div></div></div>}
-
+        </fieldset>
+      </dialog>
+      <ConfirmDialog isOpen={Boolean(deleteTarget)} onClose={() => { if (!deleting) setDeleteTarget(null); }} onConfirm={deleteCollege} loading={deleting} title="Delete college?" confirmLabel="Delete college" description={deleteTarget ? 'Remove ' + deleteTarget.name + ' and stop access to its workspace? Academic records will be preserved. Ongoing exams must finish first.' : ''} />
+      {adminTarget && <div className="modal fade show d-block cm-admin-modal" role="dialog" aria-modal="true" aria-labelledby="add-college-admin-title"><div className="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div className="modal-content"><div className="modal-header"><h2 className="modal-title h5" id="add-college-admin-title">Add college administrator</h2></div><div className="modal-body p-4"><CollegeAdminForm colleges={colleges} defaultCollegeId={adminTarget._id} onCancel={() => setAdminTarget(null)} onSuccess={() => { setAdminTarget(null); fetchColleges(); }} /></div></div></div></div>}
     </div>
   );
 };

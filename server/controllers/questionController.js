@@ -99,6 +99,11 @@ exports.updateQuestion = async (req, res, next) => {
       req.body.section = normalizeSection(req.body.section);
       if (!SECTION_IDS.includes(req.body.section)) return res.status(400).json({ success: false, message: 'Invalid question section' });
     }
+    const nextOptions = req.body.options || question.options;
+    const nextType = req.body.questionType || question.questionType;
+    if (['single', 'boolean'].includes(nextType) && nextOptions.filter(option => option.isCorrect).length !== 1) return res.status(400).json({ success: false, message: 'Select exactly one correct answer for this question type' });
+    if (nextType === 'boolean' && nextOptions.length !== 2) return res.status(400).json({ success: false, message: 'True/false questions require two options' });
+    req.body.createdBy = question.createdBy;
     if (req.collegeId) req.body.collegeId = req.collegeId;
     question = await Question.findOneAndUpdate({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) }, req.body, {
       new: true,

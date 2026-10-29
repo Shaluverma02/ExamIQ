@@ -6,12 +6,25 @@ const publicAuthRequest = (url = '') => /^\/auth\/(login|register|forgot-passwor
 const getStoredToken = () => sessionStorage.getItem('token') || localStorage.getItem('token');
 
 export const getApiErrorMessage = (error, fallback = 'The request could not be completed. Please try again.') => {
-  const serverMessage = error?.response?.data?.message;
+  const responseData = error?.response?.data;
+  const responseIsHtml = typeof responseData === 'string' && /^\s*</.test(responseData);
+  const serverMessage = typeof responseData === 'string'
+    ? responseIsHtml ? '' : responseData.trim()
+    : responseData?.message;
   if (typeof serverMessage === 'string' && serverMessage.trim()) return serverMessage;
+  if (typeof responseData?.error === 'string' && responseData.error.trim()) {
+    const status = error.response?.status;
+    return status ? `${responseData.error} (HTTP ${status}).` : responseData.error;
+  }
   if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
     return 'The request timed out. Check your connection and refresh before trying again.';
   }
   if (!error?.response && error?.request) return 'Unable to reach the server. Check your connection and try again.';
+  if (error?.response?.status) {
+    return responseIsHtml
+      ? `The server returned an unexpected response (HTTP ${error.response.status}).`
+      : `The request failed (HTTP ${error.response.status}). Please try again.`;
+  }
   return fallback;
 };
 

@@ -9,7 +9,7 @@ const { protect, authorize } = require('../middleware/auth');
 
 router.use(protect);
 
-router.post('/heartbeat', postHeartbeat);
+router.post('/heartbeat', authorize('student'), postHeartbeat);
 router.get('/live-sessions/:examId', authorize('admin', 'faculty'), getLiveSessions);
 router.post('/send-warning', authorize('admin', 'faculty'), sendWarning);
 

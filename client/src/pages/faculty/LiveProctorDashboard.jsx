@@ -83,13 +83,13 @@ const LiveProctorDashboard = () => {
   };
 
   return (
-    <div>
+    <div className="workspace-page faculty-workspace">
       {/* Top Header */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-          <h3 className="fw-bold text-body m-0 d-flex align-items-center gap-2">
-            <ShieldAlert className="text-danger" size={28} /> Live Multi-Candidate Proctor Command Center
-          </h3>
+          <h1 className="page-title fw-bold text-body m-0 d-flex align-items-center gap-2">
+            <ShieldAlert className="text-danger" size={28} /> Live proctoring
+          </h1>
           <p className="text-muted small m-0">Real-time video snapshots, audio meters, and security violation tracking</p>
         </div>
 

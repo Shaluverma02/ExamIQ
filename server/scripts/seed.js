@@ -1,6 +1,6 @@
 ﻿const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-require('dotenv').config({ path: '../.env' });
+require('../config/env');
 
 const User = require('../models/User');
 const Student = require('../models/Student');
@@ -79,6 +79,7 @@ const seedData = async () => {
           password: hashedPassword,
           role: 'admin',
           isEmailVerified: true,
+          isPhoneVerified: true,
           isActive: true,
           activeCollegeId: college._id,
         },

@@ -14,6 +14,8 @@ exports.postHeartbeat = async (req, res, next) => {
     const { examId, snapshot, status, audioLevel, violationCount } = req.body;
     const userId = req.user._id.toString();
 
+    if (!examId || !await ExamAttempt.exists({ examId, studentId: req.user._id, collegeId: req.collegeId, status: 'started' })) return res.status(403).json({ success: false, message: 'An active exam attempt is required' });
+
     liveProctorSessions.set(`${examId}_${userId}`, {
       userId,
       studentName: req.user.name,

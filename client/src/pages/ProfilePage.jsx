@@ -26,6 +26,7 @@ import {
 import API from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import StudentProfileModal from '../components/StudentProfileModal';
+import ChangePasswordForm from '../components/ChangePasswordForm';
 import './profile-page.css';
 
 const roleDetails = {
@@ -223,6 +224,9 @@ const ProfilePage = () => {
             </section>
           )}
         </aside>
+        <div className="col-12">
+          <ChangePasswordForm />
+        </div>
       </div>
 
       {role === 'student' && <StudentProfileModal isOpen={showStudentEditor} onClose={() => setShowStudentEditor(false)} user={user} initialProfile={profile} onProfileSaved={handleStudentProfileSaved} />}

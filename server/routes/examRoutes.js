@@ -13,6 +13,7 @@ const {
   retakeAssessment,
 } = require('../controllers/examController');
 const { protect, authorize } = require('../middleware/auth');
+const validateExam = require('../middleware/validateExam');
 
 router.use(protect);
 
@@ -24,11 +25,11 @@ router.post('/:id/submit', authorize('student'), submitExam);
 
 router.route('/')
   .get(getExams)
-  .post(authorize('faculty', 'admin'), createExam);
+  .post(authorize('faculty', 'admin'), validateExam(true), createExam);
 
 router.route('/:id')
   .get(getExamById)
-  .put(authorize('faculty', 'admin'), updateExam)
+  .put(authorize('faculty', 'admin'), validateExam(), updateExam)
   .delete(authorize('faculty', 'admin'), deleteExam);
 
 module.exports = router;
