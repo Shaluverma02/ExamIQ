@@ -29,7 +29,7 @@ export const getApiErrorMessage = (error, fallback = 'The request could not be c
 };
 
 const API = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   timeout: 120000,
   headers: {
     'Content-Type': 'application/json',

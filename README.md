@@ -83,6 +83,46 @@ Visit `http://localhost:5173` in your browser. Press Ctrl+C to stop both service
 
 On Windows PowerShell, use `npm.cmd run dev` if script execution policy blocks `npm`.
 
+### 5. Netlify Deployment (Frontend)
+
+Create a Netlify site from this repository with these build settings:
+
+- Base directory: `client`
+- Build command: `npm ci && npm run build`
+- Publish directory: `dist`
+
+In the Netlify site environment variables, set `VITE_API_URL` to your Render backend URL followed by `/api`, for example `https://examiq-backend.onrender.com/api`. Redeploy after adding or changing the variable. Netlify serves the React app's client-side routes through the included `netlify.toml` redirect.
+
+After Netlify assigns the site URL, set the Render backend's `CLIENT_URL` environment variable to that exact origin, for example `https://your-site.netlify.app`. If you use a custom domain too, include both origins separated by a comma. Redeploy the backend after changing the value.
+
+### 6. Render Deployment (Backend)
+Deploy the backend as a standalone Render Web Service from the `server` directory:
+
+```yaml
+# render.yaml
+services:
+  - type: web
+    name: examiq-backend
+    env: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+```
+
+Set `CLIENT_URL` in Render to your deployed Netlify frontend URL (or a comma-separated list of allowed frontend origins).
+
 ### Validation checks
 
 ```bash

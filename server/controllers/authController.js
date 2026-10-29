@@ -11,7 +11,16 @@ const sendSms = require('../services/smsService');
 
 const isPhoneVerificationRequired = () => process.env.REQUIRE_PHONE_VERIFICATION === 'true';
 
-const buildClientUrl = (path) => `${process.env.CLIENT_URL || 'http://localhost:5173'}${path}`;
+const getPrimaryClientUrl = () => {
+  const configuredOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return configuredOrigins[0] || 'http://localhost:5173';
+};
+
+const buildClientUrl = (path) => `${getPrimaryClientUrl()}${path}`;
 
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
