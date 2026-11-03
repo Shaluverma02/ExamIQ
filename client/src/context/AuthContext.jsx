@@ -121,7 +121,11 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       const message = error.response?.data?.message || error.message || 'Login failed';
       toast.error(message);
-      throw new Error(message);
+      const loginError = new Error(message);
+      loginError.code = error.response?.data?.code;
+      loginError.emailVerificationRequired = Boolean(error.response?.data?.emailVerificationRequired);
+      loginError.phoneVerificationRequired = Boolean(error.response?.data?.phoneVerificationRequired);
+      throw loginError;
     }
   };
 
@@ -134,10 +138,11 @@ export const AuthProvider = ({ children }) => {
       if (!res.data?.token) {
         if (res.data?.activeCollege) persistCollege(res.data.activeCollege);
         setMemberships(res.data?.memberships || []);
-        toast.success(res.data?.message || 'Registration successful. Please verify your email address.');
+        toast.success(res.data?.message || 'Registration successful. Complete the required verification steps before logging in.');
         return {
           ...userData,
           pendingVerification: true,
+          emailVerificationRequired: Boolean(res.data?.emailVerificationRequired),
           phoneVerificationRequired: Boolean(res.data?.phoneVerificationRequired),
         };
       }

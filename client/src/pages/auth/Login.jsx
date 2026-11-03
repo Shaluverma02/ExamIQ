@@ -49,6 +49,15 @@ const Login = () => {
       const userData = await login(email.trim().toLowerCase(), password, rememberMe);
       navigate(getDashboardPath(userData?.role), { replace: true });
     } catch (err) {
+      if (['EMAIL_VERIFICATION_REQUIRED', 'PHONE_VERIFICATION_REQUIRED'].includes(err.code)) {
+        const params = new URLSearchParams({
+          email: email.trim().toLowerCase(),
+          verifyEmail: String(err.emailVerificationRequired),
+          verifyPhone: String(err.phoneVerificationRequired),
+        });
+        navigate(`/verify-registration?${params.toString()}`);
+        return;
+      }
       const message = err.message || 'Invalid credentials or account issue. Please try again.';
       setError(message === 'Invalid email or password'
         ? 'Login failed. Check the email and password created for this role. Existing colleges created before admin setup need a College Admin account first.'

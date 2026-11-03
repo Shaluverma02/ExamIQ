@@ -19,19 +19,6 @@
   --app-bg: #101c1b;
   --app-border: #2a3c37;
 }
-.app-shell[data-workspace='college_admin'] .app-sidebar { background: var(--app-surface); border-right: 1px solid var(--app-border); }
-.app-shell[data-workspace='college_admin'] .app-sidebar .app-brand { color: var(--app-text); }
-.app-shell[data-workspace='college_admin'] .app-sidebar .brand-dot { color: var(--app-blue); }
-.app-shell[data-workspace='college_admin'] .app-sidebar .sidebar-label { color: var(--app-muted); }
-.app-shell[data-workspace='college_admin'] .sidebar-workspace .fw-bold, .app-shell[data-workspace='college_admin'] .sidebar-bottom strong { color: var(--app-text); }
-.app-shell[data-workspace='college_admin'] .sidebar-workspace .icon-box, .app-shell[data-workspace='college_admin'] .sidebar-bottom .profile-avatar { color: var(--app-blue); background: var(--app-blue-soft); }
-.app-shell[data-workspace='college_admin'] .sidebar-bottom { border-color: var(--app-border); }
-.app-shell[data-workspace='college_admin'] .sidebar-bottom small { color: var(--app-muted); }
-.app-shell[data-workspace='college_admin'] .sidebar-nav-link { color: var(--app-muted); }
-.app-shell[data-workspace='college_admin'] .sidebar-nav-link:hover { color: var(--app-blue); background: var(--app-blue-soft); }
-.app-shell[data-workspace='college_admin'] .sidebar-workspace { margin: 8px 14px 24px; border-radius: 14px; padding: 15px 12px; background: var(--app-blue-soft); border: 0; }
-.app-shell[data-workspace='college_admin'] .sidebar-nav .nav-link { margin: 3px 12px; padding: 13px 15px; border-radius: 11px; font-size: .82rem; }
-.app-shell[data-workspace='college_admin'] .sidebar-nav .nav-link.active { background: var(--app-primary-fill); color: #fff; box-shadow: 0 5px 12px #117e7020; }
 .app-shell[data-workspace='college_admin'] .page-shell { max-width: 1450px; }
 .app-shell[data-workspace='college_admin'] .page-header { padding: 8px 0 14px; margin-bottom: 20px; gap: 24px; }
 .app-shell[data-workspace='college_admin'] .page-title { font-size: clamp(1.6rem, 2.5vw, 2.35rem); font-weight: 750; letter-spacing: -.045em; line-height: 1.15; }

@@ -11,7 +11,6 @@ import {
   Camera,
   CheckSquare,
   ClipboardList,
-  Code2,
   Cpu,
   FileCheck,
   FileQuestion,
@@ -67,7 +66,6 @@ const facultySections = [
     title: 'Tools',
     items: [
       { label: 'Question Bank', path: '/faculty/questions', icon: FileQuestion, end: true },
-      { label: 'Coding Questions', path: '/faculty/coding', icon: Code2, end: true },
       { label: 'AI Question Gen', path: '/faculty/ai-generator', icon: Sparkles, end: true },
       { label: 'Plagiarism Detector', path: '/faculty/plagiarism', icon: ShieldAlert, end: true },
       { label: 'Live Monitoring', path: '/faculty/live-monitor', icon: Camera, end: true },
@@ -150,6 +148,9 @@ const Sidebar = ({ isOpen = false, onClose }) => {
   if (!isOpen && onClose) return null;
 
   const currentRole = (role || user?.role || 'student').toLowerCase();
+  const roleDisplay = currentRole === 'college_admin'
+    ? 'College Admin'
+    : currentRole.charAt(0).toUpperCase() + currentRole.slice(1);
   const roleRoutePrefix = currentRole === 'college_admin' ? 'college-admin' : currentRole;
   const sections = currentRole === 'student'
     ? studentSections
@@ -177,12 +178,11 @@ const Sidebar = ({ isOpen = false, onClose }) => {
               <Building2 size={18} />
             </span>
             <div className="min-width-0">
-              <div className="sidebar-label">{currentRole.replace('_', ' ')} workspace</div>
+              <div className="sidebar-label">{roleDisplay} Workspace</div>
               <div className="fw-bold text-truncate">{activeCollege?.name || 'ExamIQ Workspace'}</div>
             </div>
           </div>
         </div>
-
       </div>
 
       <nav className="sidebar-nav flex-grow-1 overflow-y-auto" aria-label="Main navigation">
@@ -213,7 +213,7 @@ const Sidebar = ({ isOpen = false, onClose }) => {
         <span className="profile-avatar" aria-hidden="true">{(user?.name || 'U').split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</span>
         <div className="min-width-0">
           <strong className="d-block text-truncate">{user?.name || 'Your workspace'}</strong>
-          <small>{currentRole.replace('_', ' ')} account</small>
+          <small>{roleDisplay} Account</small>
         </div>
       </div>
     </aside>

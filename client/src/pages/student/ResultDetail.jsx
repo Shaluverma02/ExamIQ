@@ -21,6 +21,7 @@ const ResultDetail = () => {
   const [locked, setLocked] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
+  const [showAnswerReview, setShowAnswerReview] = useState(false);
 
   // Retake State
   const [showRetakeModal, setShowRetakeModal] = useState(false);
@@ -115,6 +116,34 @@ const ResultDetail = () => {
       : 0;
   const status = result.status || (percentage >= 40 ? 'Pass' : 'Fail');
   const isPass = status.toLowerCase() === 'pass';
+  const questionReviews = (result.attemptId?.answers || []).map((answer, index) => {
+    const question = answer.questionId && typeof answer.questionId === 'object'
+      ? answer.questionId
+      : null;
+    const selectedOptions = (answer.selectedOptions || []).map((option) => String(option).trim());
+    const correctOptions = (question?.options || [])
+      .filter((option) => option.isCorrect === true)
+      .map((option) => String(option.optionText || '').trim())
+      .filter(Boolean);
+    const isSkipped = selectedOptions.length === 0;
+    const isCorrect = !isSkipped && (
+      typeof answer.isCorrect === 'boolean'
+        ? answer.isCorrect
+        : correctOptions.length > 0 &&
+          selectedOptions.length === correctOptions.length &&
+          selectedOptions.every((option) => correctOptions.includes(option))
+    );
+
+    return {
+      answer,
+      question,
+      questionNumber: index + 1,
+      selectedOptions,
+      correctOptions,
+      isSkipped,
+      isCorrect,
+    };
+  });
   const codingSubmission = result.attemptId?.codingSubmissions
     ?.map((item) => ({
       code: item.submissionId?.sourceCode,
@@ -201,6 +230,115 @@ const ResultDetail = () => {
           </div>
         </div>
       </div>
+
+      <section className="card p-4 mb-4">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+          <div>
+            <h3 className="h5 fw-bold text-body mb-1">Question-by-question review</h3>
+            <p className="text-muted small mb-0">
+              See which answers were correct, what you selected, and the correct answers.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-outline-primary rounded-pill px-4 d-inline-flex align-items-center gap-2"
+            aria-expanded={showAnswerReview}
+            aria-controls="result-answer-review"
+            onClick={() => setShowAnswerReview((visible) => !visible)}
+          >
+            <FileText size={16} />
+            {showAnswerReview ? 'Hide answer review' : 'Review answers'}
+          </button>
+        </div>
+
+        {showAnswerReview && (
+          <div id="result-answer-review" className="mt-4">
+            {questionReviews.length === 0 ? (
+              <p className="text-muted mb-0">No objective question answers are available for this assessment.</p>
+            ) : (
+              <div className="d-flex flex-column gap-3">
+                {questionReviews.map((review) => {
+                  const { answer, question, questionNumber, selectedOptions, correctOptions, isSkipped, isCorrect } = review;
+                  const statusLabel = isSkipped ? 'Not answered' : isCorrect ? 'Correct' : 'Incorrect';
+                  const statusClass = isSkipped ? 'bg-warning text-dark' : isCorrect ? 'bg-success' : 'bg-danger';
+
+                  return (
+                    <article
+                      key={answer._id || question?._id || questionNumber}
+                      className={`border rounded-3 p-3 ${isSkipped ? 'border-warning' : isCorrect ? 'border-success' : 'border-danger'}`}
+                    >
+                      <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
+                        <div>
+                          <span className="text-muted small">Question {questionNumber}</span>
+                          <h4 className="h6 fw-semibold text-body mt-1 mb-0">
+                            {question?.questionText || 'Question details are unavailable.'}
+                          </h4>
+                        </div>
+                        <span className={`badge ${statusClass} flex-shrink-0`}>{statusLabel}</span>
+                      </div>
+
+                      {question?.options?.length > 0 ? (
+                        <div className="d-flex flex-column gap-2">
+                          {question.options.map((option, optionIndex) => {
+                            const optionText = String(option.optionText || '').trim();
+                            const isSelected = selectedOptions.includes(optionText);
+                            const isCorrectOption = option.isCorrect === true;
+
+                            return (
+                              <div
+                                key={option._id || `${questionNumber}-${optionIndex}`}
+                                className={`border rounded-2 px-3 py-2 d-flex justify-content-between align-items-center gap-2 ${
+                                  isCorrectOption
+                                    ? 'border-success bg-success bg-opacity-10'
+                                    : isSelected
+                                      ? 'border-danger bg-danger bg-opacity-10'
+                                      : ''
+                                }`}
+                              >
+                                <span className="text-body">{optionText}</span>
+                                <span className="d-flex gap-1 flex-wrap justify-content-end">
+                                  {isSelected && (
+                                    <span className={`badge ${isCorrectOption ? 'bg-success' : 'bg-danger'}`}>
+                                      Your answer
+                                    </span>
+                                  )}
+                                  {isCorrectOption && <span className="badge bg-success">Correct answer</span>}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-muted small mb-0">Answer options are unavailable for this question.</p>
+                      )}
+
+                      {isSkipped && (
+                        <p className="small text-warning-emphasis mt-3 mb-0">
+                          You did not select an answer. The correct answer is marked above.
+                        </p>
+                      )}
+                      {!isSkipped && !isCorrect && correctOptions.length === 0 && (
+                        <p className="small text-muted mt-3 mb-0">The correct answer is not available for this question.</p>
+                      )}
+                      {question?.explanation && (
+                        <div className="border-top mt-3 pt-3">
+                          <span className="small fw-semibold text-body">Explanation</span>
+                          <p className="small text-muted mb-0 mt-1">{question.explanation}</p>
+                        </div>
+                      )}
+                      {answer.marksObtained !== undefined && answer.marksObtained !== null && (
+                        <p className="small text-muted mt-3 mb-0">
+                          Marks: {answer.marksObtained} / {question?.marks ?? '-'}
+                        </p>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       {/* AI Code Review Action Card */}
       <div className="card p-4 mb-4 border-info border-opacity-50 bg-info bg-opacity-10 d-flex justify-content-between align-items-center flex-wrap gap-3">

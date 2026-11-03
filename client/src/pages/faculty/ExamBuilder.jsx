@@ -20,6 +20,11 @@ const categoryOptions = [
   'Custom',
 ];
 
+const getQuestionCategory = (question) =>
+  typeof question.category === 'string' && question.category.trim()
+    ? question.category.trim()
+    : 'General';
+
 const toLocalInput = (date) => {
   const offset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
@@ -58,6 +63,7 @@ const ExamBuilder = () => {
   const [mcqBank, setMcqBank] = useState([]);
   const [codingBank, setCodingBank] = useState([]);
   const [mcqSearch, setMcqSearch] = useState('');
+  const [mcqCategoryFilter, setMcqCategoryFilter] = useState('');
   const [codingSearch, setCodingSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [examLoading, setExamLoading] = useState(isEditing);
@@ -125,9 +131,26 @@ const ExamBuilder = () => {
     }));
   };
 
+  const mcqCategoryCounts = useMemo(
+    () => mcqBank.reduce((counts, question) => {
+      const category = getQuestionCategory(question);
+      counts.set(category, (counts.get(category) || 0) + 1);
+      return counts;
+    }, new Map()),
+    [mcqBank]
+  );
+  const mcqCategories = useMemo(
+    () => [...mcqCategoryCounts.keys()].sort((a, b) => a.localeCompare(b)),
+    [mcqCategoryCounts]
+  );
   const filteredMcq = useMemo(
-    () => mcqBank.filter((q) => q.questionText?.toLowerCase().includes(mcqSearch.toLowerCase())),
-    [mcqBank, mcqSearch]
+    () => mcqBank.filter((question) => {
+      const matchesSearch = question.questionText?.toLowerCase().includes(mcqSearch.toLowerCase());
+      const matchesCategory = !mcqCategoryFilter
+        || getQuestionCategory(question) === mcqCategoryFilter;
+      return matchesSearch && matchesCategory;
+    }),
+    [mcqBank, mcqSearch, mcqCategoryFilter]
   );
   const filteredCoding = useMemo(
     () => codingBank.filter((p) => p.title?.toLowerCase().includes(codingSearch.toLowerCase())),
@@ -431,6 +454,20 @@ const ExamBuilder = () => {
                   <CheckSquare size={16} /> MCQs selected ({formData.questions.length})
                 </h6>
               </div>
+              <label className="form-label small fw-semibold mb-1" htmlFor="mcq-category-filter">Filter questions by category</label>
+              <select
+                id="mcq-category-filter"
+                className="form-select form-select-sm mb-2"
+                value={mcqCategoryFilter}
+                onChange={(e) => setMcqCategoryFilter(e.target.value)}
+              >
+                <option value="">All categories ({mcqBank.length})</option>
+                {mcqCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category} ({mcqCategoryCounts.get(category)})
+                  </option>
+                ))}
+              </select>
               <div className="position-relative mb-2">
                 <Search size={14} className="position-absolute text-muted" style={{ top: 10, left: 10 }} />
                 <input
@@ -444,29 +481,34 @@ const ExamBuilder = () => {
               <div className="bg-body-tertiary p-2 rounded-3 mb-4 overflow-auto" style={{ maxHeight: 170 }}>
                 {filteredMcq.length === 0 ? (
                   <div className="text-muted small text-center py-3">
-                    {mcqBank.length === 0 ? 'No MCQs available in question bank' : 'No matches for your search'}
+                    {mcqBank.length === 0
+                      ? 'No MCQs available in question bank'
+                      : mcqCategoryFilter && !mcqCategoryCounts.has(mcqCategoryFilter)
+                        ? 'No MCQs available in this category'
+                        : 'No MCQs match the selected category and search'}
                   </div>
                 ) : (
                   filteredMcq.map((q) => {
                     const selected = formData.questions.includes(q._id);
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={q._id}
                         onClick={() => handleToggleMcq(q._id)}
-                        role="checkbox"
-                        aria-checked={selected}
-                        tabIndex={0}
-                        className="p-2 rounded mb-1 small d-flex justify-content-between align-items-center"
+                        aria-pressed={selected}
+                        className="exam-question-option p-2 rounded mb-1 small d-flex justify-content-between align-items-center"
                         style={{
-                          cursor: 'pointer',
                           backgroundColor: selected ? 'var(--app-warning)' : 'transparent',
                           color: selected ? '#fff' : 'inherit',
                           fontWeight: selected ? 600 : 400,
                         }}
                       >
-                        <span className="text-truncate">{q.questionText}</span>
-                        <span className={`badge ms-2 ${selected ? 'bg-white text-dark' : 'bg-secondary'}`}>{q.marks}m</span>
-                      </div>
+                        <span className="exam-question-option-copy">
+                          <span>{q.questionText}</span>
+                          <small>{q.category || 'General'} · {q.topic || 'General'} · {q.difficulty || 'Difficulty not set'}</small>
+                        </span>
+                        <span className={`badge ms-2 flex-shrink-0 ${selected ? 'bg-white text-dark' : 'bg-secondary'}`}>{q.marks}m</span>
+                      </button>
                     );
                   })
                 )}

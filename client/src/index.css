@@ -146,8 +146,6 @@ small, .small { font-size: .875rem; }
 .sidebar-section + .sidebar-section { margin-top: 1.8rem; }
 .sidebar-nav-link { position: relative; min-height: 45px; color: var(--app-muted); border-radius: 10px; font-size: .875rem; gap: .8rem !important; transition: color .15s, background .15s; }
 .sidebar-nav-link:hover { color: var(--app-text); background: var(--app-subtle); }
-.app-sidebar .nav-pills .sidebar-nav-link.active { color: var(--app-blue); background: var(--app-blue-soft); }
-.sidebar-nav-link.active::after { content: ''; position: absolute; right: 12px; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .sidebar-account { display: flex; align-items: center; gap: .8rem; }
 .sidebar-account .fw-semibold { font-size: .875rem; }
 .sidebar-account .small { font-size: .75rem; }

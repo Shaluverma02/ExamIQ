@@ -64,28 +64,327 @@ h1, h2, h3, h4, h5, h6 { text-wrap: pretty; }
 a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 .brand-mark { border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
 .brand-wordmark { letter-spacing: -.06em; }
-.app-sidebar { background: var(--app-navy-deep); border: 0; color: #dce5f6; }
-.app-sidebar .app-brand { color: #fff; }
-.app-sidebar .brand-dot { color: #a5adff; }
-.sidebar-brand-row { padding: 1.35rem 1.45rem; min-height: 85px; }
-.sidebar-workspace { margin: .3rem 1rem 1.7rem; padding: .85rem; background: #1b2942; border-color: #31415d; border-radius: 12px; }
-.sidebar-workspace .fw-bold { font-size: .8125rem; color: #eff4ff; }
-.app-sidebar .sidebar-label { color: #9eafca; font-size: .75rem; letter-spacing: .075em; font-weight: 600; }
-.sidebar-workspace .sidebar-label { font-size: .75rem; letter-spacing: .015em; text-transform: capitalize; }
-.sidebar-workspace .icon-box { border: 0; color: #bdc5ff; background: #2b3b5d; border-radius: 9px; }
-.sidebar-nav { padding-inline: .8rem; }
-.sidebar-section + .sidebar-section { margin-top: 1.6rem; }
-.sidebar-nav-link { min-height: 44px; border-radius: 8px; color: #b2c0d8; font-size: .875rem; font-weight: 500 !important; }
-.sidebar-nav-link:hover { color: #fff; background: #22314d; }
-.app-sidebar .nav-pills .sidebar-nav-link.active { color: #fff; background: #4f46e5; box-shadow: 0 4px 12px rgba(0, 0, 0, .12); }
-.sidebar-nav-link.active::after { display: none; }
-.sidebar-nav-link svg { opacity: .85; }
-.sidebar-nav-link.active svg { opacity: 1; }
-.sidebar-bottom { margin: auto 1rem 0; padding: 1.15rem .4rem; border-top: 1px solid #2c3a54; display: flex; align-items: center; gap: .7rem; }
-.sidebar-bottom .profile-avatar { background: #2a3b5c; border: 0; outline: 0; color: #c3cbff; border-radius: 11px; width: 36px; height: 36px; }
-.sidebar-bottom strong { font-size: .8125rem; font-weight: 600; color: #ecf2ff; }
-.sidebar-bottom small { display: block; font-size: .75rem; color: #a7b7d1; text-transform: capitalize; }
-.app-sidebar .theme-toggle { color: #e2e8ff; border-color: #344563; background: #22314d; }
+/* ============================================================
+   EXAMIQ SIDEBAR - COMPLETE REDESIGN & THEME ENGINE (ALL ROLES)
+   ============================================================ */
+
+/* Base Sidebar Container */
+.app-sidebar {
+  height: 100dvh;
+  width: var(--app-sidebar-width, 260px);
+  background: var(--sidebar-bg, #ffffff);
+  border-right: 1px solid var(--sidebar-border, #e2e8f0);
+  color: var(--sidebar-text, #334155);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: background-color 0.22s ease, border-color 0.22s ease, color 0.22s ease;
+  user-select: none;
+}
+
+/* 1. Brand Row */
+.sidebar-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.4rem;
+  min-height: 76px;
+  border-bottom: 1px solid var(--sidebar-divider, #f1f5f9);
+}
+.app-sidebar .app-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--sidebar-brand-color, #0f172a);
+  text-decoration: none;
+}
+.app-sidebar .brand-mark {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--role-accent, #6366f1);
+  color: #ffffff;
+  border-radius: 11px;
+  box-shadow: 0 4px 12px var(--role-accent-glow, rgba(99, 102, 241, 0.25));
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.app-sidebar .app-brand:hover .brand-mark {
+  transform: scale(1.04);
+}
+.app-sidebar .brand-wordmark {
+  font-family: var(--app-heading, inherit);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--sidebar-brand-color, #0f172a);
+}
+.app-sidebar .brand-dot {
+  color: var(--role-accent, #6366f1);
+}
+
+/* 2. Workspace Badge Card */
+.sidebar-workspace {
+  margin: 1rem 1rem 1.25rem;
+  padding: 0.85rem 0.95rem;
+  background: var(--sidebar-card-bg, #f8fafc);
+  border: 1px solid var(--sidebar-card-border, #e2e8f0);
+  border-radius: 14px;
+  transition: all 0.2s ease;
+}
+.sidebar-workspace .icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--sidebar-card-icon-bg, rgba(99, 102, 241, 0.1));
+  color: var(--role-accent, #6366f1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 0;
+}
+.sidebar-workspace .sidebar-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sidebar-card-label, #64748b);
+  margin-bottom: 2px;
+}
+.sidebar-workspace .fw-bold {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--sidebar-card-title, #0f172a);
+  line-height: 1.25;
+}
+
+/* 3. Navigation Links & Sections */
+.sidebar-nav {
+  padding: 0 0.85rem 1.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-scrollbar, #cbd5e1) transparent;
+}
+.sidebar-section {
+  margin-bottom: 1.35rem;
+}
+.sidebar-section:last-child {
+  margin-bottom: 0.5rem;
+}
+.sidebar-section .sidebar-label {
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--sidebar-section-header, #64748b);
+  padding: 0 0.6rem;
+  margin-bottom: 0.45rem;
+}
+.sidebar-nav-link {
+  position: relative;
+  min-height: 42px;
+  padding: 0.6rem 0.85rem;
+  border-radius: 11px;
+  font-size: 0.875rem;
+  font-weight: 550;
+  color: var(--sidebar-link-color, #475569) !important;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.16s ease-in-out;
+  border: 1px solid transparent;
+}
+.sidebar-nav-link svg {
+  color: var(--sidebar-link-icon, #64748b);
+  transition: color 0.16s ease, transform 0.16s ease;
+  flex-shrink: 0;
+}
+.sidebar-nav-link:hover {
+  background: var(--sidebar-link-hover-bg, #f1f5f9);
+  color: var(--sidebar-link-hover-color, #0f172a) !important;
+  transform: translateX(2px);
+}
+.sidebar-nav-link:hover svg {
+  color: var(--role-accent, #6366f1);
+  transform: scale(1.08);
+}
+/* Active Nav Item - High Contrast, Absolute Clarity */
+.app-sidebar .nav-pills .sidebar-nav-link.active,
+.sidebar-nav-link.active {
+  background: var(--role-accent, #6366f1) !important;
+  color: #ffffff !important;
+  font-weight: 650;
+  box-shadow: 0 4px 14px var(--role-accent-glow, rgba(99, 102, 241, 0.35));
+  border-color: transparent;
+  transform: none;
+}
+.app-sidebar .nav-pills .sidebar-nav-link.active svg,
+.sidebar-nav-link.active svg {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+.sidebar-nav-link.active::after {
+  display: none !important;
+}
+
+/* 4. Bottom Profile Card */
+.sidebar-bottom {
+  margin-top: auto;
+  padding: 1rem 1.15rem;
+  border-top: 1px solid var(--sidebar-divider, #f1f5f9);
+  background: var(--sidebar-bottom-bg, transparent);
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  transition: background-color 0.22s ease;
+}
+.sidebar-bottom .profile-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--sidebar-card-icon-bg, rgba(99, 102, 241, 0.1));
+  color: var(--role-accent, #6366f1);
+  font-weight: 750;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--sidebar-card-border, #e2e8f0);
+}
+.sidebar-bottom strong {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--sidebar-user-name, #0f172a);
+  line-height: 1.25;
+}
+.sidebar-bottom small {
+  font-size: 0.72rem;
+  color: var(--sidebar-user-role, #64748b);
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+/* ============================================================
+   LIGHT THEME VARIABLES (DEFAULT)
+   ============================================================ */
+:root, [data-theme='light'], [data-bs-theme='light'], .light-theme {
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e2e8f0;
+  --sidebar-divider: #f1f5f9;
+  --sidebar-text: #334155;
+  --sidebar-brand-color: #0f172a;
+  --sidebar-card-bg: #f8fafc;
+  --sidebar-card-border: #e2e8f0;
+  --sidebar-card-icon-bg: rgba(99, 102, 241, 0.08);
+  --sidebar-card-label: #64748b;
+  --sidebar-card-title: #0f172a;
+  --sidebar-section-header: #64748b;
+  --sidebar-link-color: #475569;
+  --sidebar-link-icon: #64748b;
+  --sidebar-link-hover-bg: #f1f5f9;
+  --sidebar-link-hover-color: #0f172a;
+  --sidebar-bottom-bg: #ffffff;
+  --sidebar-user-name: #0f172a;
+  --sidebar-user-role: #64748b;
+  --sidebar-scrollbar: #cbd5e1;
+}
+
+/* ============================================================
+   DARK THEME VARIABLES (PRECISE, NO OVERLAPS, HIGH CONTRAST)
+   ============================================================ */
+[data-theme='dark'], [data-bs-theme='dark'], .dark-theme {
+  --sidebar-bg: #111420;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-divider: rgba(255, 255, 255, 0.06);
+  --sidebar-text: #e2e8f0;
+  --sidebar-brand-color: #ffffff;
+  --sidebar-card-bg: rgba(255, 255, 255, 0.035);
+  --sidebar-card-border: rgba(255, 255, 255, 0.07);
+  --sidebar-card-icon-bg: rgba(255, 255, 255, 0.07);
+  --sidebar-card-label: #94a3b8;
+  --sidebar-card-title: #ffffff;
+  --sidebar-section-header: #94a3b8;
+  --sidebar-link-color: #94a3b8;
+  --sidebar-link-icon: #94a3b8;
+  --sidebar-link-hover-bg: rgba(255, 255, 255, 0.06);
+  --sidebar-link-hover-color: #ffffff;
+  --sidebar-bottom-bg: rgba(0, 0, 0, 0.15);
+  --sidebar-user-name: #ffffff;
+  --sidebar-user-role: #94a3b8;
+  --sidebar-scrollbar: rgba(255, 255, 255, 0.15);
+}
+
+/* ============================================================
+   ROLE-SPECIFIC ACCENTS & THEMING (Both Light & Dark)
+   ============================================================ */
+
+/* 1. Student Role (Electric Indigo / Violet) */
+[data-workspace='student'] {
+  --role-accent: #6366f1;
+  --role-accent-glow: rgba(99, 102, 241, 0.35);
+}
+[data-theme='dark'] [data-workspace='student'],
+[data-bs-theme='dark'] [data-workspace='student'],
+.dark-theme [data-workspace='student'] {
+  --sidebar-bg: #101321;
+  --role-accent: #6366f1;
+  --role-accent-glow: rgba(99, 102, 241, 0.45);
+}
+
+/* 2. Faculty Role (Ocean Sky Blue / Marine) */
+[data-workspace='faculty'] {
+  --role-accent: #0284c7;
+  --role-accent-glow: rgba(2, 132, 199, 0.35);
+}
+[data-theme='dark'] [data-workspace='faculty'],
+[data-bs-theme='dark'] [data-workspace='faculty'],
+.dark-theme [data-workspace='faculty'] {
+  --sidebar-bg: #0b1520;
+  --role-accent: #0284c7;
+  --role-accent-glow: rgba(2, 132, 199, 0.45);
+}
+
+/* 3. Super Admin Role (Royal Purple / Violet) */
+[data-workspace='admin'] {
+  --role-accent: #7c3aed;
+  --role-accent-glow: rgba(124, 58, 237, 0.35);
+}
+[data-theme='dark'] [data-workspace='admin'],
+[data-bs-theme='dark'] [data-workspace='admin'],
+.dark-theme [data-workspace='admin'] {
+  --sidebar-bg: #121021;
+  --role-accent: #7c3aed;
+  --role-accent-glow: rgba(124, 58, 237, 0.45);
+}
+
+/* 4. College Admin Role (Emerald Jade) */
+[data-workspace='college_admin'] {
+  --role-accent: #059669;
+  --role-accent-glow: rgba(5, 150, 105, 0.35);
+}
+[data-theme='dark'] [data-workspace='college_admin'],
+[data-bs-theme='dark'] [data-workspace='college_admin'],
+.dark-theme [data-workspace='college_admin'] {
+  --sidebar-bg: #0c1815;
+  --role-accent: #059669;
+  --role-accent-glow: rgba(5, 150, 105, 0.45);
+}
+
+/* 5. Recruiter Role (Amber Gold) */
+[data-workspace='recruiter'] {
+  --role-accent: #d97706;
+  --role-accent-glow: rgba(217, 119, 6, 0.35);
+}
+[data-theme='dark'] [data-workspace='recruiter'],
+[data-bs-theme='dark'] [data-workspace='recruiter'],
+.dark-theme [data-workspace='recruiter'] {
+  --sidebar-bg: #17130c;
+  --role-accent: #d97706;
+  --role-accent-glow: rgba(217, 119, 6, 0.45);
+}
 .app-navbar { min-height: 76px; background: var(--app-surface); }
 .navbar-breadcrumb { font-size: .875rem; }
 .navbar-breadcrumb a { text-decoration: none; color: var(--app-muted); }

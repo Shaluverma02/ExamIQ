@@ -13,7 +13,15 @@ export default function CollegeSettings() {
   const [college, setCollege] = useState(null), [form, setForm] = useState({}), [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [error, setError] = useState('');
   const load = async () => {
     setLoading(true); setError('');
-    try { const res = await API.get('/colleges/current'); setCollege(res.data.college); setForm(Object.fromEntries(['domain', 'logoUrl', 'address', 'contactEmail', 'contactPhone'].map(field => [field, res.data.college[field] || '']))); setForm(previous => ({ ...previous, allowSelfRegistration: res.data.college.settings?.allowSelfRegistration !== false })); }
+    try {
+      const res = await API.get('/colleges/current');
+      setCollege(res.data.college);
+      setForm({
+        ...Object.fromEntries(['domain', 'logoUrl', 'address', 'contactEmail', 'contactPhone'].map(field => [field, res.data.college[field] || ''])),
+        allowSelfRegistration: res.data.college.settings?.allowSelfRegistration !== false,
+        requireInviteCode: res.data.college.settings?.requireInviteCode === true,
+      });
+    }
     catch (e) { setError(getApiErrorMessage(e)); }
     finally { setLoading(false); }
   };
@@ -22,11 +30,96 @@ export default function CollegeSettings() {
     event.preventDefault(); if (saving || !college) return;
     setSaving(true); setError('');
     try {
-      const { allowSelfRegistration, ...details } = form;
-      await API.put('/colleges/' + college._id, { ...details, settings: { ...college.settings, allowSelfRegistration } });
-      toast.success('College settings updated.'); await fetchMe();
+      const { allowSelfRegistration, requireInviteCode, ...details } = form;
+      const response = await API.put('/colleges/' + college._id, {
+        ...details,
+        settings: { ...college.settings, allowSelfRegistration, requireInviteCode },
+      });
+      setCollege(response.data.college);
+      toast.success('College settings updated.');
+      await fetchMe();
     } catch (e) { setError(getApiErrorMessage(e)); }
     finally { setSaving(false); }
   };
-  return <div className="workspace-page"><PageHeader icon={Settings} eyebrow="INSTITUTION SETTINGS" title="Your college, connected." description="Maintain contact details, branding and student self-registration." />{error && <CollegeError message={error} retry={load} />}{loading ? <div className="ca-loading" role="status">Loading institution settings…</div> : college && <CollegePanel title={college.name} description={'College code: ' + college.code}><form onSubmit={save}><div className="row">{[['domain','Website domain','text'],['logoUrl','Logo URL','url'],['contactEmail','Contact email','email'],['contactPhone','Contact phone','tel']].map(([field,label,type]) => <div key={field} className="col-12 col-md-6"><Input label={label} type={type} value={form[field] || ''} disabled={saving} onChange={e => setForm(previous => ({ ...previous, [field]: e.target.value }))} /></div>)}</div><Input label="Campus address" value={form.address || ''} disabled={saving} onChange={e => setForm(previous => ({ ...previous, address: e.target.value }))} /><label className="form-check form-switch mb-4"><input type="checkbox" className="form-check-input" checked={Boolean(form.allowSelfRegistration)} disabled={saving} onChange={e => setForm(previous => ({ ...previous, allowSelfRegistration: e.target.checked }))} /><span className="form-check-label">Allow student self-registration</span></label><div className="d-flex justify-content-end"><Button type="submit" loading={saving}><Save size={16} /> Save institution settings</Button></div></form></CollegePanel>}<div className="ca-note"><Building2 size={20} /><p>College identity and activation remain with Super Admin. Your changes apply only to your assigned institution.</p></div></div>;
+
+  return (
+    <div className="workspace-page">
+      <PageHeader
+        icon={Settings}
+        eyebrow="INSTITUTION SETTINGS"
+        title="Your college, connected."
+        description="Maintain contact details, branding and student self-registration."
+      />
+      {error && <CollegeError message={error} retry={load} />}
+      {loading ? (
+        <div className="ca-loading" role="status">Loading institution settings…</div>
+      ) : college && (
+        <CollegePanel title={college.name} description={`College code: ${college.code}`}>
+          <form onSubmit={save}>
+            {!college.isActive && (
+              <div className="alert alert-warning" role="alert">
+                This college is inactive, so it will not appear on the registration form. Ask the Super Admin to activate it.
+              </div>
+            )}
+            <div className="row">
+              {[
+                ['domain', 'Website domain', 'text'],
+                ['logoUrl', 'Logo URL', 'url'],
+                ['contactEmail', 'Contact email', 'email'],
+                ['contactPhone', 'Contact phone', 'tel'],
+              ].map(([field, label, type]) => (
+                <div key={field} className="col-12 col-md-6">
+                  <Input
+                    label={label}
+                    type={type}
+                    value={form[field] || ''}
+                    disabled={saving}
+                    onChange={(event) => setForm((previous) => ({ ...previous, [field]: event.target.value }))}
+                  />
+                </div>
+              ))}
+            </div>
+            <Input
+              label="Campus address"
+              value={form.address || ''}
+              disabled={saving}
+              onChange={(event) => setForm((previous) => ({ ...previous, address: event.target.value }))}
+            />
+            <label className="form-check form-switch mb-3">
+              <input
+                type="checkbox"
+                className="form-check-input"
+                checked={Boolean(form.allowSelfRegistration)}
+                disabled={saving}
+                onChange={(event) => setForm((previous) => ({ ...previous, allowSelfRegistration: event.target.checked }))}
+              />
+              <span className="form-check-label">Allow student self-registration</span>
+            </label>
+            <label className="form-check form-switch mb-2">
+              <input
+                type="checkbox"
+                className="form-check-input"
+                checked={Boolean(form.requireInviteCode)}
+                disabled={saving}
+                onChange={(event) => setForm((previous) => ({ ...previous, requireInviteCode: event.target.checked }))}
+              />
+              <span className="form-check-label">Require an invite code</span>
+            </label>
+            <p className="form-text mb-4">
+              Public registration is available only when self-registration is allowed and invite-code requirement is off.
+            </p>
+            <div className="d-flex justify-content-end">
+              <Button type="submit" loading={saving}>
+                <Save size={16} /> Save institution settings
+              </Button>
+            </div>
+          </form>
+        </CollegePanel>
+      )}
+      <div className="ca-note">
+        <Building2 size={20} />
+        <p>College identity and activation remain with Super Admin. Your changes apply only to your assigned institution.</p>
+      </div>
+    </div>
+  );
 }

@@ -8,6 +8,7 @@ const Register = lazy(() => import('./pages/auth/Register'));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
 const VerifyPhone = lazy(() => import('./pages/auth/VerifyPhone'));
+const VerifyRegistration = lazy(() => import('./pages/auth/VerifyRegistration'));
 const MagicLogin = lazy(() => import('./pages/auth/MagicLogin'));
 const VerifyCertificate = lazy(() => import('./pages/VerifyCertificate'));
 
@@ -190,6 +191,7 @@ const App = () => (
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
       <Route path="/verify-phone" element={<VerifyPhone />} />
+      <Route path="/verify-registration" element={<VerifyRegistration />} />
       <Route path="/magic-login" element={<MagicLogin />} />
       <Route path="/verify-certificate/:id" element={<VerifyCertificate />} />
 

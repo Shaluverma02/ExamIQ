@@ -143,13 +143,6 @@
 [data-workspace='student'] .page-description { line-height: 1.75; max-width: 620px; }
 [data-workspace='student'] .card { box-shadow: 0 8px 28px -20px color-mix(in srgb, var(--app-text) 30%, transparent); }
 [data-workspace='student'] .stat-card { position: relative; overflow: hidden; min-height: 162px; }
-[data-workspace='student'] .stat-value { font-size: 2.3rem; }
-[data-workspace='student'] .sidebar-workspace { background: #1b2942; border-color: #3b4c69; color: #eff4ff; }
-[data-workspace='student'] .sidebar-workspace .sidebar-label { color: #c0cde2; }
-[data-workspace='student'] .sidebar-workspace .fw-bold { color: #eff4ff; }
-[data-workspace='student'] .sidebar-workspace .icon-box { background: #2b3b5d; color: #d1d7ff; }
-[data-workspace='student'] .sidebar-nav-link { min-height: 48px; margin-block: .15rem; }
-[data-workspace='student'] .app-sidebar .sidebar-nav-link.active { box-shadow: inset 3px 0 var(--app-blue); }
 [data-workspace='student'] .student-toolbar { padding: 1.1rem 1.25rem; box-shadow: var(--app-shadow); }
 [data-workspace='student'] .student-exam-card { border-top: 3px solid var(--app-blue-soft) !important; padding: 1.6rem; }
 [data-workspace='student'] .student-course-icon { width: 54px; height: 54px; border: 0; border-radius: 17px; }
@@ -396,13 +389,6 @@
   --app-blue:#b6a8ff; --app-blue-dark:#d1c7ff; --app-blue-soft:#30284b;
   --app-bg:#111522; --app-border:#30364c;
 }
-[data-workspace='student'] .app-sidebar { background:#191d35; }
-[data-workspace='student'] .sidebar-workspace { background:#252a46; border-color:#383e5a; }
-[data-workspace='student'] .sidebar-workspace .icon-box { background:#393457; color:#d0c6ff; }
-[data-workspace='student'] .sidebar-nav-link { border-radius:12px; margin-bottom:4px; }
-[data-workspace='student'] .sidebar-nav-link:hover { background:#2b2f4b; }
-[data-workspace='student'] .app-sidebar .nav-pills .sidebar-nav-link.active { background:#6554d9; box-shadow:0 5px 18px #100d3326; }
-[data-workspace='student'] .sidebar-bottom { border-color:#383e5a; }
 [data-workspace='student'] .app-navbar { border-bottom:1px solid var(--app-border); }
 [data-workspace='student'] .app-main { padding-top:1.7rem; }
 [data-workspace='student'] .card { border-radius:20px; box-shadow:0 4px 20px #222a5305; }

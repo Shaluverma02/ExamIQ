@@ -189,9 +189,14 @@ const Register = () => {
     try {
       setLoading(true);
       const user = await register(formData);
-      if (user?.pendingVerification && user?.phoneVerificationRequired) navigate(`/verify-phone?email=${encodeURIComponent(formData.email)}`);
-      else if (user?.pendingVerification) navigate('/login');
-      else if (user?.role === 'admin') navigate('/admin/dashboard');
+      if (user?.pendingVerification) {
+        const params = new URLSearchParams({
+          email: formData.email,
+          verifyEmail: String(user.emailVerificationRequired),
+          verifyPhone: String(user.phoneVerificationRequired),
+        });
+        navigate(`/verify-registration?${params.toString()}`);
+      } else if (user?.role === 'admin') navigate('/admin/dashboard');
       else if (user?.role === 'faculty') navigate('/faculty/dashboard');
       else navigate('/student/dashboard');
     } catch (err) {
@@ -299,10 +304,13 @@ const Register = () => {
                 autoComplete="tel"
                 type="tel"
                 required
-                placeholder="Your mobile number"
+                placeholder="e.g. +919876543210"
+                pattern="\+[1-9][0-9]{7,14}"
+                title="Enter your number with country code, e.g. +919876543210"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
+              <p className="form-text mt-n2">Include country code so we can send your SMS OTP.</p>
               <div className="row g-2">
                 <div className="col-12 col-sm-6">
                   <Input
@@ -430,6 +438,7 @@ const Register = () => {
                 <div className="auth-review-grid">
                   <div className="text-secondary">Name <strong className="text-body">{formData.name}</strong></div>
                   <div className="text-secondary">Email <strong className="text-body">{formData.email}</strong></div>
+                  <div className="text-secondary">Mobile <strong className="text-body">{formData.phone}</strong></div>
                   <div className="text-secondary">Role <strong className="text-primary text-uppercase">{formData.role}</strong></div>
                   {formData.role === 'student' && (
                     <>
