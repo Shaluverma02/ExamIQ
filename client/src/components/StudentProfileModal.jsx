@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import API from '../services/api';
 import { toast } from 'react-toastify';
+import './student-profile-modal.css';
 import {
   X,
-  User,
   BookOpen,
   Code2,
   Briefcase,
   FolderGit2,
-  FileText,
   Plus,
   Trash2,
   CheckCircle2,
-  Sparkles,
   Save,
   GraduationCap,
   Link as LinkIcon,
@@ -74,6 +72,15 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
 
   const completedCount = [secAcademic, secSkills, secProjects, secExp, secLinks].filter(Boolean).length;
   const progressPercentage = completedCount * 20;
+  const sectionDetails = {
+    academic: { title: 'Academic details', description: 'Add your contact information and education background.', icon: BookOpen },
+    skills: { title: 'Skills & technologies', description: 'Highlight the tools and technologies you work with.', icon: Code2 },
+    projects: { title: 'Projects & portfolio', description: 'Showcase projects that demonstrate your experience.', icon: FolderGit2 },
+    experience: { title: 'Work experience', description: 'Include internships and other relevant experience.', icon: Briefcase },
+    links: { title: 'Resume & links', description: 'Help people discover your resume and professional profiles.', icon: LinkIcon },
+  };
+  const activeSection = sectionDetails[activeTab];
+  const ActiveSectionIcon = activeSection.icon;
 
   // Project handlers
   const handleAddProject = () => {
@@ -139,190 +146,209 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
 
   return (
     <div
-      className="modal fade show d-block"
+      className="modal fade show d-block spm-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="student-profile-modal-title"
       tabIndex="-1"
-      style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1050 }}
+      style={{ zIndex: 1050 }}
     >
-      <div className="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div className="modal-content card text-body border shadow-lg rounded-3">
-          {/* Modal Header */}
-          <div className="modal-header border-bottom border px-4 py-3">
-            <div className="d-flex align-items-center gap-3">
-              <div className="p-2 bg-primary bg-opacity-20 text-primary rounded-3">
-                <GraduationCap size={24} />
-              </div>
+      <div className="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable spm-dialog">
+        <div className="modal-content spm-content">
+          <div className="modal-header spm-header">
+            <div className="spm-heading">
+              <span className="spm-brand-icon"><GraduationCap size={23} /></span>
               <div>
-                <h5 className="modal-title fw-bold text-body m-0">Student Profile & Career Resume</h5>
-                <p className="text-muted small m-0">
-                  Complete all 5 sections to reach 100% profile completion
-                </p>
+                <span className="spm-eyebrow">STUDENT PROFILE</span>
+                <h2 className="modal-title" id="student-profile-modal-title">Edit your profile</h2>
+                <p>Build a profile that reflects your education and experience.</p>
               </div>
             </div>
-
-            <button type="button" className="btn-close btn-close-white" onClick={onClose} />
+            <button type="button" className="spm-close" onClick={onClose} aria-label="Close profile editor">
+              <X size={19} />
+            </button>
           </div>
 
-          {/* Progress Indicator Header Bar */}
-          <div className="bg-body-tertiary bg-opacity-50 px-4 py-3 border-bottom border">
-            <div className="d-flex justify-content-between align-items-center mb-2">
-              <span className="small fw-semibold text-secondary">
-                Profile Completion Progress: <strong className="text-success">{completedCount} of 5 sections done</strong>
-              </span>
-              <span className="badge bg-success font-monospace px-3 py-1">{progressPercentage}%</span>
+          <div className="spm-progress-panel">
+            <div className="spm-progress-copy">
+              <div>
+                <strong>Profile completeness</strong>
+                <span>{completedCount} of 5 sections filled</span>
+              </div>
+              <span className="spm-progress-value">{progressPercentage}%</span>
             </div>
-
-            <div className="progress" style={{ height: 8 }}>
-              <div
-                className="progress-bar bg-success transition-all"
-                role="progressbar"
-                style={{ width: `${progressPercentage}%` }}
-              />
+            <div className="progress spm-progress" role="progressbar" aria-label="Profile completeness" aria-valuenow={progressPercentage} aria-valuemin="0" aria-valuemax="100">
+              <div className="progress-bar" style={{ width: `${progressPercentage}%` }} />
             </div>
           </div>
 
-          {/* Nav Tabs Bar */}
-          <div className="nav nav-pills nav-fill gap-1 p-2 bg-body-tertiary border-bottom border overflow-x-auto flex-nowrap">
+          <div className="spm-tabs" role="tablist" aria-label="Profile sections">
             <button
-              className={`nav-link small py-2 px-3 rounded-3 text-nowrap d-flex align-items-center justify-content-center gap-1 ${
-                activeTab === 'academic' ? 'active bg-primary text-white' : 'text-secondary'
-              }`}
+              type="button"
+              id="student-profile-tab-academic"
+              role="tab"
+              aria-selected={activeTab === 'academic'}
+              aria-controls="student-profile-tab-panel"
+              className={`spm-tab ${activeTab === 'academic' ? 'is-active' : ''}`}
               onClick={() => setActiveTab('academic')}
             >
-              <BookOpen size={14} /> Academic {secAcademic && <CheckCircle2 size={13} className="text-success" />}
+              <BookOpen size={16} /><span>Academic</span>{secAcademic && <CheckCircle2 size={15} className="spm-tab-check" />}
             </button>
-
             <button
-              className={`nav-link small py-2 px-3 rounded-3 text-nowrap d-flex align-items-center justify-content-center gap-1 ${
-                activeTab === 'skills' ? 'active bg-primary text-white' : 'text-secondary'
-              }`}
+              type="button"
+              id="student-profile-tab-skills"
+              role="tab"
+              aria-selected={activeTab === 'skills'}
+              aria-controls="student-profile-tab-panel"
+              className={`spm-tab ${activeTab === 'skills' ? 'is-active' : ''}`}
               onClick={() => setActiveTab('skills')}
             >
-              <Code2 size={14} /> Skills {secSkills && <CheckCircle2 size={13} className="text-success" />}
+              <Code2 size={16} /><span>Skills</span>{secSkills && <CheckCircle2 size={15} className="spm-tab-check" />}
             </button>
-
             <button
-              className={`nav-link small py-2 px-3 rounded-3 text-nowrap d-flex align-items-center justify-content-center gap-1 ${
-                activeTab === 'projects' ? 'active bg-primary text-white' : 'text-secondary'
-              }`}
+              type="button"
+              id="student-profile-tab-projects"
+              role="tab"
+              aria-selected={activeTab === 'projects'}
+              aria-controls="student-profile-tab-panel"
+              className={`spm-tab ${activeTab === 'projects' ? 'is-active' : ''}`}
               onClick={() => setActiveTab('projects')}
             >
-              <FolderGit2 size={14} /> Projects {secProjects && <CheckCircle2 size={13} className="text-success" />}
+              <FolderGit2 size={16} /><span>Projects</span>{secProjects && <CheckCircle2 size={15} className="spm-tab-check" />}
             </button>
-
             <button
-              className={`nav-link small py-2 px-3 rounded-3 text-nowrap d-flex align-items-center justify-content-center gap-1 ${
-                activeTab === 'experience' ? 'active bg-primary text-white' : 'text-secondary'
-              }`}
+              type="button"
+              id="student-profile-tab-experience"
+              role="tab"
+              aria-selected={activeTab === 'experience'}
+              aria-controls="student-profile-tab-panel"
+              className={`spm-tab ${activeTab === 'experience' ? 'is-active' : ''}`}
               onClick={() => setActiveTab('experience')}
             >
-              <Briefcase size={14} /> Experience {secExp && <CheckCircle2 size={13} className="text-success" />}
+              <Briefcase size={16} /><span>Experience</span>{secExp && <CheckCircle2 size={15} className="spm-tab-check" />}
             </button>
-
             <button
-              className={`nav-link small py-2 px-3 rounded-3 text-nowrap d-flex align-items-center justify-content-center gap-1 ${
-                activeTab === 'links' ? 'active bg-primary text-white' : 'text-secondary'
-              }`}
+              type="button"
+              id="student-profile-tab-links"
+              role="tab"
+              aria-selected={activeTab === 'links'}
+              aria-controls="student-profile-tab-panel"
+              className={`spm-tab ${activeTab === 'links' ? 'is-active' : ''}`}
               onClick={() => setActiveTab('links')}
             >
-              <LinkIcon size={14} /> Resume & Links {secLinks && <CheckCircle2 size={13} className="text-success" />}
+              <LinkIcon size={16} /><span>Resume & links</span>{secLinks && <CheckCircle2 size={15} className="spm-tab-check" />}
             </button>
           </div>
 
-          {/* Modal Body */}
-          <form onSubmit={handleSubmit}>
-            <div className="modal-body p-4" style={{ maxHeight: '55vh', overflowY: 'auto' }}>
-              {/* Tab 1: Academic Info */}
-              {activeTab === 'academic' && (
-                <div className="row g-3">
-                  <div className="col-12 col-md-6">
-                    <label className="form-label text-secondary small">Full Name</label>
-                    <input
-                      type="text"
-                      className="form-control bg-body-tertiary border text-body"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="col-12 col-md-6">
-                    <label className="form-label text-secondary small">Phone Number</label>
-                    <input
-                      type="text"
-                      className="form-control bg-body-tertiary border text-body"
-                      placeholder="+91 9876543210"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="col-12 col-md-6">
-                    <label className="form-label text-secondary small">College / Institute</label>
-                    <input
-                      type="text"
-                      className="form-control bg-body-tertiary border text-body"
-                      value={formData.college}
-                      onChange={(e) => setFormData({ ...formData, college: e.target.value })}
-                      placeholder="e.g. ABC Institute of Technology"
-                    />
-                  </div>
-
-                  <div className="col-12 col-md-6">
-                    <label className="form-label text-secondary small">Degree / Course</label>
-                    <input
-                      type="text"
-                      className="form-control bg-body-tertiary border text-body"
-                      value={formData.course}
-                      onChange={(e) => setFormData({ ...formData, course: e.target.value })}
-                      placeholder="e.g. B.Tech Computer Science"
-                    />
-                  </div>
-
-                  <div className="col-12 col-md-4">
-                    <label className="form-label text-secondary small">Branch</label>
-                    <input
-                      type="text"
-                      className="form-control bg-body-tertiary border text-body"
-                      value={formData.branch}
-                      onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-                      placeholder="CSE / IT / ECE"
-                    />
-                  </div>
-
-                  <div className="col-12 col-md-4">
-                    <label className="form-label text-secondary small">Semester</label>
-                    <input
-                      type="text"
-                      className="form-control bg-body-tertiary border text-body"
-                      value={formData.semester}
-                      onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
-                      placeholder="e.g. 6th"
-                    />
-                  </div>
-
-                  <div className="col-12 col-md-4">
-                    <label className="form-label text-secondary small">Roll / Enrollment No.</label>
-                    <input
-                      type="text"
-                      className="form-control bg-body-tertiary border text-body"
-                      value={formData.rollNumber}
-                      onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value })}
-                      placeholder="2100450100"
-                    />
-                  </div>
-
-                  <div className="col-12 col-md-4">
-                    <label className="form-label text-secondary small">CGPA / Aggregate %</label>
-                    <input
-                      type="text"
-                      className="form-control bg-body-tertiary border text-body"
-                      value={formData.cgpa}
-                      onChange={(e) => setFormData({ ...formData, cgpa: e.target.value })}
-                      placeholder="8.5 / 85%"
-                    />
-                  </div>
+          <form onSubmit={handleSubmit} className="spm-form">
+            <div className="modal-body spm-body">
+              <div className="spm-section-heading">
+                <div>
+                  <span className="spm-step-label">SECTION {['academic', 'skills', 'projects', 'experience', 'links'].indexOf(activeTab) + 1} OF 5</span>
+                  <h3>{activeSection.title}</h3>
+                  <p>{activeSection.description}</p>
                 </div>
-              )}
+                <span className="spm-section-icon"><ActiveSectionIcon size={21} /></span>
+              </div>
+
+              <div
+                id="student-profile-tab-panel"
+                role="tabpanel"
+                aria-labelledby={`student-profile-tab-${activeTab}`}
+                className="spm-tab-panel"
+              >
+                {/* Tab 1: Academic Info */}
+                {activeTab === 'academic' && (
+                  <div className="row g-3">
+                    <div className="col-12 col-md-6">
+                      <label className="form-label text-secondary small">Full Name</label>
+                      <input
+                        type="text"
+                        className="form-control bg-body-tertiary border text-body"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className="col-12 col-md-6">
+                      <label className="form-label text-secondary small">Phone Number</label>
+                      <input
+                        type="text"
+                        className="form-control bg-body-tertiary border text-body"
+                        placeholder="+91 9876543210"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="col-12 col-md-6">
+                      <label className="form-label text-secondary small">College / Institute</label>
+                      <input
+                        type="text"
+                        className="form-control bg-body-tertiary border text-body"
+                        value={formData.college}
+                        onChange={(e) => setFormData({ ...formData, college: e.target.value })}
+                        placeholder="e.g. ABC Institute of Technology"
+                      />
+                    </div>
+
+                    <div className="col-12 col-md-6">
+                      <label className="form-label text-secondary small">Degree / Course</label>
+                      <input
+                        type="text"
+                        className="form-control bg-body-tertiary border text-body"
+                        value={formData.course}
+                        onChange={(e) => setFormData({ ...formData, course: e.target.value })}
+                        placeholder="e.g. B.Tech Computer Science"
+                      />
+                    </div>
+
+                    <div className="col-12 col-md-4">
+                      <label className="form-label text-secondary small">Branch</label>
+                      <input
+                        type="text"
+                        className="form-control bg-body-tertiary border text-body"
+                        value={formData.branch}
+                        onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
+                        placeholder="CSE / IT / ECE"
+                      />
+                    </div>
+
+                    <div className="col-12 col-md-4">
+                      <label className="form-label text-secondary small">Semester</label>
+                      <input
+                        type="text"
+                        className="form-control bg-body-tertiary border text-body"
+                        value={formData.semester}
+                        onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
+                        placeholder="e.g. 6th"
+                      />
+                    </div>
+
+                    <div className="col-12 col-md-4">
+                      <label className="form-label text-secondary small">Roll / Enrollment No.</label>
+                      <input
+                        type="text"
+                        className="form-control bg-body-tertiary border text-body"
+                        value={formData.rollNumber}
+                        onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value })}
+                        placeholder="2100450100"
+                      />
+                    </div>
+
+                    <div className="col-12 col-md-4">
+                      <label className="form-label text-secondary small">CGPA / Aggregate %</label>
+                      <input
+                        type="text"
+                        className="form-control bg-body-tertiary border text-body"
+                        value={formData.cgpa}
+                        onChange={(e) => setFormData({ ...formData, cgpa: e.target.value })}
+                        placeholder="8.5 / 85%"
+                      />
+                    </div>
+                  </div>
+                )}
 
               {/* Tab 2: Technical Skills */}
               {activeTab === 'skills' && (
@@ -565,17 +591,20 @@ const StudentProfileModal = ({ isOpen, onClose, user, initialProfile, onProfileS
                   </div>
                 </div>
               )}
+              </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="modal-footer border-top border px-4 py-3 d-flex justify-content-between">
-              <button type="button" className="btn btn-outline-secondary rounded-pill px-4" onClick={onClose}>
-                Cancel
-              </button>
+            <div className="modal-footer spm-footer">
+              <span className="spm-footer-note">Your profile details help personalize your ExamIQ experience.</span>
+              <div className="spm-footer-actions">
+                <button type="button" className="btn spm-cancel-button" onClick={onClose}>
+                  Cancel
+                </button>
 
-              <button type="submit" className="btn btn-success fw-bold rounded-pill px-4 d-flex align-items-center gap-2" disabled={saving}>
-                <Save size={16} /> {saving ? 'Saving Profile...' : 'Save & Update Profile'}
-              </button>
+                <button type="submit" className="btn spm-save-button" disabled={saving}>
+                  <Save size={16} /> {saving ? 'Saving...' : 'Save changes'}
+                </button>
+              </div>
             </div>
           </form>
         </div>

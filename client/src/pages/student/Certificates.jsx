@@ -1,4 +1,5 @@
 import '../../styles/student.css';
+import './student-achievements.css';
 import PageHeader from '../../components/common/PageHeader';
 import EmptyState from '../../components/common/EmptyState';
 import React, { useEffect, useState } from 'react';
@@ -58,7 +59,14 @@ const Certificates = () => {
 
   return (
     <div className="student-page">
-      <PageHeader eyebrow="Your achievements" title="Certificates" description="A record of your hard work. Download and share your verified assessment credentials." actions={<span className="badge bg-primary">{loading ? 'Loading…' : certificates.length + ' credentials'}</span>} />
+      <PageHeader
+        className="student-achievement-header"
+        eyebrow="YOUR ACHIEVEMENTS"
+        title="Certificates"
+        description="A record of your hard work. Download and share your verified assessment credentials."
+        icon={Award}
+        actions={<span className="student-achievement-count"><Award size={15} />{loading ? 'Loading…' : `${certificates.length} ${certificates.length === 1 ? 'credential' : 'credentials'}`}</span>}
+      />
       {loading ? (
         <div className="student-loading card" role="status"><span className="spinner-border text-primary" aria-hidden="true" /><p>Loading your certificates…</p></div>
       ) : error ? (
@@ -66,43 +74,41 @@ const Certificates = () => {
       ) : certificates.length === 0 ? (
         <EmptyState icon={Award} title="Your achievements belong here" description="Pass an eligible assessment to earn your first certificate. Your verified credentials will appear here." />
       ) : (
-        <div className="row g-4">
+        <div className="student-certificate-grid">
           {certificates.map((cert) => (
-            <div key={cert._id} className="col-12 col-xl-6">
-              <article className="card p-3 h-100">
-                <div id={'cert-card-' + cert.certificateId} className="student-certificate h-100">
-                  <div className="student-certificate-topline">
-                    <div>
-                      <div className="d-flex align-items-center gap-2 text-body fw-bold mb-2"><Award size={25} /> ExamIQ</div>
-                      <div className="small text-muted">Verified assessment credential</div>
-                      <div className="small text-muted mt-1" style={{ overflowWrap: 'anywhere' }}>ID: {cert.certificateId}</div>
-                    </div>
-                    <div className="bg-white p-2 rounded-3 align-self-start">
-                      <QRCodeSVG value={cert.verificationUrl || window.location.origin + '/verify-certificate/' + cert.certificateId} size={64} />
-                    </div>
+            <article key={cert._id} className="student-certificate-card">
+              <div id={'cert-card-' + cert.certificateId} className="student-certificate">
+                <div className="student-certificate-topline">
+                  <div className="student-certificate-brand">
+                    <span className="student-certificate-brand-icon"><Award size={20} /></span>
+                    <div><strong>ExamIQ</strong><span>Verified achievement</span></div>
                   </div>
-                  <div className="text-center py-3">
-                    <div className="text-uppercase text-muted small fw-semibold mb-3" style={{ letterSpacing: '0.16em' }}>Certificate of achievement</div>
-                    <h2 className="h3 mb-3">{cert.studentId?.name || 'Student'}</h2>
-                    <p className="text-muted small mb-2">has successfully completed the assessment</p>
-                    <h3 className="h5 text-body mb-4">{cert.examId?.title || 'Assessment'}</h3>
-                    <div className="d-inline-flex flex-wrap justify-content-center gap-3 px-4 py-3 rounded-3 bg-body-tertiary small">
-                      <span>Grade <strong className="text-success ms-1">{cert.grade || 'Pass'}</strong></span>
-                      <span>Score <strong className="text-info ms-1">{cert.percentage}%</strong></span>
-                      <span className="text-muted">{cert.score} points</span>
-                    </div>
-                  </div>
-                  <div className="d-flex flex-wrap justify-content-between gap-3 border-top pt-4 mt-3">
-                    <div className="small text-muted">Issued {cert.issueDate ? new Date(cert.issueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Date unavailable'}</div>
-                    <div className="small text-success d-flex align-items-center gap-1"><ShieldCheck size={16} /> ExamIQ digital credential</div>
+                  <div className="student-certificate-qr" aria-label="Certificate verification QR code">
+                    <QRCodeSVG value={cert.verificationUrl || window.location.origin + '/verify-certificate/' + cert.certificateId} size={64} />
                   </div>
                 </div>
-                <div className="student-certificate-actions" data-html2canvas-ignore="true">
-                  <a href={cert.verificationUrl || '/verify-certificate/' + cert.certificateId} target="_blank" rel="noreferrer" className="btn btn-outline-secondary btn-sm"><ExternalLink size={15} /> Verify credential</a>
-                  <button type="button" className="btn btn-primary btn-sm" disabled={Boolean(downloadingId)} onClick={() => handleDownloadPDF(cert.certificateId)}><Download size={15} /> {downloadingId === cert.certificateId ? 'Preparing PDF…' : 'Download PDF'}</button>
+                <div className="student-certificate-copy">
+                  <span className="student-certificate-kicker"><Sparkles size={14} /> CERTIFICATE OF ACHIEVEMENT</span>
+                  <h2>{cert.studentId?.name || 'Student'}</h2>
+                  <p>has successfully completed</p>
+                  <h3>{cert.examId?.title || 'Assessment'}</h3>
                 </div>
-              </article>
-            </div>
+                <div className="student-certificate-metrics">
+                  <div><span>Grade</span><strong className="is-grade">{cert.grade || 'Pass'}</strong></div>
+                  <div><span>Score</span><strong>{cert.percentage}%</strong></div>
+                  <div><span>Points</span><strong>{cert.score}</strong></div>
+                </div>
+                <div className="student-certificate-meta">
+                  <div className="student-certificate-issued"><span>ISSUED ON</span><strong>{cert.issueDate ? new Date(cert.issueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Date unavailable'}</strong></div>
+                  <div className="student-certificate-seal"><CheckCircle2 size={17} /><span><strong>Verified credential</strong><small>ExamIQ digital certificate</small></span></div>
+                </div>
+                <div className="student-certificate-id">CERTIFICATE ID <strong>{cert.certificateId}</strong></div>
+              </div>
+              <div className="student-certificate-actions" data-html2canvas-ignore="true">
+                <a href={cert.verificationUrl || '/verify-certificate/' + cert.certificateId} target="_blank" rel="noreferrer" className="btn btn-outline-secondary btn-sm"><ExternalLink size={15} /> Verify credential</a>
+                <button type="button" className="btn btn-primary btn-sm" disabled={Boolean(downloadingId)} onClick={() => handleDownloadPDF(cert.certificateId)}><Download size={15} /> {downloadingId === cert.certificateId ? 'Preparing PDF…' : 'Download PDF'}</button>
+              </div>
+            </article>
           ))}
         </div>
       )}

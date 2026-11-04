@@ -68,8 +68,16 @@ const Login = () => {
   };
 
   return (
-    <AuthLayout mode="login" eyebrow="YOUR LEARNING JOURNEY CONTINUES" title="Welcome back." description="Sign in to your workspace and pick up where you left off.">
-      <div className="eq-auth-context"><ShieldCheck size={16} /><span>Your institution. Your workspace. Your next step.</span></div>
+    <AuthLayout
+      mode="login"
+      eyebrow="YOUR LEARNING JOURNEY CONTINUES"
+      title="Welcome back."
+      description="Sign in to your workspace and pick up where you left off."
+      storyKicker="GOOD TO HAVE YOU BACK"
+      storyTitle={<>Your next step<br />starts <span>right here.</span></>}
+      storyDescription="Sign in to reconnect with your courses, assessments, and the progress you have already made."
+    >
+      <div className="eq-auth-context"><ShieldCheck size={16} /><span>Secure access to your institution and learning workspace.</span></div>
       {error && <div className="alert alert-danger small mb-3" role="alert">{error}</div>}
       <form onSubmit={handleSubmit} className="auth-form-stack" aria-busy={isSubmitting}>
         <Input label="Email address" type="email" required placeholder="name@institute.edu" value={email} onChange={(e) => setEmail(e.target.value)} icon={Mail} autoComplete="username" autoFocus />

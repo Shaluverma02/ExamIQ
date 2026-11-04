@@ -3,7 +3,10 @@
 .sa-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .sa-toolbar .ca-eyebrow { color: var(--app-muted); font-size: .6rem; letter-spacing: .14em; }
 .sa-toolbar p { margin: 8px 0 0; color: var(--app-text); font-size: .9rem; font-weight: 600; }
-.sa-dashboard .ca-hero { background: #202b48; }
+.sa-dashboard .ca-hero { background: #202b48; color: #f7f8ff; }
+.sa-dashboard .ca-hero-copy h1,
+.sa-dashboard .ca-institution h2 { color: #f7f8ff; }
+.sa-dashboard .ca-hero-copy .ca-eyebrow { color: #c5cce0; }
 .sa-dashboard .ca-hero-copy h1 span { color: #ced5ff; }
 .sa-dashboard .ca-hero-copy p { color: #d2daeb; }
 .sa-dashboard .ca-institution-icon { color: #ced5ff; }

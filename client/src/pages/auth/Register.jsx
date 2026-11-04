@@ -41,16 +41,30 @@ const CollegeField = ({ formData, setFormData, publicColleges, error }) => (
 const uniqueValues = (groups, field) => [...new Set(groups.map((group) => group[field]).filter(Boolean))].sort();
 
 const stepLabels = ['Account', 'Academics', 'Review'];
+const stepDescriptions = [
+  'Create your account and sign-in details.',
+  'Connect your institution and academic group.',
+  'Review the details before creating your account.',
+];
 
 const StepIndicator = ({ step }) => (
-  <ol className="eq-registration-steps" aria-label="Registration progress">
-    {stepLabels.map((label, index) => (
-      <li key={label} className={step === index + 1 ? 'is-active' : step > index + 1 ? 'is-complete' : ''} aria-current={step === index + 1 ? 'step' : undefined}>
-        <span>{step > index + 1 ? <CheckCircle2 size={16} /> : String(index + 1).padStart(2, '0')}</span>
-        <strong>{label}</strong>
-      </li>
-    ))}
-  </ol>
+  <div className="eq-registration-progress">
+    <ol className="eq-registration-steps" aria-label="Registration progress">
+      {stepLabels.map((label, index) => (
+        <li key={label} className={step === index + 1 ? 'is-active' : step > index + 1 ? 'is-complete' : ''} aria-current={step === index + 1 ? 'step' : undefined}>
+          <span>{step > index + 1 ? <CheckCircle2 size={16} /> : String(index + 1).padStart(2, '0')}</span>
+          <strong>{label}</strong>
+        </li>
+      ))}
+    </ol>
+    <div className="eq-registration-progress-copy">
+      <span>STEP {String(step).padStart(2, '0')} / 03</span>
+      <strong>{stepDescriptions[step - 1]}</strong>
+    </div>
+    <div className="eq-registration-progress-track" role="progressbar" aria-label="Registration progress" aria-valuenow={Math.round((step / stepLabels.length) * 100)} aria-valuemin="0" aria-valuemax="100">
+      <span style={{ width: `${(step / stepLabels.length) * 100}%` }} />
+    </div>
+  </div>
 );
 
 const Register = () => {
@@ -271,7 +285,16 @@ const Register = () => {
   }
 
   return (
-    <AuthLayout mode="register" title="Start your next chapter." description="Your learning workspace starts here. Let's get you connected to your institution." maxWidth={560} eyebrow="Get started with ExamiQ">
+    <AuthLayout
+      mode="register"
+      title="Start your next chapter."
+      description="Your learning workspace starts here. Let's get you connected to your institution."
+      maxWidth={560}
+      eyebrow="GET STARTED WITH EXAMIQ"
+      storyKicker="YOUR FUTURE, IN PROGRESS"
+      storyTitle={<>Make today<br />count. <span>Grow from here.</span></>}
+      storyDescription="Create your learning account and connect to your institution, courses, and assessment community."
+    >
           <StepIndicator step={step} />
 
           {step === 1 && (
