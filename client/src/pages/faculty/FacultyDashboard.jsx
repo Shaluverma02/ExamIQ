@@ -168,7 +168,7 @@ const FacultyDashboard = () => {
                           <span className="badge bg-secondary text-truncate">{group.college}</span>
                         </div>
                         <h6 className="fw-bold mb-1 text-truncate">{group.name}</h6>
-                        <p className="text-muted small mb-3 text-truncate">{group.course} · {group.department} · Sem {group.semester}</p>
+                        <p className="text-muted small mb-3 text-truncate">{group.course} · {group.category || group.department || '-'} · Sem {group.semester}</p>
                         <div className="metric-row mb-3 py-2">
                           <span>Students</span>
                           <strong>{group.students?.length || 0}</strong>

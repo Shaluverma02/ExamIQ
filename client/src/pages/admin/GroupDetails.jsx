@@ -111,7 +111,7 @@ const GroupDetails = () => {
           <div className="text-muted small mt-1 d-flex flex-wrap align-items-center gap-3">
             <span><Building size={14} className="me-1 text-info" />{group.college}</span>
             <span>Course: <strong>{group.course}</strong></span>
-            <span>Dept: <strong>{group.department}</strong></span>
+            {(group.category || group.department) && <span>Branch: <strong>{group.category || group.department}</strong></span>}
             <span>Sem: <strong>{group.semester}</strong></span>
             <span>Sec: <strong>{group.section}</strong></span>
           </div>
@@ -268,8 +268,8 @@ const GroupDetails = () => {
 
             <div className="col-12 col-md-4">
               <div className="p-3 rounded-3 bg-body-tertiary border">
-                <div className="text-muted mb-1">Course & Department:</div>
-                <div className="fw-bold text-body">{group.course} ({group.department})</div>
+                <div className="text-muted mb-1">Course & Branch:</div>
+                <div className="fw-bold text-body">{group.course} ({group.category || group.department || '-'})</div>
               </div>
             </div>
 

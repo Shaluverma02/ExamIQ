@@ -37,6 +37,22 @@ test('super admin cannot configure student registration when creating or editing
   assert.equal(f.college.settings.allowSelfRegistration, true);
   assert.equal(f.saves(), 0);
 });
+test('college administrator can enable public registration and disable invite-only mode', async () => {
+  const f = fixture();
+  const res = response();
+  await load('controllers/collegeController.js', f.mocks).updateCollege({
+    params: { id: 'A' },
+    user: { _id: 'college-admin', role: 'college_admin' },
+    collegeId: 'A',
+    membershipRole: 'college_admin',
+    memberships: [{ collegeId: { _id: 'A' } }],
+    body: { settings: { allowSelfRegistration: true, requireInviteCode: false } },
+  }, res, error => { throw error; });
+  assert.equal(res.code, 200);
+  assert.equal(f.college.settings.allowSelfRegistration, true);
+  assert.equal(f.college.settings.requireInviteCode, false);
+  assert.equal(f.saves(), 1);
+});
 test('college delete removes access while preserving linked academic records', async () => {
   const f = fixture(); const res = response();
   await load('controllers/collegeController.js', f.mocks).deleteCollege({ user: { role: 'admin' }, params: { id: 'A' } }, res, error => { throw error; });
@@ -100,4 +116,3 @@ test('delete college administrator rejects non-superadmin and self-deletion', as
   await load('controllers/adminController.js', f.mocks).deleteCollegeAdmin({ user: { _id: 'superadmin', role: 'admin' }, params: { id: 'm1' } }, resSelf, error => { throw error; });
   assert.equal(resSelf.code, 400);
 });
-

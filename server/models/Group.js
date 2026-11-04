@@ -29,6 +29,21 @@ const groupSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    courseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Course',
+      default: null,
+    },
+    category: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+      default: null,
+    },
     department: {
       type: String,
       trim: true,

@@ -1,4 +1,5 @@
 import { SECTION_LABELS } from '../utils/examSections';
+import '../styles/json-import-modal.css';
 import React, { useState } from 'react';
 import { questionAPI } from '../services/api';
 import { toast } from 'react-toastify';
@@ -240,46 +241,52 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   return (
-    <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 1060 }}>
-      <div className="modal-dialog modal-dialog-centered modal-xl">
+    <div className="modal fade show d-block json-import-overlay">
+      <div className="modal-dialog modal-dialog-centered modal-xl json-import-dialog">
         <div className="modal-content card text-body border shadow-lg">
           {/* Header */}
-          <div className="modal-header border">
-            <div className="d-flex align-items-center gap-2">
-              <FileJson className="text-primary" size={24} />
-              <h5 className="modal-title fw-bold">Bulk Question Import (JSON / CSV)</h5>
+          <div className="modal-header json-import-header">
+            <div className="d-flex align-items-center gap-3 min-w-0">
+              <span className="json-import-heading-icon"><FileJson size={21} /></span>
+              <div className="min-w-0">
+                <h5 className="modal-title fw-bold">Bulk Question Import</h5>
+                <p className="mb-0 small text-muted">Upload, validate, and add questions to your bank.</p>
+              </div>
             </div>
             <button
               type="button"
-              className="btn-close btn-close-white"
+              className="btn-close"
               onClick={onClose}
               aria-label="Close"
             />
           </div>
 
           {/* Stepper Indicator */}
-          <div className="px-4 py-2 border-bottom border bg-body-tertiary bg-opacity-50">
-            <div className="d-flex align-items-center justify-content-center gap-2 small">
-              <span className={`badge ${step >= 1 ? 'bg-primary' : 'bg-secondary'} px-3 py-1 font-monospace`}>
-                1. Upload file
-              </span>
-              <span className="text-muted">â”€â”€â”€</span>
-              <span className={`badge ${step >= 2 ? 'bg-primary' : 'bg-secondary'} px-3 py-1 font-monospace`}>
-                2. Preview & Validate
-              </span>
-              <span className="text-muted">â”€â”€â”€</span>
-              <span className={`badge ${step >= 3 ? 'bg-success' : 'bg-secondary'} px-3 py-1 font-monospace`}>
-                3. Import Result
-              </span>
+          <div className="json-import-stepper">
+            <div className="json-import-steps">
+              {['Upload file', 'Preview & Validate', 'Import Result'].map((label, index) => {
+                const stepNumber = index + 1;
+                const isComplete = step > stepNumber;
+                const isActive = step === stepNumber;
+                return (
+                  <React.Fragment key={label}>
+                    {index > 0 && <span className={`json-import-step-line ${isComplete ? 'is-complete' : ''}`} />}
+                    <div className={`json-import-step ${isActive ? 'is-active' : ''} ${isComplete ? 'is-complete' : ''}`}>
+                      <span className="json-import-step-number">{isComplete ? <CheckCircle2 size={15} /> : stepNumber}</span>
+                      <span>{label}</span>
+                    </div>
+                  </React.Fragment>
+                );
+              })}
             </div>
           </div>
 
           {/* Modal Body */}
-          <div className="modal-body p-4" style={{ minHeight: '380px' }}>
+          <div className="modal-body json-import-body">
             {/* STEP 1: UPLOAD FILE */}
             {step === 1 && (
               <div>
-                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                <div className="json-import-intro">
                   <div>
                     <h6 className="fw-bold mb-1">Upload section questions</h6>
                     <p className="text-muted small m-0">
@@ -287,24 +294,24 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
                     </p>
                   </div>
 
-                  <div className="d-flex gap-2 flex-wrap flex-shrink-0">
+                  <div className="json-import-templates">
                     <button
                       type="button"
-                      className="btn btn-outline-info btn-sm rounded-pill px-3 d-flex align-items-center gap-2"
+                      className="btn btn-outline-info btn-sm d-flex align-items-center justify-content-center gap-2"
                       onClick={handleDownloadTemplate}
                     >
                       <Download size={15} /> MCQ JSON Template
                     </button>
                     <button
                       type="button"
-                      className="btn btn-outline-success btn-sm rounded-pill px-3 d-flex align-items-center gap-2"
+                      className="btn btn-outline-success btn-sm d-flex align-items-center justify-content-center gap-2"
                       onClick={handleDownloadTemplateCoding}
                     >
                       <Download size={15} /> Coding JSON Template
                     </button>
                     <button
                       type="button"
-                      className="btn btn-outline-warning btn-sm rounded-pill px-3 d-flex align-items-center gap-2"
+                      className="btn btn-outline-warning btn-sm d-flex align-items-center justify-content-center gap-2"
                       onClick={handleDownloadTemplateCsv}
                     >
                       <Download size={15} /> CSV Template
@@ -312,10 +319,10 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
                   </div>
                 </div>
 
-                <div className="mb-4"><label htmlFor="import-default-section" className="form-label fw-semibold">Section for this upload</label><select id="import-default-section" className="form-select" value={defaultSection} onChange={e => setDefaultSection(e.target.value)}><option value="">Use file sections / auto-detect</option>{Object.entries(SECTION_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select><p className="small text-muted mt-2 mb-0">For separate section files, select their section here. For a mixed file, add a section field to each question: aptitude, reasoning, verbal or general. Each question’s section takes priority. Coding problems automatically go to Coding Test.</p></div>
+                <div className="json-import-section-setting"><label htmlFor="import-default-section" className="form-label fw-semibold">Section for this upload</label><select id="import-default-section" className="form-select" value={defaultSection} onChange={e => setDefaultSection(e.target.value)}><option value="">Use file sections / auto-detect</option>{Object.entries(SECTION_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select><p className="small text-muted mt-2 mb-0">For separate section files, select their section here. For a mixed file, add a section field to each question: aptitude, reasoning, verbal or general. Each question’s section takes priority. Coding problems automatically go to Coding Test.</p></div>
                 {/* Dropzone */}
-                <div className="border-2 border-dashed border rounded-3 p-5 text-center bg-body-tertiary bg-opacity-20 mb-4">
-                  <Upload size={48} className="text-primary mb-3 opacity-75" />
+                <div className="json-import-dropzone">
+                  <span className="json-import-upload-icon"><Upload size={24} /></span>
 
                   <h6 className="fw-bold text-body mb-2">
                     {file ? file.name : 'Select a .json or .csv file'}
@@ -326,12 +333,12 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
                       {(file.size / 1024).toFixed(1)} KB
                     </div>
                   ) : (
-                    <p className="text-secondary small mb-3">Supports MCQ, Multiple Correct, and True/False questions</p>
+                    <p className="text-secondary small mb-3">Supports MCQ, coding, multiple-correct, and true/false questions</p>
                   )}
 
                   <div>
-                    <label className="btn btn-primary btn-sm px-4 rounded-pill fw-bold" style={{ cursor: 'pointer' }}>
-                      Choose file
+                    <label className="btn btn-primary btn-sm px-4 rounded-pill fw-bold mb-0">
+                      {file ? 'Choose another file' : 'Choose file'}
                       <input
                         type="file"
                         accept=".json,.csv,application/json,text/csv"
@@ -342,7 +349,7 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
                   </div>
                 </div>
 
-                <div className="p-3 rounded-3 bg-body-tertiary border small text-muted">
+                <div className="json-import-supported-fields small text-muted">
                   <div className="fw-bold text-body mb-1">Supported JSON Fields:</div>
                   <code>question</code> (or <code>questionText</code>), <code>type</code> (single, multiple, boolean), <code>options</code> (array), <code>correctAnswer</code>, <code>difficulty</code>, <code>category</code>, <code>topic</code>, <code>marks</code>, <code>explanation</code>, <code>section</code> (aptitude, reasoning, verbal, general).
                 </div>
@@ -404,7 +411,7 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
                 </div>
 
                 {/* Preview Table */}
-                <div className="table-responsive border rounded-3" style={{ maxHeight: 260, overflowY: 'auto' }}>
+                <div className="table-responsive border rounded-3 json-import-preview-table">
                   <table className="table table-hover align-middle m-0 small">
                     <thead>
                       <tr className="text-muted text-uppercase">
@@ -499,7 +506,7 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
           </div>
 
           {/* Modal Footer */}
-          <div className="modal-footer border">
+          <div className="modal-footer json-import-footer">
             {step === 1 && (
               <>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>
@@ -562,4 +569,3 @@ const JsonImportModal = ({ isOpen, onClose, onSuccess }) => {
 };
 
 export default JsonImportModal;
-

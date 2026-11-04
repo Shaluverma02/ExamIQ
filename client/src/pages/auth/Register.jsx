@@ -39,6 +39,7 @@ const CollegeField = ({ formData, setFormData, publicColleges, error }) => (
 );
 
 const uniqueValues = (groups, field) => [...new Set(groups.map((group) => group[field]).filter(Boolean))].sort();
+const getGroupBranch = (group) => group.category || group.department || '';
 
 const stepLabels = ['Account', 'Academics', 'Review'];
 const stepDescriptions = [
@@ -171,7 +172,7 @@ const Register = () => {
         ...formData,
         groupId,
         course: selected.course || formData.course,
-        branch: selected.department || formData.branch,
+        branch: getGroupBranch(selected) || formData.branch,
         semester: selected.semester || formData.semester,
       });
     } else {
@@ -181,12 +182,6 @@ const Register = () => {
 
   const handleNextStep2 = (e) => {
     e.preventDefault();
-
-    if (formData.role === 'student' && availableGroups.length > 0 && !formData.groupId) {
-      setErrors({ groupId: 'Please select a group or batch to complete registration' });
-      toast.warning('Please select a group or batch');
-      return;
-    }
 
     if (!formData.college.trim()) {
       setErrors({ college: 'College or institution is required' });
@@ -230,19 +225,21 @@ const Register = () => {
   const selectedGroupObj = availableGroups.find((group) => group._id === formData.groupId);
   const courseOptions = uniqueValues(availableGroups, 'course');
   const branchOptions = uniqueValues(
-    availableGroups.filter((group) => !formData.course || group.course === formData.course),
-    'department'
+    availableGroups
+      .filter((group) => !formData.course || group.course === formData.course)
+      .map((group) => ({ branch: getGroupBranch(group) })),
+    'branch'
   );
   const semesterOptions = uniqueValues(
     availableGroups.filter((group) => (
       (!formData.course || group.course === formData.course)
-      && (!formData.branch || group.department === formData.branch)
+      && (!formData.branch || getGroupBranch(group) === formData.branch)
     )),
     'semester'
   );
   const mappedGroups = availableGroups.filter((group) => (
     (!formData.course || group.course === formData.course)
-    && (!formData.branch || group.department === formData.branch)
+    && (!formData.branch || getGroupBranch(group) === formData.branch)
     && (!formData.semester || group.semester === formData.semester)
   ));
 
@@ -380,7 +377,7 @@ const Register = () => {
 
                 <div className="mb-3">
                   <label htmlFor="registration-group" className="form-label d-flex justify-content-between align-items-center">
-                    <span>Assigned Group / Batch *</span>
+                    <span>Assigned Group / Batch (Optional)</span>
                     {groupsLoading && <span className="spinner-border spinner-border-sm text-primary" role="status" />}
                   </label>
 
@@ -394,12 +391,11 @@ const Register = () => {
                   ) : (
                     <select
                       id="registration-group"
-                      className={`form-select fw-semibold ${errors.groupId ? 'is-invalid' : ''}`}
+                      className="form-select fw-semibold"
                       value={formData.groupId}
                       onChange={(e) => handleGroupSelect(e.target.value)}
-                      required
                     >
-                      <option value="">Select your assigned group</option>
+                      <option value="">Continue without a group</option>
                       {mappedGroups.map((group) => (
                         <option key={group._id} value={group._id}>
                           {group.name} [{group.code}] ({group.course} - Sem {group.semester})
@@ -407,8 +403,31 @@ const Register = () => {
                       ))}
                     </select>
                   )}
-                  {errors.groupId && <div className="invalid-feedback d-block">{errors.groupId}</div>}
                 </div>
+
+                {selectedGroupObj && (
+                  <div className="eq-registration-group-summary" aria-live="polite">
+                    <div className="eq-registration-group-summary-heading">
+                      <strong>Selected group details</strong>
+                      <span>Read only</span>
+                    </div>
+                    <dl className="eq-registration-group-details">
+                      <div><dt>Group</dt><dd>{selectedGroupObj.name || '-'}</dd></div>
+                      <div><dt>Code</dt><dd>{selectedGroupObj.code || '-'}</dd></div>
+                      <div><dt>College</dt><dd>{selectedGroupObj.college || formData.college || '-'}</dd></div>
+                      <div><dt>Course</dt><dd>{selectedGroupObj.course || '-'}</dd></div>
+                      <div><dt>Branch</dt><dd>{getGroupBranch(selectedGroupObj) || '-'}</dd></div>
+                      <div><dt>Semester</dt><dd>{selectedGroupObj.semester || '-'}</dd></div>
+                      <div><dt>Section</dt><dd>{selectedGroupObj.section || '-'}</dd></div>
+                      <div><dt>Academic year</dt><dd>{selectedGroupObj.academicYear || '-'}</dd></div>
+                    </dl>
+                    {selectedGroupObj.description && (
+                      <p className="eq-registration-group-description">
+                        <strong>Description:</strong> {selectedGroupObj.description}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div className="row g-2">
                   <div className="col-12 col-sm-6">
@@ -419,7 +438,7 @@ const Register = () => {
                     </select>
                   </div>
                   <div className="col-12 col-sm-6">
-                    <label htmlFor="registration-branch" className="form-label">Branch / Dept</label>
+                    <label htmlFor="registration-branch" className="form-label">Branch</label>
                     <select id="registration-branch" className="form-select" value={formData.branch} onChange={(e) => handleAcademicChange('branch', e.target.value)} disabled={!formData.course}>
                       <option value="">Select branch</option>
                       {branchOptions.map((branch) => <option key={branch} value={branch}>{branch}</option>)}
@@ -467,7 +486,7 @@ const Register = () => {
                     <>
                       <div className="text-secondary">College <strong className="text-body">{formData.college}</strong></div>
                       <div className="text-secondary">Group / Batch <strong className="text-primary">{selectedGroupObj ? `${selectedGroupObj.name} [${selectedGroupObj.code}]` : 'Not assigned'}</strong></div>
-                      <div className="text-secondary">Course / Dept <strong className="text-body">{formData.course || '-'} ({formData.branch || '-'})</strong></div>
+                      <div className="text-secondary">Course / Branch <strong className="text-body">{formData.course || '-'} ({formData.branch || '-'})</strong></div>
                       <div className="text-secondary">Roll No <strong className="text-body">{formData.rollNumber || 'Will be assigned by institute'}</strong></div>
                     </>
                   )}

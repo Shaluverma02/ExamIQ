@@ -3,6 +3,8 @@ const Student = require('../models/Student');
 const User = require('../models/User');
 const ExamAssignment = require('../models/ExamAssignment');
 const Result = require('../models/Result');
+const Course = require('../models/Course');
+const Category = require('../models/Category');
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const validateRoster = async (students, collegeId) => {
@@ -13,6 +15,26 @@ const validateRoster = async (students, collegeId) => {
   const profiles = await Student.find({ userId: { $in: ids }, collegeId }).select('userId');
   const validIds = new Set(profiles.map(profile => String(profile.userId)));
   return ids.every(id => validIds.has(id)) ? null : 'All students must belong to the selected college';
+};
+
+exports.getAcademicOptions = async (req, res, next) => {
+  try {
+    if (!req.collegeId) {
+      return res.status(400).json({ success: false, message: 'Select an active college workspace to load courses and categories' });
+    }
+
+    const [courses, categories] = await Promise.all([
+      Course.find({ collegeId: req.collegeId }).select('name code').sort({ name: 1 }),
+      Category.find({ collegeId: req.collegeId })
+        .select('name courseId')
+        .populate('courseId', 'name code')
+        .sort({ name: 1 }),
+    ]);
+
+    res.status(200).json({ success: true, courses, categories });
+  } catch (err) {
+    next(err);
+  }
 };
 
 // @desc    Get public groups by college (for student registration dropdown)
@@ -30,7 +52,7 @@ exports.getPublicGroups = async (req, res, next) => {
     }
 
     const groups = await Group.find(query)
-      .select('name code college course department semester section academicYear isActive')
+      .select('name code college course category department semester section academicYear isActive')
       .sort({ name: 1 });
 
     // Also get distinct list of colleges available
@@ -168,7 +190,8 @@ exports.createGroup = async (req, res, next) => {
       name,
       code,
       course = '',
-      department = '',
+      courseId,
+      categoryId,
       semester = '',
       section = '',
       academicYear = '',
@@ -183,6 +206,23 @@ exports.createGroup = async (req, res, next) => {
 
     if (!name || !code) {
       return res.status(400).json({ success: false, message: 'Group name and code are required' });
+    }
+
+    let selectedCourse = null;
+    if (courseId) {
+      selectedCourse = await Course.findOne({ _id: courseId, collegeId: req.collegeId });
+      if (!selectedCourse) return res.status(404).json({ success: false, message: 'Course not found in this college' });
+    }
+
+    let selectedCategory = null;
+    if (categoryId) {
+      if (!selectedCourse) return res.status(400).json({ success: false, message: 'Select a course before selecting a category' });
+      selectedCategory = await Category.findOne({
+        _id: categoryId,
+        collegeId: req.collegeId,
+        courseId: selectedCourse._id,
+      });
+      if (!selectedCategory) return res.status(404).json({ success: false, message: 'Category not found for the selected course' });
     }
 
     const rosterError = await validateRoster(students, req.collegeId);
@@ -208,8 +248,10 @@ exports.createGroup = async (req, res, next) => {
       code: code.toUpperCase().trim(),
       collegeId: req.collegeId || undefined,
       college: college.trim(),
-      course: course.trim(),
-      department: department.trim(),
+      course: selectedCourse?.name || course.trim(),
+      courseId: selectedCourse?._id || null,
+      category: selectedCategory?.name || '',
+      categoryId: selectedCategory?._id || null,
       semester: semester.trim(),
       section: section.trim(),
       academicYear: academicYear.trim(),
@@ -258,7 +300,8 @@ exports.updateGroup = async (req, res, next) => {
       code,
       college,
       course,
-      department,
+      courseId,
+      categoryId,
       semester,
       section,
       academicYear,
@@ -289,10 +332,49 @@ exports.updateGroup = async (req, res, next) => {
       group.code = code.toUpperCase().trim();
     }
 
+    let selectedCourse = null;
+    if (courseId) {
+      selectedCourse = await Course.findOne({ _id: courseId, collegeId: req.collegeId });
+      if (!selectedCourse) return res.status(404).json({ success: false, message: 'Course not found in this college' });
+    } else if (courseId === null || courseId === '') {
+      selectedCourse = null;
+    } else if (group.courseId) {
+      selectedCourse = await Course.findOne({ _id: group.courseId, collegeId: req.collegeId });
+    }
+
+    let selectedCategory = null;
+    if (categoryId) {
+      if (!selectedCourse) return res.status(400).json({ success: false, message: 'Select a course before selecting a category' });
+      selectedCategory = await Category.findOne({
+        _id: categoryId,
+        collegeId: req.collegeId,
+        courseId: selectedCourse._id,
+      });
+      if (!selectedCategory) return res.status(404).json({ success: false, message: 'Category not found for the selected course' });
+    } else if (categoryId === null || categoryId === '' || courseId !== undefined) {
+      selectedCategory = null;
+    } else if (group.categoryId && selectedCourse) {
+      selectedCategory = await Category.findOne({
+        _id: group.categoryId,
+        collegeId: req.collegeId,
+        courseId: selectedCourse._id,
+      });
+    }
+
     if (name) group.name = name.trim();
     if (college) group.college = college.trim();
-    if (course) group.course = course.trim();
-    if (department) group.department = department.trim();
+    if (courseId !== undefined) {
+      group.courseId = selectedCourse?._id || null;
+      group.course = selectedCourse?.name || String(course || '').trim();
+      group.categoryId = selectedCategory?._id || null;
+      group.category = selectedCategory?.name || '';
+    } else if (course) {
+      group.course = course.trim();
+    }
+    if (categoryId !== undefined && courseId === undefined) {
+      group.categoryId = selectedCategory?._id || null;
+      group.category = selectedCategory?.name || '';
+    }
     if (semester) group.semester = semester.trim();
     if (section) group.section = section.trim();
     if (academicYear) group.academicYear = academicYear.trim();

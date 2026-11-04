@@ -13,13 +13,30 @@ exports.register = [
   body('name').isString().bail().trim().isLength({ min: 1, max: 120 }).withMessage('Name is required and must be at most 120 characters'),
   body('collegeId').isMongoId().withMessage('Select a valid registered college'),
   body('groupId').optional({ values: 'falsy' }).isMongoId().withMessage('Select a valid group'),
-  body('phone').optional({ values: 'falsy' }).isString().bail().matches(/^\+?[0-9\s()-]{7,20}$/).withMessage('Enter a valid mobile number'),
+  body('phone').optional({ values: 'falsy' }).isString().bail().custom(value => (
+    process.env.REQUIRE_PHONE_VERIFICATION === 'true'
+      ? /^\+[1-9]\d{7,14}$/.test(value.trim())
+      : /^\+?[0-9\s()-]{7,20}$/.test(value)
+  )).withMessage('Enter a valid mobile number with country code, for example +919876543210'),
   finish,
 ];
 exports.login = [email(), body('password').isString().bail().notEmpty().withMessage('Password is required'), finish];
 exports.email = [email(), finish];
 exports.reset = [password(), body('password').custom(value => Buffer.byteLength(value, 'utf8') <= 72).withMessage('Password is too long'), finish];
+exports.resetWithCode = [
+  email(),
+  body('code').isString().bail().matches(/^\d{6}$/).withMessage('Enter the six-digit password reset code'),
+  password(),
+  body('confirmPassword').isString().bail().custom((value, { req }) => value === req.body.password).withMessage('Passwords do not match'),
+  finish,
+];
 exports.phone = [email(), body('code').isString().bail().matches(/^\d{6}$/).withMessage('Enter the six-digit verification code'), finish];
+exports.registrationOtp = [
+  email(),
+  body('emailCode').optional({ values: 'falsy' }).isString().bail().matches(/^\d{6}$/).withMessage('Enter the six-digit email verification code'),
+  body('phoneCode').optional({ values: 'falsy' }).isString().bail().matches(/^\d{6}$/).withMessage('Enter the six-digit mobile verification code'),
+  finish,
+];
 exports.changePassword = [
   body('currentPassword').isString().bail().notEmpty().withMessage('Current password is required'),
   body('newPassword').isString().bail().isLength({ min: 6, max: 72 }).withMessage('New password must be 6 to 72 characters').bail().custom(value => Buffer.byteLength(value, 'utf8') <= 72).withMessage('New password is too long'),

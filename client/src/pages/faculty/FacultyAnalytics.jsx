@@ -43,7 +43,7 @@ const FacultyAnalytics = () => {
         return {
           id: group._id,
           name: group.name,
-          department: group.department || '-',
+          branch: group.category || group.department || '-',
           course: group.course || '-',
           enrolled,
           attempted,
@@ -186,7 +186,7 @@ const FacultyAnalytics = () => {
             <thead>
               <tr>
                 <th>Batch / Group Name</th>
-                <th>Department / Course</th>
+                <th>Course / Branch</th>
                 <th>Enrolled Candidates</th>
                 <th>Evaluated Attempts</th>
                 <th>Class Pass Rate</th>
@@ -203,7 +203,7 @@ const FacultyAnalytics = () => {
                 return (
                   <tr key={group.id}>
                     <td className="fw-bold text-body">{group.name}</td>
-                    <td><span className="badge bg-primary">{group.course} / {group.department}</span></td>
+                    <td><span className="badge bg-primary">{group.course} / {group.branch}</span></td>
                     <td>{group.enrolled} Students</td>
                     <td>{group.attempted} Attempted</td>
                     <td><strong className="text-success">{group.passRate}%</strong></td>

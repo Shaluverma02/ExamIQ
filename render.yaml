@@ -18,3 +18,23 @@ services:
         sync: false
       - key: CLIENT_URL
         sync: false
+      - key: REQUIRE_EMAIL_VERIFICATION
+        value: "true"
+      - key: REQUIRE_PHONE_VERIFICATION
+        value: "true"
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false

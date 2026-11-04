@@ -25,7 +25,9 @@ const testCaseSchema = new mongoose.Schema(
 
     expectedOutput: {
       type: String,
-      required: true,
+      required() {
+        return this.expectedOutput !== '';
+      },
     },
 
     // =====================================================

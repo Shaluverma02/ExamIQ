@@ -15,7 +15,10 @@ test('real HTTP and MongoDB application flows', { skip: process.env.RUN_FLOW_TES
   const app = require('../app');
   const dbName = `examiq_flow_test_${crypto.randomBytes(8).toString('hex')}`;
   const phoneSetting = process.env.REQUIRE_PHONE_VERIFICATION;
+  const smtpKeys = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM'];
+  const smtpSettings = smtpKeys.map(key => process.env[key]);
   process.env.REQUIRE_PHONE_VERIFICATION = 'false';
+  smtpKeys.forEach((key) => { process.env[key] = `flow-test-${key.toLowerCase()}`; });
   let http;
   try {
     await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/online_exam_db', { dbName });
@@ -368,14 +371,16 @@ test('real HTTP and MongoDB application flows', { skip: process.env.RUN_FLOW_TES
         if (index === 2) studentToken = restored.token;
       }
     });
-    await check('invalid reset payload rejected and password reset requires sign in', async () => {
+    await check('invalid reset payload rejected and password reset revokes existing sessions', async () => {
       await request('POST', '/auth/reset-password/invalid', { password: 'x' }, undefined, 400);
       const reset = crypto.randomBytes(20).toString('hex');
       await User.updateOne({ _id: studentId }, { resetPasswordToken: crypto.createHash('sha256').update(reset).digest('hex'), resetPasswordExpire: Date.now() + 60000 });
       const data = await request('POST', `/auth/reset-password/${reset}`, { password: 'UpdatedFlow@123' });
       assert.equal(data.token, undefined);
+      await request('GET', '/auth/me', undefined, studentToken, 401);
       await request('POST', '/auth/login', { email: registration.email, password: pass }, undefined, 401);
-      await request('POST', '/auth/login', { email: registration.email, password: 'UpdatedFlow@123' });
+      const signedIn = await request('POST', '/auth/login', { email: registration.email, password: 'UpdatedFlow@123' });
+      studentToken = signedIn.token;
       await request('POST', `/auth/reset-password/${reset}`, { password: pass }, undefined, 400);
     });
     await check('disabled accounts cannot use password login or magic login', async () => {
@@ -391,5 +396,9 @@ test('real HTTP and MongoDB application flows', { skip: process.env.RUN_FLOW_TES
     await mongoose.disconnect();
     if (phoneSetting === undefined) delete process.env.REQUIRE_PHONE_VERIFICATION;
     else process.env.REQUIRE_PHONE_VERIFICATION = phoneSetting;
+    smtpKeys.forEach((key, index) => {
+      if (smtpSettings[index] === undefined) delete process.env[key];
+      else process.env[key] = smtpSettings[index];
+    });
   }
 });

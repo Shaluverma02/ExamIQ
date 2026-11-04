@@ -58,14 +58,19 @@ CLIENT_URL=http://localhost:5173
 MONGO_URI=mongodb://127.0.0.1:27017/online_exam_db
 JWT_SECRET=super_secret_jwt_key_exam_platform_2026_secure
 JWT_EXPIRES_IN=7d
-REQUIRE_EMAIL_VERIFICATION=false
+REQUIRE_EMAIL_VERIFICATION=true
 REQUIRE_PHONE_VERIFICATION=true
+SMTP_HOST=your_smtp_host
+SMTP_PORT=587
+SMTP_USER=your_smtp_username
+SMTP_PASS=your_smtp_password
+SMTP_FROM=your_verified_sender_email
 TWILIO_ACCOUNT_SID=your_twilio_account_sid
 TWILIO_AUTH_TOKEN=your_twilio_auth_token
 TWILIO_PHONE_NUMBER=+10000000000
 ```
 
-When phone verification is enabled, new accounts receive a six-digit SMS code. Configure the Twilio values with production secrets before enabling it.
+During registration, students must verify the six-digit codes sent to their email and mobile number before they can sign in. Codes expire after 10 minutes and can be resent from the verification screen. Configure SMTP and Twilio values with production secrets, and keep both verification flags enabled in the deployment environment.
 
 ### 3. Database Seeding (Demo Credentials)
 ```bash
@@ -122,6 +127,8 @@ services:
 ```
 
 Set `CLIENT_URL` in Render to your deployed Netlify frontend URL (or a comma-separated list of allowed frontend origins).
+
+The Render blueprint enables email and SMS OTP verification for registration. Before deploying, configure the SMTP variables (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`) and Twilio variables (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`) in the backend service environment. The phone number entered during registration must include its country code in E.164 format, for example `+919876543210`. The project-root `.env` is ignored by Git and does not configure Render.
 
 ### Validation checks
 

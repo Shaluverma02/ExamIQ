@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   getGroups,
   getPublicGroups,
+  getAcademicOptions,
   getGroupById,
   createGroup,
   updateGroup,
@@ -17,6 +18,7 @@ router.get('/public', getPublicGroups);
 
 router.use(protect);
 
+router.get('/academic-options', authorize('admin', 'faculty', 'college_admin'), getAcademicOptions);
 router.get('/', authorize('admin', 'faculty', 'college_admin'), getGroups);
 router.get('/:id', authorize('admin', 'faculty', 'college_admin'), getGroupById);
 router.post('/', authorize('admin', 'college_admin', 'faculty'), createGroup);

@@ -1,0 +1,352 @@
+.json-import-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1060;
+  overflow: auto;
+  padding: 1.25rem;
+  background: rgb(10 15 28 / 72%);
+  backdrop-filter: blur(5px);
+}
+
+.json-import-dialog {
+  width: min(100%, 1120px);
+  max-width: none;
+  min-height: calc(100% - 2.5rem);
+  margin: 0 auto;
+}
+
+.json-import-dialog .modal-content {
+  max-height: calc(100vh - 2.5rem);
+  min-height: 520px;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 18px;
+  background: var(--app-surface);
+}
+
+.json-import-header {
+  flex: 0 0 auto;
+  gap: 1rem;
+  padding: 1.15rem 1.5rem;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+
+.json-import-header .modal-title {
+  color: var(--app-text);
+  font-size: 1.05rem;
+}
+
+.json-import-heading-icon,
+.json-import-upload-icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--app-blue);
+  background: var(--app-blue-soft);
+}
+
+.json-import-heading-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+
+.json-import-stepper {
+  flex: 0 0 auto;
+  padding: .8rem 1.5rem;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-subtle);
+}
+
+.json-import-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.json-import-step {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  color: var(--app-muted);
+  font-size: .75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.json-import-step-number {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--app-border);
+  border-radius: 50%;
+  background: var(--app-surface);
+  font-size: .7rem;
+}
+
+.json-import-step.is-active {
+  color: var(--app-blue);
+}
+
+.json-import-step.is-active .json-import-step-number {
+  border-color: var(--app-primary-fill, var(--app-blue));
+  background: var(--app-primary-fill, var(--app-blue));
+  color: #fff;
+}
+
+.json-import-step.is-complete {
+  color: var(--app-success);
+}
+
+.json-import-step.is-complete .json-import-step-number {
+  border-color: var(--app-success);
+  background: var(--app-success-soft);
+}
+
+.json-import-step-line {
+  width: clamp(18px, 6vw, 72px);
+  height: 1px;
+  flex: 0 1 auto;
+  margin: 0 .7rem;
+  background: var(--app-border);
+}
+
+.json-import-step-line.is-complete {
+  background: var(--app-success);
+}
+
+.json-import-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 1.35rem 1.5rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.json-import-intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.json-import-templates {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .5rem;
+}
+
+.json-import-templates .btn {
+  min-height: 36px;
+  padding: .45rem .75rem;
+  border-radius: 9px;
+  font-size: .72rem;
+  font-weight: 650;
+}
+
+.json-import-section-setting {
+  margin-bottom: 1rem;
+}
+
+.json-import-section-setting .form-label {
+  margin-bottom: .4rem;
+  color: var(--app-text);
+  font-size: .78rem;
+}
+
+.json-import-section-setting .form-select {
+  max-width: 420px;
+  min-height: 42px;
+}
+
+.json-import-section-setting p {
+  max-width: 760px;
+  line-height: 1.55;
+}
+
+.json-import-dropzone {
+  display: flex;
+  min-height: 190px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  border: 1px dashed color-mix(in srgb, var(--app-blue) 40%, var(--app-border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--app-blue-soft) 40%, var(--app-surface));
+  text-align: center;
+}
+
+.json-import-upload-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: .8rem;
+  border-radius: 14px;
+}
+
+.json-import-dropzone h6 {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.json-import-dropzone .btn {
+  min-height: 40px;
+}
+
+.json-import-supported-fields {
+  padding: .85rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 11px;
+  background: var(--app-subtle);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.json-import-supported-fields code {
+  color: var(--app-blue);
+}
+
+.json-import-preview-table {
+  max-height: min(42vh, 360px);
+  overflow: auto;
+}
+
+.json-import-preview-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--app-surface);
+  white-space: nowrap;
+}
+
+.json-import-footer {
+  flex: 0 0 auto;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .9rem 1.5rem;
+  border-top: 1px solid var(--app-border);
+  background: var(--app-subtle);
+}
+
+.json-import-footer .btn {
+  min-height: 40px;
+  border-radius: 9px;
+}
+
+@media (max-width: 767.98px) {
+  .json-import-overlay {
+    padding: .5rem;
+  }
+
+  .json-import-dialog {
+    min-height: calc(100% - 1rem);
+  }
+
+  .json-import-dialog .modal-content {
+    max-height: calc(100vh - 1rem);
+    min-height: min(620px, calc(100dvh - 1rem));
+    border-radius: 14px;
+  }
+
+  .json-import-header {
+    padding: .9rem 1rem;
+  }
+
+  .json-import-stepper {
+    padding: .7rem .65rem;
+  }
+
+  .json-import-step {
+    gap: .3rem;
+    font-size: .65rem;
+  }
+
+  .json-import-step-number {
+    width: 25px;
+    height: 25px;
+  }
+
+  .json-import-step-line {
+    width: clamp(8px, 4vw, 26px);
+    margin: 0 .35rem;
+  }
+
+  .json-import-body {
+    padding: 1rem;
+  }
+
+  .json-import-intro {
+    flex-direction: column;
+    gap: .8rem;
+    margin-bottom: 1rem;
+  }
+
+  .json-import-templates {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .json-import-templates .btn:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .json-import-section-setting .form-select {
+    max-width: none;
+  }
+
+  .json-import-dropzone {
+    min-height: 165px;
+    padding: 1rem;
+  }
+
+  .json-import-footer {
+    padding: .75rem 1rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .json-import-steps {
+    justify-content: space-between;
+  }
+
+  .json-import-step {
+    flex-direction: column;
+    gap: .25rem;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .json-import-step-line {
+    flex: 1 1 auto;
+    margin: 0 .3rem;
+  }
+
+  .json-import-templates {
+    grid-template-columns: 1fr;
+  }
+
+  .json-import-templates .btn:last-child {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 359.98px) {
+  .json-import-footer {
+    flex-direction: column-reverse;
+  }
+
+  .json-import-footer > .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

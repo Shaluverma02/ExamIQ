@@ -24,6 +24,8 @@ const GroupManagement = () => {
   const groupBase = role === 'college_admin' ? '/college-admin/groups' : role === 'faculty' ? '/faculty/groups' : '/admin/groups';
   const [groups, setGroups] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [academicOptionsError, setAcademicOptionsError] = useState('');
   const [allStudents, setAllStudents] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -37,12 +39,13 @@ const GroupManagement = () => {
   // Group Create / Edit Modal State
   const [showModal, setShowModal] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState(null);
+  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [groupForm, setGroupForm] = useState({
     name: '',
     code: '',
     college: '',
     course: '',
-    department: '',
     semester: '',
     section: '',
     academicYear: '',
@@ -68,9 +71,9 @@ const GroupManagement = () => {
       if (semesterFilter) queryParams.append('semester', semesterFilter);
       if (statusFilter) queryParams.append('isActive', statusFilter);
 
-      const [groupsResult, coursesResult, studentsResult] = await Promise.allSettled([
+      const [groupsResult, academicOptionsResult, studentsResult] = await Promise.allSettled([
         API.get(`/groups?${queryParams.toString()}`),
-        API.get('/admin/courses'),
+        API.get('/groups/academic-options'),
         API.get('/admin/users?role=student'),
       ]);
 
@@ -80,8 +83,15 @@ const GroupManagement = () => {
         throw groupsResult.reason;
       }
 
-      if (coursesResult.status === 'fulfilled') setCourses(coursesResult.value.data.courses || []);
-      else setCourses([]);
+      if (academicOptionsResult.status === 'fulfilled') {
+        setCourses(academicOptionsResult.value.data.courses || []);
+        setCategories(academicOptionsResult.value.data.categories || []);
+        setAcademicOptionsError('');
+      } else {
+        setCourses([]);
+        setCategories([]);
+        setAcademicOptionsError(academicOptionsResult.reason.response?.data?.message || 'Unable to load courses and categories');
+      }
 
       if (studentsResult.status === 'fulfilled') setAllStudents(studentsResult.value.data.users || []);
       else setAllStudents([]);
@@ -100,24 +110,30 @@ const GroupManagement = () => {
       code: '',
       college: activeCollege?.name || '',
       course: '',
-      department: '',
       semester: '',
       section: '',
       academicYear: '',
       description: '',
       isActive: true,
     });
+    setSelectedCourseId('');
+    setSelectedCategoryId('');
     setShowModal(true);
   };
 
   const handleOpenEditModal = (group) => {
     setEditingGroupId(group._id);
+    const courseId = String(group.courseId?._id || group.courseId || courses.find((course) => course.name === group.course)?._id || '');
+    const categoryId = String(group.categoryId?._id || group.categoryId || categories.find((category) => (
+      category.name === group.category && String(category.courseId?._id || category.courseId) === courseId
+    ))?._id || '');
+    setSelectedCourseId(courseId);
+    setSelectedCategoryId(categoryId);
     setGroupForm({
       name: group.name || '',
       code: group.code || '',
       college: group.college || '',
       course: group.course || '',
-      department: group.department || '',
       semester: group.semester || '',
       section: group.section || '',
       academicYear: group.academicYear || '',
@@ -125,6 +141,20 @@ const GroupManagement = () => {
       isActive: group.isActive !== false,
     });
     setShowModal(true);
+  };
+
+  const handleCourseChange = (courseId) => {
+    const course = courses.find((item) => item._id === courseId);
+    setSelectedCourseId(courseId);
+    setSelectedCategoryId('');
+    setGroupForm((previous) => ({
+      ...previous,
+      course: course?.name || '',
+    }));
+  };
+
+  const handleCategoryChange = (categoryId) => {
+    setSelectedCategoryId(categoryId);
   };
 
   const handleSaveGroup = async (e) => {
@@ -135,11 +165,18 @@ const GroupManagement = () => {
     }
 
     try {
+      const payload = {
+        ...groupForm,
+        ...(!academicOptionsError ? {
+          courseId: selectedCourseId || null,
+          categoryId: selectedCategoryId || null,
+        } : {}),
+      };
       if (editingGroupId) {
-        await API.put(`/groups/${editingGroupId}`, groupForm);
+        await API.put(`/groups/${editingGroupId}`, payload);
         toast.success('Group updated successfully!');
       } else {
-        await API.post('/groups', groupForm);
+        await API.post('/groups', payload);
         toast.success('Group created successfully!');
       }
       setShowModal(false);
@@ -217,7 +254,7 @@ const GroupManagement = () => {
       <PageHeader
         eyebrow="Batches"
         title="Groups & batches"
-        description="Organize students into structured college, course, department, semester, and section groups."
+        description="Organize students into structured college, course, branch, semester, and section groups."
         actions={(<button className="btn btn-primary" onClick={handleOpenCreateModal}><Plus size={16} /> Create Group</button>)}
       />
 
@@ -348,7 +385,7 @@ const GroupManagement = () => {
 
                   <div className="d-flex flex-wrap gap-1 mb-3">
                     <span className="badge bg-body-tertiary border text-info">{group.course}</span>
-                    <span className="badge bg-body-tertiary border text-body">Dept: {group.department}</span>
+                    {(group.category || group.department) && <span className="badge bg-body-tertiary border text-primary">Branch: {group.category || group.department}</span>}
                     <span className="badge bg-body-tertiary border text-warning">Sem: {group.semester}</span>
                     <span className="badge bg-body-tertiary border text-secondary">Sec: {group.section}</span>
                   </div>
@@ -395,6 +432,11 @@ const GroupManagement = () => {
                   <button type="button" className="btn-close btn-close-white" onClick={() => setShowModal(false)} />
                 </div>
                 <div className="modal-body">
+                  {academicOptionsError && (
+                    <div className="alert alert-warning small" role="alert">
+                      {academicOptionsError}. Course and branch selections are unavailable.
+                    </div>
+                  )}
                   <div className="row g-3">
                     <div className="col-12 col-md-6">
                       <label className="form-label small text-muted">Group Name *</label>
@@ -433,25 +475,40 @@ const GroupManagement = () => {
                     </div>
 
                     <div className="col-12 col-md-6">
-                      <label className="form-label small text-muted">Course</label>
-                      <input
-                        type="text"
-                        className="form-control bg-secondary text-body border-0"
-                        placeholder="e.g. BCA"
-                        value={groupForm.course}
-                        onChange={(e) => setGroupForm({ ...groupForm, course: e.target.value })}
-                      />
+                      <label className="form-label small text-muted" htmlFor="group-course">Course</label>
+                      <select
+                        id="group-course"
+                        className="form-select bg-secondary text-body border-0"
+                        value={selectedCourseId || (editingGroupId && groupForm.course ? '__legacy_course__' : '')}
+                        onChange={(e) => handleCourseChange(e.target.value)}
+                        disabled={Boolean(academicOptionsError)}
+                      >
+                        <option value="">Select a course</option>
+                        {groupForm.course && !selectedCourseId && (
+                          <option value="__legacy_course__" disabled>{groupForm.course} (not in course list)</option>
+                        )}
+                        {courses.map((course) => (
+                          <option key={course._id} value={course._id}>{course.name} ({course.code})</option>
+                        ))}
+                      </select>
                     </div>
 
                     <div className="col-12 col-md-4">
-                      <label className="form-label small text-muted">Department</label>
-                      <input
-                        type="text"
-                        className="form-control bg-secondary text-body border-0"
-                        placeholder="e.g. Computer Science"
-                        value={groupForm.department}
-                        onChange={(e) => setGroupForm({ ...groupForm, department: e.target.value })}
-                      />
+                      <label className="form-label small text-muted" htmlFor="group-category">Branch</label>
+                      <select
+                        id="group-category"
+                        className="form-select bg-secondary text-body border-0"
+                        value={selectedCategoryId}
+                        onChange={(e) => handleCategoryChange(e.target.value)}
+                        disabled={!selectedCourseId || Boolean(academicOptionsError)}
+                      >
+                        <option value="">{selectedCourseId ? 'Select a branch' : 'Select a course first'}</option>
+                        {categories
+                          .filter((category) => String(category.courseId?._id || category.courseId) === selectedCourseId)
+                          .map((category) => (
+                            <option key={category._id} value={category._id}>{category.name}</option>
+                          ))}
+                      </select>
                     </div>
 
                     <div className="col-12 col-md-4">
@@ -614,6 +671,3 @@ const GroupManagement = () => {
 };
 
 export default GroupManagement;
-
-
-

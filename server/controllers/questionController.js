@@ -138,6 +138,37 @@ exports.deleteQuestion = async (req, res, next) => {
 };
 
 // Helper to validate & normalize a single question item from JSON
+const normalizeCodingTestCases = (testCases) => {
+  if (testCases === undefined) return { testCases: [], errors: [] };
+  if (!Array.isArray(testCases)) {
+    return { testCases: [], errors: ['testCases must be an array'] };
+  }
+
+  const errors = [];
+  const normalized = testCases.map((testCase, index) => {
+    if (!testCase || typeof testCase !== 'object' || Array.isArray(testCase)) {
+      errors.push(`Test case ${index + 1} must be an object`);
+      return null;
+    }
+
+    const expectedOutput = testCase.expectedOutput ?? testCase.output;
+    if (testCase.input === undefined || expectedOutput === undefined) {
+      errors.push(`Test case ${index + 1} requires input and expectedOutput`);
+      return null;
+    }
+
+    const weight = Number(testCase.weight);
+    return {
+      input: String(testCase.input),
+      expectedOutput: String(expectedOutput),
+      isHidden: testCase.isHidden === true || testCase.isHidden === 'true',
+      weight: Number.isFinite(weight) && weight > 0 ? weight : 1,
+    };
+  });
+
+  return { testCases: normalized.filter(Boolean), errors };
+};
+
 const validateAndNormalizeQuestion = (item) => {
   const errors = [];
 
@@ -145,11 +176,15 @@ const validateAndNormalizeQuestion = (item) => {
 
   // 0. Coding Problem Check
   if (rawType === 'coding' || item.isCoding || Array.isArray(item.testCases)) {
+    const normalizedTestCases = normalizeCodingTestCases(item.testCases);
+    errors.push(...normalizedTestCases.errors);
     const title = (item.title || item.question || item.questionText || '').toString().trim();
     const description = (item.description || item.questionText || item.question || '').toString().trim();
 
     if (!title || !description) {
       errors.push('Coding problem requires title and description');
+    }
+    if (errors.length > 0) {
       return { valid: false, errors, questionText: title || 'Coding Problem' };
     }
 
@@ -159,17 +194,17 @@ const validateAndNormalizeQuestion = (item) => {
       data: {
         title,
         description,
-        inputFormat: (item.inputFormat || '').trim(),
-        outputFormat: (item.outputFormat || '').trim(),
-        constraints: (item.constraints || '').trim(),
-        difficulty: ['easy', 'medium', 'hard'].includes((item.difficulty || '').toLowerCase()) ? item.difficulty.toLowerCase() : 'easy',
-        category: (item.category || 'Data Structures').trim(),
-        topic: (item.topic || 'General').trim(),
+        inputFormat: String(item.inputFormat || '').trim(),
+        outputFormat: String(item.outputFormat || '').trim(),
+        constraints: String(item.constraints || '').trim(),
+        difficulty: ['easy', 'medium', 'hard'].includes(String(item.difficulty || '').toLowerCase()) ? String(item.difficulty).toLowerCase() : 'easy',
+        category: String(item.category || 'Data Structures').trim(),
+        topic: String(item.topic || 'General').trim(),
         marks: Number(item.marks || 10),
         timeLimit: Number(item.timeLimit || 2),
         memoryLimit: Number(item.memoryLimit || 128),
         allowedLanguages: Array.isArray(item.allowedLanguages) ? item.allowedLanguages : ['javascript', 'python', 'java', 'cpp', 'c'],
-        testCases: Array.isArray(item.testCases) ? item.testCases : [],
+        testCases: normalizedTestCases.testCases,
         starterCode: Array.isArray(item.starterCode) ? item.starterCode : [],
       },
     };
@@ -433,24 +468,22 @@ exports.importQuestionsJson = async (req, res, next) => {
 
       if (validCodingToSave.length > 0) {
         for (const codingItem of validCodingToSave) {
-          const testCases = codingItem.testCases || [];
-          delete codingItem.testCases;
+          const { testCases = [], ...codingProblemData } = codingItem;
 
           const createdProblem = await CodingProblem.create({
-            ...codingItem,
+            ...codingProblemData,
             createdBy: req.user._id,
             collegeId: req.collegeId || undefined,
           });
 
           if (testCases.length > 0) {
-            const tcDocs = testCases.map((tc, tcIdx) => ({
+            const tcDocs = testCases.map((testCase, tcIdx) => ({
               codingProblemId: createdProblem._id,
-              problemId: createdProblem._id,
-              input: tc.input || '',
-              expectedOutput: tc.expectedOutput || tc.output || '',
-              isHidden: !!tc.isHidden,
+              input: testCase.input,
+              expectedOutput: testCase.expectedOutput,
+              isHidden: testCase.isHidden,
               order: tcIdx + 1,
-              weight: tc.weight || 1,
+              weight: testCase.weight,
             }));
             await TestCase.insertMany(tcDocs);
           }
@@ -476,4 +509,3 @@ exports.importQuestionsJson = async (req, res, next) => {
     next(err);
   }
 };
-

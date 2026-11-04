@@ -51,7 +51,7 @@ exports.generateResultsExcel = (results = [], profileMap = {}, options = {}) => 
       'Email': student.email || 'N/A',
       'Group': group.name ? `${group.name} (${group.code || ''})` : 'N/A',
       'Course': profile.course || group.course || 'N/A',
-      'Department': profile.branch || group.department || 'N/A',
+      'Branch': profile.branch || group.category || group.department || 'N/A',
       'Exam Name': exam.title || 'N/A',
       'Exam ID': exam._id?.toString() || 'N/A',
       'Exam Date': r.createdAt ? new Date(r.createdAt).toISOString().split('T')[0] : 'N/A',

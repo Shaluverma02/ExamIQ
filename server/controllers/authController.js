@@ -9,7 +9,11 @@ const Membership = require('../models/Membership');
 const sendEmail = require('../utils/sendEmail');
 const sendSms = require('../services/smsService');
 
+const isEmailVerificationRequired = () => process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
 const isPhoneVerificationRequired = () => process.env.REQUIRE_PHONE_VERIFICATION === 'true';
+const isEmailPasswordResetEnabled = () => (
+  ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM'].every((key) => Boolean(process.env[key]))
+);
 
 const getPrimaryClientUrl = () => {
   const configuredOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
@@ -31,6 +35,26 @@ const makeCollegeCode = (name) => String(name || 'COLLEGE')
 
 const createPhoneCode = () => String(crypto.randomInt(100000, 1000000));
 const hashPhoneCode = (code) => crypto.createHash('sha256').update(String(code)).digest('hex');
+const isVerificationCodeValid = (code, codeHash, expiresAt) => {
+  if (!codeHash || !expiresAt || new Date(expiresAt).getTime() <= Date.now()) return false;
+  const expectedHash = Buffer.from(codeHash, 'hex');
+  const providedHash = Buffer.from(hashPhoneCode(code), 'hex');
+  return expectedHash.length === providedHash.length && crypto.timingSafeEqual(expectedHash, providedHash);
+};
+
+const issueEmailVerification = async (user) => {
+  const code = createPhoneCode();
+  user.isEmailVerified = false;
+  user.emailVerificationCodeHash = hashPhoneCode(code);
+  user.emailVerificationExpire = Date.now() + 10 * 60 * 1000;
+  await user.save();
+  await sendEmail({
+    email: user.email,
+    subject: 'Your ExamiQ registration verification code',
+    message: `Your ExamiQ email verification code is ${code}. It expires in 10 minutes.`,
+    html: `<p>Your ExamiQ email verification code is <strong>${code}</strong>.</p><p>It expires in 10 minutes.</p>`,
+  });
+};
 
 const issuePhoneVerification = async (user) => {
   const code = createPhoneCode();
@@ -135,7 +159,7 @@ const sendTokenResponse = async (user, statusCode, res, message = 'Success', mem
   );
 
   const userObj = user.toObject();
-  for (const field of ['password', 'resetPasswordToken', 'resetPasswordExpire', 'magicToken', 'magicTokenExpire', 'verificationToken', 'phoneVerificationCodeHash', 'phoneVerificationExpire']) delete userObj[field];
+  for (const field of ['password', 'resetPasswordToken', 'resetPasswordExpire', 'magicToken', 'magicTokenExpire', 'verificationToken', 'emailVerificationCodeHash', 'emailVerificationExpire', 'phoneVerificationCodeHash', 'phoneVerificationExpire']) delete userObj[field];
 
   res.status(statusCode).json({
     success: true,
@@ -154,7 +178,7 @@ exports.register = async (req, res, next) => {
   try {
     const {
       name,
-      email,
+      email: rawEmail,
       password,
       role = 'student',
       phone,
@@ -171,6 +195,7 @@ exports.register = async (req, res, next) => {
       designation,
       employeeId,
     } = req.body;
+    const email = String(rawEmail || '').trim().toLowerCase();
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -218,7 +243,7 @@ exports.register = async (req, res, next) => {
       role,
       phone: phone || '',
       isPhoneVerified: !isPhoneVerificationRequired(),
-      isEmailVerified: true,
+      isEmailVerified: !isEmailVerificationRequired(),
     });
 
     const memberships = await ensureUserCollegeMembership({
@@ -228,13 +253,14 @@ exports.register = async (req, res, next) => {
       createdBy: user._id,
     });
 
-    if (isPhoneVerificationRequired()) {
+    if (isEmailVerificationRequired() || isPhoneVerificationRequired()) {
       try {
-        await issuePhoneVerification(user);
-      } catch (smsError) {
+        if (isEmailVerificationRequired()) await issueEmailVerification(user);
+        if (isPhoneVerificationRequired()) await issuePhoneVerification(user);
+      } catch (verificationError) {
         await Membership.deleteMany({ userId: user._id });
         await User.findByIdAndDelete(user._id);
-        return next(smsError);
+        return next(verificationError);
       }
     }
 
@@ -265,15 +291,16 @@ exports.register = async (req, res, next) => {
         employeeId: employeeId || '',
       });
     }
-    if (isPhoneVerificationRequired()) {
+    if (isEmailVerificationRequired() || isPhoneVerificationRequired()) {
       const userObj = user.toObject();
-      for (const field of ['password', 'resetPasswordToken', 'resetPasswordExpire', 'magicToken', 'magicTokenExpire', 'verificationToken', 'phoneVerificationCodeHash', 'phoneVerificationExpire']) delete userObj[field];
+      for (const field of ['password', 'resetPasswordToken', 'resetPasswordExpire', 'magicToken', 'magicTokenExpire', 'verificationToken', 'emailVerificationCodeHash', 'emailVerificationExpire', 'phoneVerificationCodeHash', 'phoneVerificationExpire']) delete userObj[field];
       return res.status(201).json({
         success: true,
-        message: 'Registration successful. Please verify your mobile number before logging in.',
+        message: 'Registration successful. Complete the required verification steps before logging in.',
         user: userObj,
-        verificationRequired: false,
-        phoneVerificationRequired: true,
+        verificationRequired: true,
+        emailVerificationRequired: isEmailVerificationRequired(),
+        phoneVerificationRequired: isPhoneVerificationRequired(),
         activeCollege: collegeDoc,
         memberships,
       });
@@ -325,11 +352,23 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    if (isEmailVerificationRequired() && !resolvedUser.isEmailVerified) {
+      return res.status(403).json({
+        success: false,
+        code: 'EMAIL_VERIFICATION_REQUIRED',
+        message: 'Please verify your email address before logging in',
+        emailVerificationRequired: true,
+        phoneVerificationRequired: isPhoneVerificationRequired() && !resolvedUser.isPhoneVerified,
+      });
+    }
+
     if (isPhoneVerificationRequired() && resolvedUser.phone && !resolvedUser.isPhoneVerified) {
       return res.status(403).json({
         success: false,
         code: 'PHONE_VERIFICATION_REQUIRED',
         message: 'Please verify your mobile number before logging in',
+        emailVerificationRequired: false,
+        phoneVerificationRequired: true,
       });
     }
 
@@ -475,33 +514,93 @@ exports.updateProfile = async (req, res, next) => {
 // @access  Public
 exports.forgotPassword = async (req, res, next) => {
   try {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(404).json({
+    if (!isEmailPasswordResetEnabled()) {
+      return res.status(503).json({
         success: false,
-        message: 'No account found with this email',
+        message: 'Password recovery is temporarily unavailable. Please contact your institution administrator.',
       });
     }
 
-    const resetToken = crypto.randomBytes(20).toString('hex');
-    user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.resetPasswordExpire = Date.now() + 30 * 60 * 1000; // 30 mins
-    await user.save();
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const user = await User.findOne({ email });
 
-    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
+    if (user) {
+      const code = createPhoneCode();
+      user.resetPasswordCodeHash = hashPhoneCode(code);
+      user.resetPasswordCodeExpire = Date.now() + 10 * 60 * 1000;
+      user.resetPasswordCodeAttempts = 0;
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save();
 
-    await sendEmail({
-      email: user.email,
-      subject: 'Password Reset Request - Exam Portal',
-      message: `You requested a password reset. Please click the link to reset your password:\n${resetUrl}`,
-    });
+      try {
+        await sendEmail({
+          email: user.email,
+          subject: 'Your ExamIQ password reset code',
+          message: `Your ExamIQ password reset code is ${code}. It expires in 10 minutes. If you did not request this, you can ignore this email.`,
+          html: `<p>Your ExamIQ password reset code is <strong>${code}</strong>.</p><p>It expires in 10 minutes. If you did not request this, you can ignore this email.</p>`,
+        });
+      } catch (emailError) {
+        user.resetPasswordCodeHash = undefined;
+        user.resetPasswordCodeExpire = undefined;
+        user.resetPasswordCodeAttempts = 0;
+        await user.save();
+        throw emailError;
+      }
+    }
 
     res.status(200).json({
       success: true,
-      message: 'Password reset link sent to your email',
+      message: 'If an account exists for this email, a password reset code has been sent.',
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Reset password using an email code
+// @route   POST /api/auth/reset-password/with-code
+// @access  Public
+exports.resetPasswordWithCode = async (req, res, next) => {
+  try {
+    if (!isEmailPasswordResetEnabled()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Password recovery is temporarily unavailable. Please contact your institution administrator.',
+      });
+    }
+
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const user = await User.findOne({ email }).select(
+      '+password +resetPasswordCodeHash +resetPasswordCodeExpire +resetPasswordCodeAttempts'
+    );
+
+    if (!user || !user.resetPasswordCodeHash || (user.resetPasswordCodeAttempts || 0) >= 5) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired password reset code' });
+    }
+
+    if (!isVerificationCodeValid(req.body.code, user.resetPasswordCodeHash, user.resetPasswordCodeExpire)) {
+      user.resetPasswordCodeAttempts = (user.resetPasswordCodeAttempts || 0) + 1;
+      if (user.resetPasswordCodeAttempts >= 5) {
+        user.resetPasswordCodeHash = undefined;
+        user.resetPasswordCodeExpire = undefined;
+        user.resetPasswordCodeAttempts = 0;
+      }
+      await user.save();
+      return res.status(400).json({ success: false, message: 'Invalid or expired password reset code' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(req.body.password, salt);
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    user.resetPasswordCodeHash = undefined;
+    user.resetPasswordCodeExpire = undefined;
+    user.resetPasswordCodeAttempts = 0;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Password reset successful. Please sign in with your new password.' });
   } catch (err) {
     next(err);
   }
@@ -512,6 +611,13 @@ exports.forgotPassword = async (req, res, next) => {
 // @access  Public
 exports.resetPassword = async (req, res, next) => {
   try {
+    if (!isEmailPasswordResetEnabled()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Password recovery is temporarily unavailable. Please contact your institution administrator.',
+      });
+    }
+
     const resetPasswordToken = crypto.createHash('sha256').update(req.params.resetToken).digest('hex');
 
     const user = await User.findOne({
@@ -528,8 +634,12 @@ exports.resetPassword = async (req, res, next) => {
 
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(req.body.password, salt);
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
+    user.resetPasswordCodeHash = undefined;
+    user.resetPasswordCodeExpire = undefined;
+    user.resetPasswordCodeAttempts = 0;
     await user.save();
 
     res.status(200).json({ success: true, message: 'Password reset successful. Please sign in with your new password.' });
@@ -555,6 +665,8 @@ exports.verifyEmail = async (req, res, next) => {
 
     user.isEmailVerified = true;
     user.verificationToken = undefined;
+    user.emailVerificationCodeHash = undefined;
+    user.emailVerificationExpire = undefined;
     await user.save();
 
     if (isPhoneVerificationRequired() && user.phone && !user.isPhoneVerified) {
@@ -629,6 +741,75 @@ exports.requestPhoneVerification = async (req, res, next) => {
   }
 };
 
+// @desc    Send or resend required registration verification codes
+// @route   POST /api/auth/registration/request-codes
+// @access  Public
+exports.requestRegistrationCodes = async (req, res, next) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const user = await User.findOne({ email }).select('+emailVerificationCodeHash +emailVerificationExpire +phoneVerificationCodeHash +phoneVerificationExpire');
+    if (!user) return res.status(404).json({ success: false, message: 'No pending registration was found for this email' });
+
+    const emailRequired = isEmailVerificationRequired() && !user.isEmailVerified;
+    const phoneRequired = isPhoneVerificationRequired() && !user.isPhoneVerified;
+    if (!emailRequired && !phoneRequired) {
+      return res.status(400).json({ success: false, message: 'This account has no pending verification' });
+    }
+
+    if (emailRequired) await issueEmailVerification(user);
+    if (phoneRequired) await issuePhoneVerification(user);
+
+    const destinations = [
+      emailRequired && 'email',
+      phoneRequired && 'mobile number',
+    ].filter(Boolean);
+    res.status(200).json({ success: true, message: `Verification code${destinations.length > 1 ? 's' : ''} sent to your ${destinations.join(' and ')}` });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Verify registration email and mobile codes
+// @route   POST /api/auth/registration/verify
+// @access  Public
+exports.verifyRegistration = async (req, res, next) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const { emailCode, phoneCode } = req.body;
+    const user = await User.findOne({ email }).select('+emailVerificationCodeHash +emailVerificationExpire +phoneVerificationCodeHash +phoneVerificationExpire');
+    if (!user) return res.status(404).json({ success: false, message: 'No pending registration was found for this email' });
+
+    const emailRequired = isEmailVerificationRequired() && !user.isEmailVerified;
+    const phoneRequired = isPhoneVerificationRequired() && !user.isPhoneVerified;
+    if (!emailRequired && !phoneRequired) {
+      return res.status(400).json({ success: false, message: 'This account has no pending verification' });
+    }
+
+    if (emailRequired && !isVerificationCodeValid(emailCode, user.emailVerificationCodeHash, user.emailVerificationExpire)) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired email verification code' });
+    }
+    if (phoneRequired && !isVerificationCodeValid(phoneCode, user.phoneVerificationCodeHash, user.phoneVerificationExpire)) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired mobile verification code' });
+    }
+
+    if (emailRequired) {
+      user.isEmailVerified = true;
+      user.emailVerificationCodeHash = undefined;
+      user.emailVerificationExpire = undefined;
+    }
+    if (phoneRequired) {
+      user.isPhoneVerified = true;
+      user.phoneVerificationCodeHash = undefined;
+      user.phoneVerificationExpire = undefined;
+    }
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Verification completed successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // @desc    Verify mobile verification code
 // @route   POST /api/auth/phone/verify
 // @access  Public
@@ -643,7 +824,7 @@ exports.verifyPhone = async (req, res, next) => {
       email,
       phoneVerificationCodeHash: hashPhoneCode(code),
       phoneVerificationExpire: { $gt: Date.now() },
-    });
+    }).select('+phoneVerificationCodeHash +phoneVerificationExpire');
     if (!user) {
       return res.status(400).json({ success: false, message: 'Invalid or expired mobile verification code' });
     }
@@ -713,6 +894,7 @@ exports.magicLogin = async (req, res, next) => {
     }
 
     if (!user.isActive) return res.status(403).json({ success: false, message: 'Your account has been deactivated by administrator' });
+    if (isEmailVerificationRequired() && !user.isEmailVerified) return res.status(403).json({ success: false, message: 'Please verify your email address before logging in' });
     if (isPhoneVerificationRequired() && user.phone && !user.isPhoneVerified) return res.status(403).json({ success: false, message: 'Please verify your mobile number before logging in' });
 
     user.magicToken = undefined;
@@ -724,5 +906,3 @@ exports.magicLogin = async (req, res, next) => {
     next(err);
   }
 };
-
-
