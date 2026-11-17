@@ -1,6 +1,7 @@
 import '../../styles/faculty.css';
 import React, { useEffect, useState } from 'react';
 import API from '../../services/api';
+import { downloadResultsExcel } from '../../utils/downloadExcel';
 import { toast } from 'react-toastify';
 import {
   Award,
@@ -29,6 +30,7 @@ const FacultyAssessmentResults = () => {
   const [selectedAssessment, setSelectedAssessment] = useState(null);
 
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [stats, setStats] = useState(null);
   const [studentMatrix, setStudentMatrix] = useState([]);
   const [rawResults, setRawResults] = useState([]);
@@ -181,10 +183,17 @@ const FacultyAssessmentResults = () => {
   };
 
   // Export to Excel
-  const handleExportExcel = () => {
-    if (!selectedAssessmentId) return;
-    window.open(`${API.defaults.baseURL}/assessments/${selectedAssessmentId}/export/excel`, '_blank');
-    toast.info('Downloading Excel Results report...');
+  const handleExportExcel = async () => {
+    if (!selectedAssessmentId || exporting) return;
+    try {
+      setExporting(true);
+      await downloadResultsExcel(
+        { examId: selectedAssessmentId },
+        `${(selectedAssessment?.title || 'Assessment').replace(/[^a-zA-Z0-9_-]/g, '_')}_Results.xlsx`
+      );
+    } finally {
+      setExporting(false);
+    }
   };
 
   // Filtered Student Matrix
@@ -236,8 +245,9 @@ const FacultyAssessmentResults = () => {
               type="button"
               className="btn btn-outline-success font-monospace fw-bold d-flex align-items-center gap-2 rounded-pill px-3"
               onClick={handleExportExcel}
+              disabled={!selectedAssessmentId || exporting}
             >
-              <FileSpreadsheet size={16} /> Export Excel
+              <FileSpreadsheet size={16} /> {exporting ? 'Exporting…' : 'Export Excel'}
             </button>
           </div>
         </div>
