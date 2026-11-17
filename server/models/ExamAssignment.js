@@ -50,7 +50,7 @@ const examAssignmentSchema = new mongoose.Schema(
     attemptsAllowed: {
       type: Number,
       default: 1,
-      min: 1,
+      min: 0,
     },
     status: {
       type: String,

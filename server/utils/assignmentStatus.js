@@ -8,7 +8,7 @@ const getAssignmentStatus = ({
   const isUpcoming = Boolean(startDate && new Date(startDate) > now);
   const isExpired = Boolean(endDate && new Date(endDate) < now);
   const hasCompletedAttempt = ['submitted', 'auto-submitted', 'evaluated'].includes(attemptStatus);
-  const isCompleted = attemptsRemaining <= 0;
+  const isCompleted = attemptsRemaining != null && attemptsRemaining <= 0;
   const isInProgress = attemptStatus === 'started' && !isExpired;
 
   let computedStatus = 'available';

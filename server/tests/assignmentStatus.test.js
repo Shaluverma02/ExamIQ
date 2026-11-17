@@ -22,6 +22,12 @@ test('completed attempt takes precedence over elapsed schedule', () => {
   assert.equal(result.computedStatus, 'completed');
 });
 
+test('unlimited assignment attempts do not mark a student completed', () => {
+  const result = getAssignmentStatus({ now, startDate: past, endDate: future, attemptsRemaining: null });
+  assert.equal(result.computedStatus, 'available');
+  assert.equal(result.isCompleted, false);
+});
+
 test('expired assignment cannot be resumed', () => {
   const result = getAssignmentStatus({ now, startDate: past, endDate: past, attemptStatus: 'started', attemptsRemaining: 1 });
   assert.equal(result.computedStatus, 'expired');

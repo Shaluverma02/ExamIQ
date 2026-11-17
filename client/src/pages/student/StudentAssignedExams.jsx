@@ -50,7 +50,7 @@ const StudentAssignedExams = () => {
   });
 
   const getStatusInfo = (assignment) => {
-    if (assignment.attemptsRemaining <= 0) {
+    if (assignment.attemptsRemaining != null && assignment.attemptsRemaining <= 0) {
       return { label: 'Attempts Exhausted', className: 'bg-danger' };
     }
     if (assignment.attempt?.status === 'started') {
@@ -90,7 +90,7 @@ const StudentAssignedExams = () => {
           {filtered.map((assignment) => {
             const exam = assignment.examId;
             const statusInfo = getStatusInfo(assignment);
-            const canAttempt = assignment.attemptsRemaining > 0;
+            const canAttempt = assignment.attemptsRemaining == null || assignment.attemptsRemaining > 0;
             const isInProgress = assignment.attempt?.status === 'started';
 
             return (
@@ -136,7 +136,7 @@ const StudentAssignedExams = () => {
 
                   <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center small text-muted mb-4 border-top border-bottom py-3">
                     <span>
-                      Attempts: {assignment.attemptsUsed}/{assignment.attemptsAllowed}
+                      Attempts: {assignment.attemptsUsed}/{assignment.attemptsAllowed > 0 ? assignment.attemptsAllowed : 'Unlimited'}
                     </span>
                     <span>Marks: {exam?.totalMarks || '—'}</span>
                   </div>
@@ -144,7 +144,7 @@ const StudentAssignedExams = () => {
                   <div className="mt-auto d-flex gap-2">
                     {canAttempt ? (
                       <Link
-                        to={`/student/exam/${exam?._id}/attempt`}
+                        to={`/student/exam/${exam?._id}/overview`}
                         className="btn btn-primary flex-grow-1 d-flex align-items-center justify-content-center gap-2"
                       >
                         {isInProgress ? (

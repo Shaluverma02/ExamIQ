@@ -29,7 +29,7 @@ exports.getLiveAssessmentMonitoring = async (req, res, next) => {
         .slice(-1)[0]?.snapshot || '';
 
       const elapsed = Math.floor((Date.now() - new Date(att.startedAt).getTime()) / 1000);
-      const totalSeconds = (exam.duration || 60) * 60;
+      const totalSeconds = (att.duration || exam.duration || 60) * 60;
       const remainingSeconds = Math.max(0, totalSeconds - elapsed);
 
       return {

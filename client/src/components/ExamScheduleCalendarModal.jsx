@@ -66,7 +66,7 @@ const ExamScheduleCalendarModal = ({ isOpen, onClose, assignments = [] }) => {
                         <div className="fw-bold text-warning small d-flex align-items-center gap-1 justify-content-end">
                           <Calendar size={14} /> {new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}
                         </div>
-                        <span className="text-muted small">Attempts Allowed: {item.attemptsAllowed}</span>
+                        <span className="text-muted small">Attempts Allowed: {item.attemptsAllowed > 0 ? item.attemptsAllowed : 'Unlimited'}</span>
                       </div>
                     </div>
                   );

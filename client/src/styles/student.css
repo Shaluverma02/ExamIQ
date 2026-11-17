@@ -277,6 +277,45 @@
 
 /* Exam preparation wizard */
 .exam-setup-screen { min-height:100dvh; padding:32px 20px; background:var(--app-bg); color:var(--app-text); }
+.exam-overview-screen { min-height:100dvh; padding:32px 20px; background:var(--app-bg); color:var(--app-text); }
+.exam-overview-shell { max-width:1240px; margin:auto; }
+.exam-overview-header { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; margin-bottom:24px; }
+.exam-overview-header h1 { font-size:clamp(1.7rem,3vw,2.4rem); margin:12px 0 8px; font-weight:750; }
+.exam-overview-header p { color:var(--app-muted); margin:0; max-width:760px; }
+.exam-overview-back { display:flex; align-items:center; gap:7px; color:var(--app-muted); text-decoration:none; margin-bottom:18px; font-size:.85rem; }
+.exam-overview-back:hover { color:var(--app-blue); }
+.exam-overview-layout { display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:22px; align-items:start; }
+.exam-overview-main { display:grid; gap:18px; min-width:0; }
+.exam-overview-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.exam-overview-facts article { display:flex; align-items:center; gap:12px; padding:16px; border:1px solid var(--app-border); border-radius:14px; background:var(--app-surface); color:var(--app-blue); min-width:0; }
+.exam-overview-facts article span { display:block; min-width:0; }
+.exam-overview-facts small { display:block; color:var(--app-muted); font-size:.75rem; }
+.exam-overview-facts strong { display:block; color:var(--app-text); font-size:.88rem; overflow-wrap:anywhere; }
+.exam-overview-card { padding:22px; border:1px solid var(--app-border); border-radius:16px; background:var(--app-surface); min-width:0; }
+.exam-overview-card h2 { display:flex; align-items:center; gap:9px; font-size:1.05rem; font-weight:700; margin:0 0 14px; }
+.exam-overview-instructions { white-space:pre-wrap; overflow-wrap:anywhere; color:var(--app-muted); line-height:1.7; margin:0; }
+.exam-overview-section-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:12px; }
+.exam-overview-section-heading h2 { margin:0 0 5px; }
+.exam-overview-section-heading p { color:var(--app-muted); font-size:.82rem; margin:0; }
+.exam-overview-table { --bs-table-bg:transparent; --bs-table-color:var(--app-text); --bs-table-border-color:var(--app-border); font-size:.84rem; }
+.exam-overview-table thead th { color:var(--app-muted); font-size:.74rem; font-weight:650; text-transform:uppercase; letter-spacing:.04em; }
+.exam-overview-table td,.exam-overview-table th { padding:12px 10px; }
+.exam-overview-table .exam-overview-total th,.exam-overview-table .exam-overview-total td { font-weight:700; border-top-width:2px; }
+.exam-overview-question-table { min-width:600px; }
+.exam-overview-question-text { min-width:260px; max-width:520px; white-space:normal; overflow-wrap:anywhere; }
+.exam-overview-negative-note { color:var(--app-warning); font-size:.8rem; margin-top:12px; }
+.exam-overview-sidebar { position:sticky; top:20px; }
+.exam-overview-start-card { padding:24px; }
+.exam-overview-start-card h2 { font-size:1.25rem; margin:14px 0 8px; }
+.exam-overview-start-card p,.exam-overview-start-card li { color:var(--app-muted); font-size:.84rem; line-height:1.6; }
+.exam-overview-start-card ul { padding-left:20px; margin:16px 0; }
+.exam-overview-start-card li+li { margin-top:5px; }
+.exam-overview-start-card .btn { display:flex; align-items:center; justify-content:center; gap:8px; min-height:46px; }
+.exam-overview-start-card > small { display:block; color:var(--app-muted); font-size:.72rem; text-align:center; margin-top:12px; }
+.exam-overview-screen button:focus-visible,.exam-overview-screen a:focus-visible { outline:3px solid var(--app-blue); outline-offset:3px; }
+@media(max-width:900px) { .exam-overview-layout { grid-template-columns:minmax(0,1fr) 280px; gap:14px; } .exam-overview-card { padding:18px; } }
+@media(max-width:767px) { .exam-overview-screen { padding:22px 12px; } .exam-overview-layout { grid-template-columns:1fr; } .exam-overview-sidebar { position:static; grid-row:1; } .exam-overview-facts { grid-template-columns:1fr 1fr; } .exam-overview-header { gap:12px; } }
+@media(max-width:420px) { .exam-overview-facts { grid-template-columns:1fr; } }
 .exam-setup-shell { max-width:1100px; margin:auto; }
 .exam-setup-header { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; }
 .exam-setup-header h1 { font-size:clamp(1.6rem,3vw,2.2rem); margin:12px 0 8px; font-weight:750; }

@@ -25,7 +25,6 @@ const ResultDetail = () => {
 
   // Retake State
   const [showRetakeModal, setShowRetakeModal] = useState(false);
-  const [isStartingRetake, setIsStartingRetake] = useState(false);
 
   // AI Modal States
   const [showAiCodeModal, setShowAiCodeModal] = useState(false);
@@ -36,20 +35,11 @@ const ResultDetail = () => {
     problemTitle: '',
   });
 
-  const handleStartRetake = async () => {
+  const handleStartRetake = () => {
     if (!result || !result.examId) return;
     const examId = result.examId._id || result.examId;
-    try {
-      setIsStartingRetake(true);
-      const res = await API.post(`/exams/${examId}/retake`);
-      toast.success(`New attempt #${res.data.attemptNumber || ''} created!`);
-      setShowRetakeModal(false);
-      navigate(`/student/exam/${examId}/attempt`);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to start retake attempt');
-    } finally {
-      setIsStartingRetake(false);
-    }
+    setShowRetakeModal(false);
+    navigate(`/student/exam/${examId}/overview`);
   };
 
   useEffect(() => {
@@ -419,7 +409,6 @@ const ResultDetail = () => {
         assessmentTitle={result.examId?.title || 'Assessment'}
         previousAttempts={retakeLimits.used}
         maxAttempts={retakeLimits.max}
-        loading={isStartingRetake}
       />
 
       {/* AI Modals */}

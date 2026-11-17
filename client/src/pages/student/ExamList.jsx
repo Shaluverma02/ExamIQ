@@ -301,7 +301,7 @@ const ExamList = () => {
                         </div>
                       )}
                       <div className="d-flex justify-content-between align-items-center">
-                        <span>Attempts: {assignment.attemptsUsed ?? 0}/{assignment.attemptsAllowed ?? 1}</span>
+                        <span>Attempts: {assignment.attemptsUsed ?? 0}/{assignment.attemptsAllowed > 0 ? assignment.attemptsAllowed : 'Unlimited'}</span>
                         <span>Marks: {exam?.totalMarks ?? '—'}</span>
                       </div>
                     </div>
@@ -351,14 +351,14 @@ const ExamList = () => {
                       </button>
                     ) : isInProgress ? (
                       <Link
-                        to={`/student/exam/${exam?._id}/attempt`}
+                        to={`/student/exam/${exam?._id}/overview`}
                         className="btn btn-warning flex-grow-1 fw-bold py-2 rounded-3 d-flex align-items-center justify-content-center gap-2"
                       >
                         <Play size={16} /> Resume Assessment
                       </Link>
                     ) : (
                       <Link
-                        to={`/student/exam/${exam?._id}/attempt`}
+                        to={`/student/exam/${exam?._id}/overview`}
                         className="btn btn-primary flex-grow-1 fw-bold py-2 rounded-3 d-flex align-items-center justify-content-center gap-2"
                       >
                         {assignment.canRetake || assignment.attemptsUsed > 0 ? 'Reattempt Assessment' : 'Start Assessment'} <ArrowRight size={16} />

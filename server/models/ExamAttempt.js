@@ -27,6 +27,7 @@ const examAttemptSchema = new mongoose.Schema(
     collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'College', default: null, index: true },
     attemptNumber: { type: Number, default: 1 },
     startedAt: { type: Date, default: Date.now },
+    duration: { type: Number, min: 1 }, // duration in minutes, captured when the attempt starts
     submittedAt: { type: Date },
     remainingTime: { type: Number }, // in seconds
     status: {

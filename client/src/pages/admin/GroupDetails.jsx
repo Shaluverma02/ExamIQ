@@ -370,7 +370,7 @@ const GroupDetails = () => {
                         {new Date(as.startDate).toLocaleDateString()} – {new Date(as.endDate).toLocaleDateString()}
                       </td>
                       <td>{as.duration} mins</td>
-                      <td>{as.attemptsAllowed} attempt(s)</td>
+                      <td>{as.attemptsAllowed > 0 ? `${as.attemptsAllowed} attempt(s)` : 'Unlimited'}</td>
                       <td className="small text-muted">{as.facultyId?.name}</td>
                       <td>
                         <span className={`badge ${as.status === 'published' ? 'bg-success' : 'bg-warning'}`}>

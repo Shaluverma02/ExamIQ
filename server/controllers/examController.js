@@ -380,7 +380,8 @@ exports.startExamAttempt = async (req, res, next) => {
       status: 'started',
     }).sort({ attemptNumber: -1 });
 
-    const totalSeconds = (exam.duration || 60) * 60;
+    const configuredDuration = authCheck.assignment?.duration || exam.duration || 60;
+    const totalSeconds = (attempt?.duration || configuredDuration) * 60;
 
     if (!attempt) {
       const existingAttempts = await ExamAttempt.find({
@@ -411,6 +412,7 @@ exports.startExamAttempt = async (req, res, next) => {
         collegeId: req.collegeId || exam.collegeId || undefined,
         attemptNumber: attemptCount + 1,
         startedAt: new Date(),
+        duration: configuredDuration,
         remainingTime: totalSeconds,
         status: 'started',
         answers: (exam.questions || []).map((q) => ({
@@ -424,6 +426,7 @@ exports.startExamAttempt = async (req, res, next) => {
       });
     } else {
       // Calculate server authoritative remaining time
+      attempt.duration = attempt.duration || configuredDuration;
       const elapsedSeconds = Math.floor((Date.now() - new Date(attempt.startedAt).getTime()) / 1000);
       const serverRemaining = totalSeconds - elapsedSeconds;
 
@@ -461,7 +464,7 @@ exports.startExamAttempt = async (req, res, next) => {
       exam: {
         _id: exam._id,
         title: exam.title,
-        duration: exam.duration,
+        duration: attempt.duration || configuredDuration,
         totalMarks: exam.totalMarks,
         negativeMarking: exam.negativeMarking,
         allowRetake: exam.allowRetake,
@@ -485,7 +488,7 @@ exports.saveAnswer = async (req, res, next) => {
     const exam = await Exam.findOne({ _id: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     const attempt = await ExamAttempt.findOne({ studentId: req.user._id, examId: req.params.id, ...(req.collegeId ? { collegeId: req.collegeId } : {}), status: 'started' });
     if (!exam || !attempt) return res.status(404).json({ success: false, message: 'Active attempt not found' });
-    if (Date.now() >= new Date(attempt.startedAt).getTime() + exam.duration * 60000) return res.status(409).json({ success: false, message: 'Exam duration has elapsed' });
+    if (Date.now() >= new Date(attempt.startedAt).getTime() + (attempt.duration || exam.duration) * 60000) return res.status(409).json({ success: false, message: 'Exam duration has elapsed' });
     if (codingProblemId) {
       if (!(exam.codingProblems || []).some(id => String(id) === String(codingProblemId))) return res.status(400).json({ success: false, message: 'Problem is not part of this exam' });
       await ExamAttempt.updateOne({ _id: attempt._id, status: 'started' }, { $addToSet: { codingVisited: codingProblemId } });
@@ -778,7 +781,8 @@ exports.retakeAssessment = async (req, res, next) => {
 
     // Create Fresh Attempt
     const newAttemptNumber = totalPrevious + 1;
-    const totalSeconds = (exam.duration || 60) * 60;
+    const configuredDuration = authCheck.assignment?.duration || exam.duration || 60;
+    const totalSeconds = configuredDuration * 60;
 
     const newAttempt = await ExamAttempt.create({
         studentId: req.user._id,
@@ -786,6 +790,7 @@ exports.retakeAssessment = async (req, res, next) => {
         collegeId: req.collegeId || exam.collegeId || undefined,
       attemptNumber: newAttemptNumber,
       startedAt: new Date(),
+      duration: configuredDuration,
       remainingTime: totalSeconds,
       status: 'started',
       answers: (exam.questions || []).map((q) => ({

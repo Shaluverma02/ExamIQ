@@ -50,7 +50,7 @@ const RetakeConfirmModal = ({
 
             <div className="p-2.5 rounded-3 bg-info bg-opacity-10 border-info border-opacity-25 text-info small">
               <AlertCircle size={16} className="me-1 mb-0.5 inline-block" />
-              Starting a retake will generate a <strong>brand-new attempt</strong>. Your previous scores will remain safely stored.
+              You will review the test details and complete the required checks before your new attempt starts. Your previous scores will remain safely stored.
             </div>
           </div>
 
@@ -75,7 +75,7 @@ const RetakeConfirmModal = ({
                 </>
               ) : (
                 <>
-                  <Play size={16} /> Start Retake
+                  <Play size={16} /> Continue to test details
                 </>
               )}
             </button>

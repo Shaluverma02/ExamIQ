@@ -105,7 +105,7 @@ const StudentDashboard = () => {
           const isExpired = assignment.endDate && new Date(assignment.endDate) < new Date();
           const inProgress = assignment.attempt?.status === 'started' && !isExpired;
           const upcoming = assignment.startDate && new Date(assignment.startDate) > new Date();
-          const completed = assignment.computedStatus === 'completed' || assignment.attemptsRemaining <= 0;
+          const completed = assignment.computedStatus === 'completed' || (assignment.attemptsRemaining != null && assignment.attemptsRemaining <= 0);
           const exhausted = assignment.attemptsRemaining != null && assignment.attemptsRemaining <= 0;
           return { ...assignment, inProgress, upcoming, isExpired, completed, exhausted, daysLeft: daysLeftFrom(assignment.endDate) };
         })
@@ -196,7 +196,7 @@ const StudentDashboard = () => {
             ) : (
               <Link
                 to={(nextUp.examId?._id || (typeof nextUp.examId === 'string' ? nextUp.examId : null))
-                  ? `/student/exam/${nextUp.examId?._id || nextUp.examId}/attempt`
+                  ? `/student/exam/${nextUp.examId?._id || nextUp.examId}/overview`
                   : '/student/exams'}
                 className="btn btn-light fw-semibold flex-shrink-0 align-self-start align-self-md-center"
               >
@@ -232,7 +232,7 @@ const StudentDashboard = () => {
             <div className="row g-3">
               {assignedExams.slice(0, 3).map((assignment) => {
                 const examId = assignment.examId?._id || (typeof assignment.examId === 'string' ? assignment.examId : null);
-                const completed = assignment.computedStatus === 'completed' || assignment.attemptsRemaining <= 0;
+                const completed = assignment.computedStatus === 'completed' || (assignment.attemptsRemaining != null && assignment.attemptsRemaining <= 0);
                 const exhausted = assignment.attemptsRemaining != null && assignment.attemptsRemaining <= 0;
                 const upcoming = assignment.startDate && new Date(assignment.startDate) > new Date();
                 const expired = assignment.endDate && new Date(assignment.endDate) < new Date();
@@ -259,7 +259,7 @@ const StudentDashboard = () => {
                           {upcoming ? 'View schedule' : expired ? 'Assessment expired' : completed || exhausted ? 'View results' : 'View assessment'} <ArrowRight size={15} />
                         </Link>
                       ) : (
-                        <Link to={examId ? `/student/exam/${examId}/attempt` : '/student/exams'} className="btn btn-primary btn-sm mt-auto">
+                        <Link to={examId ? `/student/exam/${examId}/overview` : '/student/exams'} className="btn btn-primary btn-sm mt-auto">
                           {inProgress ? 'Resume assessment' : 'Start assessment'} <ArrowRight size={15} />
                         </Link>
                       )}

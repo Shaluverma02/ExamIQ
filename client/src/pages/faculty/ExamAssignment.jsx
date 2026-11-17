@@ -43,6 +43,12 @@ const statusStyles = {
   archived: { bg: 'var(--app-subtle)', color: 'var(--app-muted)' },
 };
 
+const getExamAttemptsAllowed = (exam) => {
+  if (exam?.allowRetake === false) return 1;
+  const maxAttempts = Number(exam?.maxAttempts);
+  return Number.isFinite(maxAttempts) && maxAttempts >= 0 ? maxAttempts : 1;
+};
+
 const ExamAssignment = () => {
   const [assignments, setAssignments] = useState([]);
   const [exams, setExams] = useState([]);
@@ -144,12 +150,24 @@ const ExamAssignment = () => {
       startDate: toLocalDateTimeInput(assignment.startDate),
       endDate: toLocalDateTimeInput(assignment.endDate),
       duration: assignment.duration || '',
-      attemptsAllowed: assignment.attemptsAllowed || 1,
+      attemptsAllowed: assignment.attemptsAllowed ?? 1,
       title: assignment.title || '',
       notes: assignment.notes || '',
     });
     setEditingId(assignment._id);
     setShowForm(true);
+  };
+
+  const handleExamChange = (examId) => {
+    const exam = exams.find((item) => item._id === examId);
+    setForm((current) => ({
+      ...current,
+      examId,
+      startDate: exam?.startDate ? toLocalDateTimeInput(exam.startDate) : '',
+      endDate: exam?.endDate ? toLocalDateTimeInput(exam.endDate) : '',
+      duration: exam?.duration ? String(exam.duration) : '',
+      attemptsAllowed: exam ? getExamAttemptsAllowed(exam) : 1,
+    }));
   };
 
   const toggleGroup = (groupId) => {
@@ -208,7 +226,7 @@ const ExamAssignment = () => {
       startDate: new Date(form.startDate).toISOString(),
       endDate: new Date(form.endDate).toISOString(),
       duration: form.duration ? Number(form.duration) : undefined,
-      attemptsAllowed: Number(form.attemptsAllowed) || 1,
+      attemptsAllowed: Number(form.attemptsAllowed),
       title: form.title,
       notes: form.notes,
     };
@@ -334,7 +352,7 @@ const ExamAssignment = () => {
                 <select
                   className="form-select"
                   value={form.examId}
-                  onChange={(e) => setForm({ ...form, examId: e.target.value })}
+                  onChange={(e) => handleExamChange(e.target.value)}
                   required
                 >
                   <option value="">Choose a published exam...</option>
@@ -366,6 +384,7 @@ const ExamAssignment = () => {
                   onChange={(e) => setForm({ ...form, startDate: e.target.value })}
                   required
                 />
+                <div className="form-text">Defaults to the selected exam's date and time.</div>
               </div>
 
               <div className="col-md-6">
@@ -377,6 +396,7 @@ const ExamAssignment = () => {
                   onChange={(e) => setForm({ ...form, endDate: e.target.value })}
                   required
                 />
+                <div className="form-text">Defaults to the selected exam's date and time.</div>
                 {endBeforeStart && <div className="invalid-feedback d-block">Must be after the start date</div>}
               </div>
 
@@ -390,18 +410,20 @@ const ExamAssignment = () => {
                   value={form.duration}
                   onChange={(e) => setForm({ ...form, duration: e.target.value })}
                 />
+                <div className="form-text">Defaults to the selected exam's duration.</div>
               </div>
 
               <div className="col-md-4">
-                <label className="form-label text-muted small fw-semibold">Attempts allowed</label>
+                <label className="form-label text-muted small fw-semibold">Attempts allowed (0 = unlimited)</label>
                 <input
                   type="number"
-                  min="1"
+                  min="0"
                   className="form-control"
                   value={form.attemptsAllowed}
                   onChange={(e) => setForm({ ...form, attemptsAllowed: e.target.value })}
                   required
                 />
+                <div className="form-text">Defaults to the selected exam's retake settings.</div>
               </div>
 
               <div className="col-md-4 d-flex align-items-end">

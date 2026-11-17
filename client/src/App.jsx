@@ -26,6 +26,7 @@ const ProblemSolvingArena = lazy(() => import('./pages/student/ProblemSolvingAre
 const AIInterviewPrep = lazy(() => import('./pages/student/AIInterviewPrep'));
 const VersantAssessment = lazy(() => import('./pages/student/VersantAssessment'));
 const StudentAssignedExams = lazy(() => import('./pages/student/StudentAssignedExams'));
+const ExamOverview = lazy(() => import('./pages/student/ExamOverview'));
 
 const FacultyDashboard = lazy(() => import('./pages/faculty/FacultyDashboard'));
 const FacultyExamList = lazy(() => import('./pages/faculty/FacultyExamList'));
@@ -195,7 +196,8 @@ const App = () => (
       <Route path="/magic-login" element={<MagicLogin />} />
       <Route path="/verify-certificate/:id" element={<VerifyCertificate />} />
 
-      <Route path="/student/exam/:id" element={protectedRoute(<LiveExam />, ['student'])} />
+      <Route path="/student/exam/:id" element={protectedRoute(<ExamOverview />, ['student'])} />
+      <Route path="/student/exam/:id/overview" element={protectedRoute(<ExamOverview />, ['student'])} />
       <Route path="/student/exam/:id/attempt" element={protectedRoute(<LiveExam />, ['student'])} />
 
       <Route element={protectedRoute(<MainLayout />, ['student', 'faculty', 'admin', 'college_admin', 'recruiter'])}>

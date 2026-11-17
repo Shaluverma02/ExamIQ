@@ -111,7 +111,9 @@ exports.isStudentAuthorizedForExam = async (studentId, examId, collegeId = null)
   }
 
   const examSettings = await Exam.findOne({ _id: examId, ...scoped });
-  const attemptsAllowed = assignment ? assignment.attemptsAllowed : (examSettings?.allowRetake === false ? 1 : (examSettings?.maxAttempts || Infinity));
+  const attemptsAllowed = assignment
+    ? (assignment.attemptsAllowed > 0 ? assignment.attemptsAllowed : Infinity)
+    : (examSettings?.allowRetake === false ? 1 : (examSettings?.maxAttempts > 0 ? examSettings.maxAttempts : Infinity));
 
   const attemptCount = await ExamAttempt.countDocuments({
     studentId,
@@ -147,10 +149,10 @@ exports.createAssignment = async (req, res, next) => {
       notes,
     } = req.body;
 
-    if (!examId || !startDate || !endDate) {
+    if (!examId) {
       return res.status(400).json({
         success: false,
-        message: 'examId, startDate, and endDate are required',
+        message: 'examId is required',
       });
     }
 
@@ -161,10 +163,6 @@ exports.createAssignment = async (req, res, next) => {
       });
     }
 
-    if (new Date(startDate) >= new Date(endDate)) {
-      return res.status(400).json({ success: false, message: 'End date must be after start date' });
-    }
-
     const exam = await Exam.findOne({ _id: examId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
     if (!exam) {
       return res.status(404).json({ success: false, message: 'Exam not found' });
@@ -172,6 +170,21 @@ exports.createAssignment = async (req, res, next) => {
 
     if (req.user.role === 'faculty' && exam.facultyId.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized to assign this exam' });
+    }
+
+    const effectiveStartDate = startDate || exam.startDate;
+    const effectiveEndDate = endDate || exam.endDate;
+    if (!effectiveStartDate || !effectiveEndDate || Number.isNaN(new Date(effectiveStartDate).getTime()) || Number.isNaN(new Date(effectiveEndDate).getTime())) {
+      return res.status(400).json({ success: false, message: 'Valid start and end dates are required' });
+    }
+    if (new Date(effectiveStartDate) >= new Date(effectiveEndDate)) {
+      return res.status(400).json({ success: false, message: 'End date must be after start date' });
+    }
+    if (duration !== undefined && (!Number.isFinite(Number(duration)) || Number(duration) < 1)) {
+      return res.status(400).json({ success: false, message: 'Duration must be at least 1 minute' });
+    }
+    if (attemptsAllowed !== undefined && (!Number.isInteger(Number(attemptsAllowed)) || Number(attemptsAllowed) < 0)) {
+      return res.status(400).json({ success: false, message: 'Attempts allowed must be a nonnegative integer' });
     }
 
     const eligibleStudentIds = await resolveEligibleStudentIds(groupIds, studentIds, req);
@@ -202,10 +215,12 @@ exports.createAssignment = async (req, res, next) => {
       groupIds,
       studentIds: eligibleStudentIds,
       assignmentType: resolvedType,
-      startDate,
-      endDate,
-      duration: duration || exam.duration,
-      attemptsAllowed: attemptsAllowed || 1,
+      startDate: effectiveStartDate,
+      endDate: effectiveEndDate,
+      duration: duration !== undefined ? Number(duration) : exam.duration,
+      attemptsAllowed: attemptsAllowed !== undefined
+        ? Number(attemptsAllowed)
+        : (exam.allowRetake === false ? 1 : (exam.maxAttempts > 0 ? exam.maxAttempts : 0)),
       title: title || exam.title,
       notes: notes || '',
       status: 'draft',
@@ -335,13 +350,31 @@ exports.updateAssignment = async (req, res, next) => {
       });
     }
 
+    if (startDate !== undefined && Number.isNaN(new Date(startDate).getTime())) {
+      return res.status(400).json({ success: false, message: 'A valid start date is required' });
+    }
+    if (endDate !== undefined && Number.isNaN(new Date(endDate).getTime())) {
+      return res.status(400).json({ success: false, message: 'A valid end date is required' });
+    }
+    const nextStartDate = startDate !== undefined ? new Date(startDate) : assignment.startDate;
+    const nextEndDate = endDate !== undefined ? new Date(endDate) : assignment.endDate;
+    if (nextStartDate >= nextEndDate) {
+      return res.status(400).json({ success: false, message: 'End date must be after start date' });
+    }
+    if (duration !== undefined && (!Number.isFinite(Number(duration)) || Number(duration) < 1)) {
+      return res.status(400).json({ success: false, message: 'Duration must be at least 1 minute' });
+    }
+    if (attemptsAllowed !== undefined && (!Number.isInteger(Number(attemptsAllowed)) || Number(attemptsAllowed) < 0)) {
+      return res.status(400).json({ success: false, message: 'Attempts allowed must be a nonnegative integer' });
+    }
+
     if (groupIds !== undefined) assignment.groupIds = groupIds;
     if (studentIds !== undefined) assignment.studentIds = studentIds;
     if (assignmentType) assignment.assignmentType = assignmentType;
     if (startDate) assignment.startDate = startDate;
     if (endDate) assignment.endDate = endDate;
-    if (duration) assignment.duration = duration;
-    if (attemptsAllowed) assignment.attemptsAllowed = attemptsAllowed;
+    if (duration !== undefined) assignment.duration = Number(duration);
+    if (attemptsAllowed !== undefined) assignment.attemptsAllowed = Number(attemptsAllowed);
     if (title !== undefined) assignment.title = title;
     if (notes !== undefined) assignment.notes = notes;
 
@@ -512,8 +545,10 @@ exports.getStudentAssignedExams = async (req, res, next) => {
         });
 
         const attemptsUsed = completedAttempts;
-        const attemptsAllowed = assignment.attemptsAllowed || 1;
-        const attemptsRemaining = Math.max(0, attemptsAllowed - completedAttempts);
+        const attemptsAllowed = assignment.attemptsAllowed ?? 1;
+        const attemptsRemaining = attemptsAllowed > 0
+          ? Math.max(0, attemptsAllowed - completedAttempts)
+          : null;
         const status = getAssignmentStatus({
           now,
           startDate: assignment.startDate,

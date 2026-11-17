@@ -1115,7 +1115,7 @@ exports.submitCode = async (
       const exam = await Exam.findOne({ _id: examId, ...(req.collegeId ? { collegeId: req.collegeId } : {}) });
       examAttempt = await ExamAttempt.findOne({ examId, studentId: req.user._id, ...(req.collegeId ? { collegeId: req.collegeId } : {}), status: 'started' }).sort({ attemptNumber: -1 });
       if (!exam || !examAttempt || !(exam.codingProblems || []).some(id => String(id) === String(problemId))) return res.status(403).json({ success: false, message: 'No active exam attempt for this coding problem' });
-      if (Date.now() >= new Date(examAttempt.startedAt).getTime() + exam.duration * 60000) return res.status(409).json({ success: false, message: 'Exam duration has elapsed' });
+      if (Date.now() >= new Date(examAttempt.startedAt).getTime() + (examAttempt.duration || exam.duration) * 60000) return res.status(409).json({ success: false, message: 'Exam duration has elapsed' });
     }
 
     /**
